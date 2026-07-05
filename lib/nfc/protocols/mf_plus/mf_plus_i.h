@@ -1,0 +1,37 @@
+#pragma once
+
+#include "mf_plus.h"
+
+#include <nfc/helpers/nxp_native_command.h>
+
+#define MF_PLUS_FFF_PICC_PREFIX "PICC"
+
+// probed_security_level carries the result of the poller's active SAK-0x20 probe (SL0 or SL3), or
+// MfPlusSecurityLevelUnknown when no probe applies/succeeded; it only influences the SAK-0x20 path.
+MfPlusError mf_plus_get_type_from_version(
+    const Iso14443_4aData* iso14443_4a_data,
+    MfPlusSecurityLevel probed_security_level,
+    MfPlusData* mf_plus_data);
+
+MfPlusError mf_plus_get_type_from_iso4(
+    const Iso14443_4aData* iso4_data,
+    MfPlusSecurityLevel probed_security_level,
+    MfPlusData* mf_plus_data);
+
+MfPlusError mf_plus_version_parse(MfPlusVersion* data, const BitBuffer* buf);
+
+bool mf_plus_version_load(MfPlusVersion* data, FlipperFormat* ff);
+
+bool mf_plus_security_level_load(MfPlusSecurityLevel* data, FlipperFormat* ff);
+
+bool mf_plus_type_load(MfPlusType* data, FlipperFormat* ff);
+
+bool mf_plus_size_load(MfPlusSize* data, FlipperFormat* ff);
+
+bool mf_plus_version_save(const MfPlusVersion* data, FlipperFormat* ff);
+
+bool mf_plus_security_level_save(const MfPlusSecurityLevel* data, FlipperFormat* ff);
+
+bool mf_plus_type_save(const MfPlusType* data, FlipperFormat* ff);
+
+bool mf_plus_size_save(const MfPlusSize* data, FlipperFormat* ff);
