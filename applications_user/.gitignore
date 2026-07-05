@@ -1,1 +1,6 @@
 *
+
+# Custom-Flipper Phase 2A tracked user apps (explicit exceptions to the
+# blanket ignore above, added one at a time as each app is reviewed/imported)
+!/network_subnet/
+!/network_subnet/**
