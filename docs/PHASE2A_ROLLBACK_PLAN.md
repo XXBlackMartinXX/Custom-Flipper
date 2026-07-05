@@ -1,8 +1,9 @@
 # Phase 2A — Rollback Plan
 
-**v2** — commit hashes updated for the rebuilt branch (see
-`PHASE2A_INTEGRATION_LOG.md` for why v1 was replaced). Rollback logic and per-app
-file lists are otherwise unchanged from v1.
+**v3** — updated for the `chess` SAM-removal cleanup commit (`6359f87`); see
+`PHASE2A_CHESS_SAM_LICENSE_REVIEW.md` and the integration log's cleanup entry. v2
+updated commit hashes for the rebuilt branch (see `PHASE2A_INTEGRATION_LOG.md` for
+why v1 was replaced).
 
 Every import this phase is its own commit on `integration/phase2a-first-batch`, with
 no cross-app dependencies, so rollback is per-app or whole-branch, at your choice.
@@ -29,6 +30,9 @@ e4dd48f  + programmer_calc
 d18cd29  + vin_decoder
 7ca2d5f  + flipper95
 202245e  + chess
+6b5cc53  + Phase 2A docs (v2)
+140ec5c  + build PASS + SAM license review docs
+6359f87  + chess: SAM voice feature removed (cleanup, not a new app)
 ```
 
 To drop only the *last* app and keep everything before it:
@@ -73,9 +77,16 @@ Unchanged from v1 — the app content itself didn't change, only the base undern
   the base and unaffected either way.
 
 ### `chess`
-- Remove: `applications_user/chess/` (40 files, includes its own `LICENSE` and the
-  two bundled third-party libraries)
+- Remove: `applications_user/chess/` (35 files as of `6359f87`, confirmed by direct
+  count — 4 SAM-related files were deleted from the original import in the cleanup
+  commit; includes its own `LICENSE` and the remaining `smallchesslib` third-party
+  library)
 - Revert in `applications_user/.gitignore`: remove `!/chess/` and `!/chess/**`
+- **To roll back only the SAM-removal cleanup** (i.e., keep `chess` but restore the
+  SAM voice feature) rather than removing the whole app: `git revert 6359f87` on
+  top of the current tip, or `git show 202245e:applications_user/chess/sam/stm32_sam.h`
+  etc. to recover the pre-removal file contents from history. **Not recommended** —
+  that would reintroduce the unclear-license code this cleanup exists to remove.
 
 ## Rolling back the base itself (if the submodule approach needs further changes)
 
