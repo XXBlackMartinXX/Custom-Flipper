@@ -4,3 +4,5 @@
 # blanket ignore above, added one at a time as each app is reviewed/imported)
 !/network_subnet/
 !/network_subnet/**
+!/programmer_calc/
+!/programmer_calc/**
