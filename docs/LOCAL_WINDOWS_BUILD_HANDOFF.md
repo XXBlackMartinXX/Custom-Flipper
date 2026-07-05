@@ -181,3 +181,26 @@ official build.
 | Clean official build | **BLOCKED IN CLOUD / PENDING LOCAL BUILD** |
 | Release status | **NOT RELEASE-READY** |
 | Feature integration | **NOT STARTED** |
+
+## 7. Result — local Windows build (reported by project owner)
+
+The official local Windows build was run and reported back. Recorded here as-reported
+(this AI session did not and cannot independently execute or observe a Windows build —
+see `BUILD_LOG.md` for the same caveat applied consistently).
+
+| Field | Value |
+|---|---|
+| Machine | Windows 11, repo at `C:\Github\flipper-unleashed-build` |
+| Commit built | `5cdf9b33745f41f1a0405a6da44821128c233f5c` (matches Phase 0 selection) |
+| `git status` before build | clean |
+| `.\fbt.cmd COMPACT=1 DEBUG=0` | **PASS** |
+| `.\fbt.cmd COMPACT=1 DEBUG=0 updater_package` | **PASS** |
+| Firmware artifact | `build\f7-firmware-C\firmware.dfu` (exists) |
+| Updater package artifact | `dist\f7-C\flipper-z-f7-update-local.tgz` (exists) |
+| `git status` after build | clean |
+| Real hardware flashing/testing | **NOT PERFORMED** |
+
+This resolves the cloud-side blocker described in Section 2 and in `BUILD_LOG.md`:
+the real pinned vendor toolchain was used (not the cloud session's substitute), and a
+genuine firmware + updater artifact now exists. See `BUILD_LOG.md` for the updated
+overall verdict.

@@ -1,5 +1,46 @@
 # Build Log — Unleashed Base, Phase 0/4 Verification Pass
 
+## Current status: RESOLVED — clean official build confirmed locally (Windows)
+
+The cloud-sandbox blocker described below (network policy denies the vendor
+toolchain host) was resolved by running the **official, unmodified** `fbt` build on
+a local Windows 11 machine, per `docs/LOCAL_WINDOWS_BUILD_HANDOFF.md`. Summary,
+as reported by the project owner (this AI session did not and cannot execute or
+observe a Windows build itself — this is recorded as reported, not independently
+verified beyond consistency-checking against the handoff instructions):
+
+- Repo: `DarkFlippers/unleashed-firmware`, commit `5cdf9b33745f41f1a0405a6da44821128c233f5c`
+- `git status --short` clean both before and after the build
+- `.\fbt.cmd COMPACT=1 DEBUG=0` — **PASS**
+- `.\fbt.cmd COMPACT=1 DEBUG=0 updater_package` — **PASS**
+- Firmware artifact present: `build\f7-firmware-C\firmware.dfu`
+- Updater package present: `dist\f7-C\flipper-z-f7-update-local.tgz`
+- Real hardware flashing/testing: **NOT PERFORMED** (none claimed)
+
+This used the real pinned vendor toolchain (via `fbt.cmd`'s own download, on an
+unrestricted network), not the cloud session's ad hoc substitute described below.
+**The substitute-toolchain narrative below is kept as an honest record of the cloud
+attempt and its diagnostic value (it independently corroborated that nothing in
+Unleashed's own source was broken in everything it reached) — it is not the basis for
+the PASS verdict above.** No source patches from the substitute-toolchain experiment
+were carried into this repository or into the local Windows build; the Windows build
+used the official, unpatched `site_scons/cc.scons`.
+
+## Overall verdict (updated)
+
+| Item | Status |
+|---|---|
+| Phase 0 source verification | **PASS** |
+| Base selected | **Unleashed** (`dev` @ `5cdf9b33745f41f1a0405a6da44821128c233f5c`) |
+| Clean official build | **PASS** (confirmed on local Windows 11, official toolchain) |
+| Release status | **TEST-READY ONLY / NOT RELEASE-READY** |
+| Feature integration | **NOT STARTED** |
+| Hardware tested | **NOT PERFORMED** |
+
+---
+
+## Historical record: cloud sandbox build attempt (superseded, kept for the record)
+
 ## What this is
 
 A real, unedited-output record of attempting `./fbt` against a real recursive clone of
