@@ -1,11 +1,43 @@
 # Phase 2A — Build Report
 
-**This is v2 of this document**, covering both the real local Windows build failure
-against v1 of this branch and the fix applied in v2. See
+**This is v3 of this document.** v2 covered the real local Windows build failure
+against v1 of this branch (flattened submodules breaking protobuf-version
+generation) and the fix applied (real git submodules). **This v3 records that the
+corrected branch was rebuilt and the local Windows build now PASSES.** See
 `PHASE2A_INTEGRATION_LOG.md` for the full explanation of what was wrong and what
 changed.
 
-## Real build attempt #1 (v1 of this branch) — FAILED, reported by the project owner
+## Real build attempt #2 (v2/current branch, commit `6b5cc53`) — PASS, reported by the project owner
+
+| Field | Value |
+|---|---|
+| Machine | Windows 11, repo at `C:\Github\Custom-Flipper-phase2a-build` |
+| Branch / commit tested | `integration/phase2a-first-batch` @ `6b5cc53fa1bcaca9e3dc9f497d479c33b0d63956` |
+| Fresh clone | **PASS** |
+| Recursive submodule checkout | **PASS** |
+| `assets/protobuf` `git describe --tags --abbrev=0` | `0.29` — confirms the exact fix from v2 works on a real independent clone, not just in this cloud sandbox |
+| `git status` before build | clean |
+| `.\fbt.cmd COMPACT=1 DEBUG=0` | **PASS** |
+| `.\fbt.cmd COMPACT=1 DEBUG=0 updater_package` | **PASS** |
+| Firmware artifact | `build\f7-firmware-C\firmware.dfu` (exists) |
+| Updater package | `dist\f7-C\flipper-z-f7-update-local.tgz` (exists) |
+| `git status` after build | clean |
+| Hardware flashing/testing | **NOT PERFORMED** (none claimed) |
+
+**This confirms the protobuf/versioning failure from v1 is RESOLVED.** The fix
+(restoring real git submodule structure, verified in the previous session only
+inside this cloud sandbox) has now been independently confirmed on a fresh clone on
+real hardware-adjacent tooling (a real Windows machine, the real official toolchain)
+— this is a stronger confirmation than the sandbox-only check could provide, since
+it rules out any sandbox-specific quirk in how the submodules were verified.
+
+This also means, for the first time in this project, that **all 5 imported apps
+have been compiled**, not just statically validated — the plain `.\fbt.cmd` build
+target compiles everything under `applications_user/` as part of a full firmware
+build. (Whether each app's specific `.fap` target was individually confirmed loadable
+was not part of this report; see "What's still open" below.)
+
+## Historical record: build attempt #1 (v1 of this branch) — FAILED
 
 | Field | Value |
 |---|---|
@@ -74,36 +106,34 @@ byte-for-byte upstream Unleashed. The 5 imported apps' own content is unchanged.
   exactly as documented throughout this project. This cloud sandbox cannot verify a
   full compile either way — only the local Windows path can.
 
-## Build status: **PENDING LOCAL BUILD (rebuild required — please re-run)**
+## Build status: **PASS**
 
-This is explicitly **not** claimed as fixed until you rebuild and it actually
-passes. What's confirmed here is that the specific reported error's root cause has
-a verified fix for the exact failing command — not that the rest of the build
-(actual app compilation, linking, `updater_package`) will succeed. Static
-verification has limits; only your local build can confirm the rest.
+Confirmed by the project owner's real local Windows build (see "Real build attempt
+#2" above): fresh clone, recursive submodule checkout, plain firmware build, and
+`updater_package` all passed, with both artifacts present and `git status` clean
+before and after. The protobuf/versioning failure from v1 is resolved.
 
-### To re-run
+## What's still open (not yet confirmed, not claimed)
 
-```powershell
-cd C:\Github\Custom-Flipper-phase2a-build
-git fetch origin
-git checkout integration/phase2a-first-batch
-git reset --hard origin/integration/phase2a-first-batch
-git submodule update --init --recursive
-.\fbt.cmd COMPACT=1 DEBUG=0
-.\fbt.cmd COMPACT=1 DEBUG=0 updater_package
-```
+- **Individual `.fap` targets for each of the 5 apps were not separately confirmed
+  built/loadable** — the plain build compiles everything under `applications_user/`
+  as part of the firmware image, which is good evidence but isn't the same as
+  confirming each app's own `.fap` output exists and is well-formed. Not blocking,
+  just not yet explicitly checked.
+- **Real hardware flashing/testing: NOT PERFORMED.** No device has been flashed,
+  booted, or used to launch any of the 5 apps. Nothing here should be read as
+  implying otherwise.
+- **`chess`'s bundled SAM text-to-speech component has an unresolved license
+  question** — investigated separately in
+  `docs/PHASE2A_CHESS_SAM_LICENSE_REVIEW.md`. This does not affect whether the code
+  *compiles* (it does, per this report), only whether it's appropriate to
+  *distribute*. Build status and license status are reported independently and
+  should not be conflated — a clean build is not the same as a release-ready or
+  legally-clear build.
 
-The `git reset --hard` + fresh `git submodule update --init --recursive` matters
-this time — the branch was force-pushed with different history, and the new commits
-require the submodules to actually be initialized (they weren't present as
-submodules in v1 at all).
+## Release status
 
-### What to send back
-
-Same as before: exact commands used, full result (PASS/FAIL) for both the plain
-build and `updater_package`, artifact paths + sizes if produced, the toolchain
-version line, and — if it fails again — the exact, unparaphrased error, plus
-confirmation of which step it failed at this time (asset generation again, or
-somewhere in actual app compilation, which would be a new and different class of
-issue specific to one of the 5 apps rather than the base).
+**TEST-READY ONLY / NOT RELEASE-READY.** A passing local build on one machine is a
+real, meaningful milestone, but release-readiness additionally requires: the SAM
+license question resolved, hardware testing, the remaining Top-25/broader-catalog
+review, and the project's full release-gate checklist — none of which are done.
