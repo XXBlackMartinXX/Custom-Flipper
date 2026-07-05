@@ -93,8 +93,11 @@ v1 log and reproduced here:
   is one of the 12 real submodules in this base, so this is a legitimate, already-
   present dependency, not a new one.
 - **`chess`**: ships its own MIT `LICENSE`; bundles two third-party libraries
-  (`smallchesslib.h`, CC0/public domain; `sam/stm32_sam.{h,cpp}`, license
-  **unverified** from its header — flagged, not assumed); no conflicts.
+  (`smallchesslib.h`, CC0/public domain; `sam/stm32_sam.{h,cpp}`, investigated in
+  full in `PHASE2A_CHESS_SAM_LICENSE_REVIEW.md` — the upstream `s-macke/SAM`
+  project has no open-source license, is self-described "abandonware," and offers
+  only a speculative Fair Use claim. Decision: **SAM LICENSE UNCLEAR / DISABLE
+  VOICE FEATURE**, a code change pending approval, not yet applied); no conflicts.
 
 ## Deliberately not imported this phase
 

@@ -22,3 +22,18 @@
    The project owner has a local Windows machine and could perform real hardware
    testing there; none has been done yet — the local build pass so far was build-only,
    by explicit instruction (no flashing).
+
+## Firmware / content (open item)
+
+4. **OPEN — `chess`'s bundled SAM text-to-speech component has no valid open-source
+   license.** `applications_user/chess/sam/stm32_sam.{h,cpp}` (Phase 2A,
+   `integration/phase2a-first-batch`) is a port of `s-macke/SAM`, whose own README
+   explicitly states the code is reverse-engineered 1980s "abandonware" from a
+   defunct company, with no rights holder able to grant a license — only a
+   speculative "might qualify as Fair Use" claim, not a license grant. Full
+   investigation in `PHASE2A_CHESS_SAM_LICENSE_REVIEW.md`. Decision: **SAM LICENSE
+   UNCLEAR / DISABLE VOICE FEATURE**. Does not affect compilation or safety (the
+   component has no hardware-capability access) — this is a distribution/compliance
+   issue. Implementing the decision requires a code change (removing or gating
+   `sam/stm32_sam.{h,cpp}` and `helpers/flipchess_voice.{cpp,h}`) that has **not**
+   been made yet, pending separate approval before touching code.

@@ -34,32 +34,45 @@ used the official, unpatched `site_scons/cc.scons`.
 | Base selected | **Unleashed** (`dev` @ `5cdf9b33745f41f1a0405a6da44821128c233f5c`) |
 | Clean official build | **PASS** (confirmed on local Windows 11, official toolchain) |
 | Release status | **TEST-READY ONLY / NOT RELEASE-READY** |
-| Feature integration | **PHASE 2A IN PROGRESS** — see below |
+| Feature integration | **PHASE 2A: local build PASS, 1 licensing item open** — see below |
 | Hardware tested | **NOT PERFORMED** |
 
-## Phase 2A update: first app-integration batch (v2 — rebuilt after a real local build failure)
+## Phase 2A update: first app-integration batch — local build PASS
 
 A separate branch, `integration/phase2a-first-batch`, contains 5 individually
 source-audited RogueMaster apps (`network_subnet`, `programmer_calc`, `vin_decoder`,
 `flipper95`, `chess`) on top of this exact Unleashed base commit, each its own
 commit. See `PHASE2A_INTEGRATION_LOG.md`, `PHASE2A_BUILD_REPORT.md`,
-`PHASE2A_SAFETY_REVIEW.md`, and `PHASE2A_ROLLBACK_PLAN.md` (mirrored here from that
-branch) for full detail.
+`PHASE2A_SAFETY_REVIEW.md`, `PHASE2A_ROLLBACK_PLAN.md`, and
+`PHASE2A_CHESS_SAM_LICENSE_REVIEW.md` (mirrored here from that branch) for full
+detail.
 
-**The first version of that branch failed a real local Windows build.** It had
-flattened all of Unleashed's git submodules into plain files (no `.git` metadata),
-which broke a real build step: `fbt_assets.py` runs `git fetch --tags` /
-`git describe --tags` inside `assets/protobuf` at build time to stamp
-`protobuf_version.h`, and a flattened directory has nothing valid for those commands
-to run against. The project owner's real build log showed exactly this:
-`"Failed to process git tags for protobuf versioning"`. The branch was rebuilt with
-all 12 submodules (plus 4 further nested ones) as genuine git submodules pinned to
-the exact commits Unleashed itself uses, and force-pushed. The specific failing
-command was verified fixed directly in this cloud sandbox
-(`cd assets/protobuf && git describe --tags --abbrev=0` → `0.29`), but **the branch
-has not yet been rebuilt-and-confirmed on a real local Windows machine** — that
-re-run is the next step, not yet done. Status remains **PENDING LOCAL BUILD**, now
-more precisely "pending a repeat of the local build against the corrected branch."
+**The first version of that branch failed a real local Windows build**, at
+`protobuf_version.h` generation — Unleashed's build genuinely runs `git fetch
+--tags`/`git describe --tags` inside `assets/protobuf` at build time, and that
+branch had flattened all submodules into plain files with no `.git` metadata for
+those commands to operate on. **Fixed** by rebuilding the branch with all 12
+submodules (plus 4 nested) as real git submodules pinned to Unleashed's exact
+commits, and **the project owner's re-run of the real local Windows build against
+the corrected branch (commit `6b5cc53`) PASSED**: fresh clone, recursive submodule
+checkout, `assets/protobuf` version tag resolved correctly (`0.29`), both
+`.\fbt.cmd COMPACT=1 DEBUG=0` and `.\fbt.cmd COMPACT=1 DEBUG=0 updater_package`
+passed, both artifacts present. Hardware flashing/testing: **NOT PERFORMED**.
+
+**One open item, licensing not build-blocking**: `chess` bundles a ported SAM
+text-to-speech component whose original upstream project
+(`s-macke/SAM`) has no valid open-source license — it is self-described
+"abandonware" with only a speculative Fair Use claim, confirmed by fetching that
+project's own README directly. Decision: **SAM LICENSE UNCLEAR / DISABLE VOICE
+FEATURE** (full investigation in `PHASE2A_CHESS_SAM_LICENSE_REVIEW.md`). This is a
+distribution/compliance question, not a build or safety one — the code compiles
+fine and has no hardware-capability concerns — but implementing the decision
+requires a code change (removing/gating the voice feature) that has **not** been
+made yet, pending separate approval.
+
+**Release status: TEST-READY ONLY / NOT RELEASE-READY.** A passing local build is
+real progress, but release-readiness still requires the SAM license item resolved,
+hardware testing, and the project's full release-gate checklist.
 
 ---
 
