@@ -92,12 +92,43 @@ v1 log and reproduced here:
   as pure bignum arithmetic (`mbedtls_mpi_*`), no crypto/secret operations; `mbedtls`
   is one of the 12 real submodules in this base, so this is a legitimate, already-
   present dependency, not a new one.
-- **`chess`**: ships its own MIT `LICENSE`; bundles two third-party libraries
-  (`smallchesslib.h`, CC0/public domain; `sam/stm32_sam.{h,cpp}`, investigated in
-  full in `PHASE2A_CHESS_SAM_LICENSE_REVIEW.md` — the upstream `s-macke/SAM`
-  project has no open-source license, is self-described "abandonware," and offers
-  only a speculative Fair Use claim. Decision: **SAM LICENSE UNCLEAR / DISABLE
-  VOICE FEATURE**, a code change pending approval, not yet applied); no conflicts.
+- **`chess`**: ships its own MIT `LICENSE`; bundles one third-party library
+  (`smallchesslib.h`, CC0/public domain). Originally also bundled a ported SAM
+  text-to-speech component (`sam/stm32_sam.{h,cpp}`) with no valid open-source
+  license — see the cleanup entry immediately below; that component no longer
+  exists in this tree as of commit `6359f87`.
+
+## Post-import cleanup: `chess` SAM voice feature removed
+
+Investigated in full in `PHASE2A_CHESS_SAM_LICENSE_REVIEW.md`: the upstream
+`s-macke/SAM` project (which `sam/stm32_sam.{h,cpp}` was ported from) has no
+open-source license, is self-described "abandonware" (reverse-engineered 1980s
+commercial software from a defunct company), and offers only a speculative Fair Use
+claim, not a license grant. Decision: **SAM LICENSE UNCLEAR / REMOVE SAM VOICE
+FEATURE ENTIRELY**, implemented in commit `6359f87`:
+
+- Deleted `applications_user/chess/sam/stm32_sam.{h,cpp}` and
+  `applications_user/chess/helpers/flipchess_voice.{cpp,h}` outright (not just
+  excluded from the build).
+- Removed all `#include`s and all four `flipchess_voice_*()` call sites across
+  `views/flipchess_scene_1.c`, `scenes/flipchess_scene_startscreen.c`, and
+  `scenes/flipchess_scene_settings.c`.
+- Removed the now-purposeless `uint8_t sound;` field (`flipchess.h`) and its
+  initialization (`flipchess.c`).
+- Relabeled the start screen's Left/Right buttons from "Sound"/"Silent" to
+  "Haptic"/"No Haptic" and simplified the key handlers to control only the
+  pre-existing, independent haptic feature — no new feature invented; `chess` is
+  otherwise silent, per instruction.
+- Scope confirmed confined to `applications_user/chess/`: 4 files deleted (5,850
+  lines), 6 files modified (7 insertions, 28 deletions), 0 files touched outside
+  that directory. `application.fam` unchanged (no explicit `sources=[...]` list
+  referenced the removed files; `appid="chess"` unchanged).
+- Validated: a full grep sweep (`\bsam\b`, `stm32_sam`, `flipchess_voice`,
+  `\bspeech\b`, `\bvoice\b`, word-bounded) across every `.c`/`.h`/`.cpp`/`.fam` file
+  in `applications_user/chess/` returns zero matches. All modified files re-checked
+  with the comment/string-aware brace checker (all balanced).
+- Build status: **PENDING LOCAL REBUILD** — this change has not been compiled
+  anywhere yet; see `PHASE2A_BUILD_REPORT.md`.
 
 ## Deliberately not imported this phase
 
@@ -115,7 +146,7 @@ Unchanged from v1 — see the per-app bullets above. None of this has been refle
 into `CREDITS.md`/`THIRD_PARTY_NOTICES.md` yet (those live on the documentation
 branch); still a follow-up item, not part of this phase's scope.
 
-## Commit sequence (v2, current)
+## Commit sequence (current)
 
 ```
 4c95acb Import Unleashed firmware base (v2 - proper git submodules) @ 5cdf9b3
@@ -124,9 +155,14 @@ e4dd48f Import programmer_calc (RogueMaster external app) into applications_user
 d18cd29 Import vin_decoder (RogueMaster external app) into applications_user/
 7ca2d5f Import flipper95 (RogueMaster external app) into applications_user/
 202245e Import chess (RogueMaster external app) into applications_user/
+6b5cc53 Add Phase 2A v2 docs: explain flattened-submodule build failure and fix
+140ec5c Confirm Phase 2A local Windows build PASS; resolve chess SAM license question
+6359f87 Remove unclear-license SAM voice feature from chess entirely
 ```
 
-One commit per app, each independently revertable (see
-`PHASE2A_ROLLBACK_PLAN.md`), none depending on any other. This branch was
-force-pushed to replace the flawed v1 history — v1's commit hashes (`64b3cdd`
-through `2f2e208`) no longer exist on `integration/phase2a-first-batch`.
+One commit per app for the initial import, each independently revertable (see
+`PHASE2A_ROLLBACK_PLAN.md`). `6359f87` is a follow-up cleanup commit scoped
+entirely to `applications_user/chess/`, not a new app import. This branch was
+force-pushed once already to replace a flawed v1 history — v1's commit hashes
+(`64b3cdd` through `2f2e208`) no longer exist on `integration/phase2a-first-batch`;
+everything from `4c95acb` onward is current, unforced history.

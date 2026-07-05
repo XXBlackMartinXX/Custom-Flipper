@@ -73,7 +73,8 @@ in the Phase 2A safety review and integration log.
 
 ## Decision
 
-**SAM LICENSE UNCLEAR / DISABLE VOICE FEATURE**
+**SAM LICENSE UNCLEAR / REMOVE SAM VOICE FEATURE ENTIRELY** (final — implemented,
+see "Implementation" below)
 
 Rationale: the rest of `chess` (game logic, UI, `smallchesslib`) is cleanly
 licensed and has clear ongoing value; only the SAM-based voice easter-egg is in
@@ -87,20 +88,31 @@ license compliance. Disabling the feature (and not linking the SAM engine into t
 build at all) removes the actual legal exposure while keeping everything else about
 the app.
 
-**This decision requires a code change to implement** (removing or gating the
-`voice.*` calls in `flipchess.c`/scenes, and/or excluding
-`sam/stm32_sam.{h,cpp}` and `helpers/flipchess_voice.{cpp,h}` from the build). Per
-instruction, that code change is **not** made in this review — this stops here and
-asks first. Two implementation options, for when that's approved:
+**Implemented** in commit `6359f87` on `integration/phase2a-first-batch` (option 1
+of the two originally offered: full removal from the repository, not just from the
+build). Specifically:
 
-1. **Remove the two SAM files and the voice wrapper entirely**, and remove the
-   handful of `flipchess_voice_*()` call sites in the scene files. Cleanest; fully
-   eliminates the code from the tree, not just from what runs.
-2. **Keep the files but exclude them from the build** (e.g., omit them from
-   `application.fam`'s source list, if this app's `.fam` enumerates sources
-   explicitly, or gate them behind a define that's off by default) — keeps the
-   files present for reference/future reconsideration if the license question is
-   ever resolved, but ships nothing compiled from them.
+- Deleted `applications_user/chess/sam/stm32_sam.{h,cpp}` (the ported engine) and
+  `applications_user/chess/helpers/flipchess_voice.{cpp,h}` (the wrapper) — these
+  files no longer exist anywhere in the tree, not just excluded from compilation.
+- Removed every `#include ".../flipchess_voice.h"` and all four
+  `flipchess_voice_*()` call sites (in `views/flipchess_scene_1.c` ×3,
+  `scenes/flipchess_scene_startscreen.c`, `scenes/flipchess_scene_settings.c`).
+- Removed the `uint8_t sound;` field from the `FlipChess` struct
+  (`flipchess.h`) and its initialization (`flipchess.c`) — it existed solely to
+  gate the now-removed voice calls.
+- The start screen previously let the Left/Right buttons set `app->sound` *and*
+  `app->haptic` together (labeled "Sound"/"Silent" on screen). Per instruction not
+  to invent new audio behavior and to rely only on the existing, independent,
+  already-present haptic feature: relabeled the two buttons to "Haptic"/"No Haptic"
+  and simplified the key handlers to set only `app->haptic` — no new feature added,
+  chess is otherwise silent as instructed.
 
-No recommendation is made between the two here; that's a judgment call for you,
-not something this review should decide unilaterally.
+**Unclear-license code is no longer distributed in this branch.** Verified by a
+full grep sweep (`sam`, `stm32_sam`, `flipchess_voice`, `speech`, `voice` — all with
+word boundaries) across every `.c`/`.h`/`.cpp`/`.fam` file in `applications_user/chess/`:
+zero matches. `chess`'s remaining content (Struan Clark's MIT-licensed game/UI code,
+`smallchesslib`'s CC0-licensed engine) is unaffected and unchanged.
+
+Build status: **PENDING LOCAL REBUILD** — this change has not been compiled
+anywhere yet; see `PHASE2A_BUILD_REPORT.md`.

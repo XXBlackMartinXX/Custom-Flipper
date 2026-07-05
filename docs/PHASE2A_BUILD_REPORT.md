@@ -1,13 +1,53 @@
 # Phase 2A — Build Report
 
-**This is v3 of this document.** v2 covered the real local Windows build failure
+**This is v4 of this document.** v2 covered the real local Windows build failure
 against v1 of this branch (flattened submodules breaking protobuf-version
-generation) and the fix applied (real git submodules). **This v3 records that the
-corrected branch was rebuilt and the local Windows build now PASSES.** See
-`PHASE2A_INTEGRATION_LOG.md` for the full explanation of what was wrong and what
-changed.
+generation) and the fix applied (real git submodules). v3 recorded that the
+corrected branch was rebuilt and the local Windows build **PASSED** (commit
+`6b5cc53`). **This v4 records a code change made *after* that passing build**:
+commit `6359f87` removed `chess`'s unclear-license SAM voice feature entirely (see
+`PHASE2A_CHESS_SAM_LICENSE_REVIEW.md`). **The build has not been re-run since that
+change** — the PASS below is historical, against the pre-removal tree, not a
+current claim.
 
-## Real build attempt #2 (v2/current branch, commit `6b5cc53`) — PASS, reported by the project owner
+## Build status: **PENDING LOCAL REBUILD (post-SAM-removal, please re-run)**
+
+Commit `6359f87` (current tip, `integration/phase2a-first-batch`) has not been
+compiled anywhere. The PASS recorded below was against commit `6b5cc53`, one commit
+earlier, before the SAM removal. The change itself is small and scoped entirely to
+`applications_user/chess/` (2 files deleted outright, 4 files with small edits, 0
+core/firmware files touched — see `PHASE2A_INTEGRATION_LOG.md`'s cleanup entry), and
+static validation (brace balance, manifest syntax, a full grep sweep confirming zero
+remaining `sam`/`voice`/`speech` references) all passed — but per this project's own
+discipline, a passing static check is not a substitute for an actual compile.
+
+### To re-run
+
+```powershell
+cd C:\Github\Custom-Flipper-phase2a-build
+git fetch origin
+git checkout integration/phase2a-first-batch
+git reset --hard origin/integration/phase2a-first-batch
+git submodule update --init --recursive
+.\fbt.cmd COMPACT=1 DEBUG=0
+.\fbt.cmd COMPACT=1 DEBUG=0 updater_package
+```
+
+No new submodule changes this time (this was a pure app-code change), but
+`git reset --hard` is still the safest way to make sure the working tree exactly
+matches commit `6359f87` before rebuilding.
+
+### What to send back
+
+Same as before: exact commands, PASS/FAIL for both targets, artifact paths/sizes,
+and — since `chess` specifically changed — ideally confirmation that `chess`'s own
+`.fap` target builds cleanly (`.\fbt.cmd COMPACT=1 DEBUG=0 fap_chess`), not just the
+overall firmware image, since that isolates any issue to the actual modified app if
+something did go wrong.
+
+---
+
+## Historical: build attempt #2 (pre-SAM-removal, commit `6b5cc53`) — PASS, reported by the project owner
 
 | Field | Value |
 |---|---|
@@ -106,34 +146,35 @@ byte-for-byte upstream Unleashed. The 5 imported apps' own content is unchanged.
   exactly as documented throughout this project. This cloud sandbox cannot verify a
   full compile either way — only the local Windows path can.
 
-## Build status: **PASS**
+## Build status at commit `6b5cc53` (superseded — see top of document for current status)
 
-Confirmed by the project owner's real local Windows build (see "Real build attempt
-#2" above): fresh clone, recursive submodule checkout, plain firmware build, and
-`updater_package` all passed, with both artifacts present and `git status` clean
-before and after. The protobuf/versioning failure from v1 is resolved.
+Confirmed by the project owner's real local Windows build: fresh clone, recursive
+submodule checkout, plain firmware build, and `updater_package` all passed, with
+both artifacts present and `git status` clean before and after. The
+protobuf/versioning failure from v1 is resolved. **This PASS predates the SAM
+removal (commit `6359f87`) and does not cover the current tip** — see the "Build
+status: PENDING LOCAL REBUILD" section at the top of this document.
 
 ## What's still open (not yet confirmed, not claimed)
 
+- **The tree has not been rebuilt since the SAM removal** (commit `6359f87`) — see
+  top of document. This is the immediate next step, not yet done.
 - **Individual `.fap` targets for each of the 5 apps were not separately confirmed
-  built/loadable** — the plain build compiles everything under `applications_user/`
-  as part of the firmware image, which is good evidence but isn't the same as
-  confirming each app's own `.fap` output exists and is well-formed. Not blocking,
-  just not yet explicitly checked.
+  built/loadable** at commit `6b5cc53`, and this remains true now — the plain build
+  compiles everything under `applications_user/` as part of the firmware image,
+  which is good evidence but isn't the same as confirming each app's own `.fap`
+  output exists and is well-formed. Not blocking, just not yet explicitly checked.
 - **Real hardware flashing/testing: NOT PERFORMED.** No device has been flashed,
   booted, or used to launch any of the 5 apps. Nothing here should be read as
   implying otherwise.
-- **`chess`'s bundled SAM text-to-speech component has an unresolved license
-  question** — investigated separately in
-  `docs/PHASE2A_CHESS_SAM_LICENSE_REVIEW.md`. This does not affect whether the code
-  *compiles* (it does, per this report), only whether it's appropriate to
-  *distribute*. Build status and license status are reported independently and
-  should not be conflated — a clean build is not the same as a release-ready or
-  legally-clear build.
+- **`chess`'s SAM license question is resolved and implemented**, not open anymore
+  — see `docs/PHASE2A_CHESS_SAM_LICENSE_REVIEW.md` for the full record. Removed
+  from the repository outright, not just excluded from the build.
 
 ## Release status
 
-**TEST-READY ONLY / NOT RELEASE-READY.** A passing local build on one machine is a
-real, meaningful milestone, but release-readiness additionally requires: the SAM
-license question resolved, hardware testing, the remaining Top-25/broader-catalog
-review, and the project's full release-gate checklist — none of which are done.
+**TEST-READY ONLY / NOT RELEASE-READY.** The SAM license question is now resolved
+(removed entirely), but a passing local build against that removal hasn't happened
+yet — see "Build status" at the top of this document. Release-readiness also still
+requires hardware testing, the remaining Top-25/broader-catalog review, and the
+project's full release-gate checklist — none of which are done.
