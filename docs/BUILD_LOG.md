@@ -34,8 +34,21 @@ used the official, unpatched `site_scons/cc.scons`.
 | Base selected | **Unleashed** (`dev` @ `5cdf9b33745f41f1a0405a6da44821128c233f5c`) |
 | Clean official build | **PASS** (confirmed on local Windows 11, official toolchain) |
 | Release status | **TEST-READY ONLY / NOT RELEASE-READY** |
-| Feature integration | **NOT STARTED** |
+| Feature integration | **PHASE 2A IN PROGRESS** — see below |
 | Hardware tested | **NOT PERFORMED** |
+
+## Phase 2A update: first app-integration batch
+
+A separate branch, `integration/phase2a-first-batch`, was created (orphan branch,
+no shared history with this documentation branch) containing an unmodified snapshot
+of this exact Unleashed base commit plus 5 individually source-audited RogueMaster
+apps (`network_subnet`, `programmer_calc`, `vin_decoder`, `flipper95`, `chess`),
+each its own commit. See `PHASE2A_INTEGRATION_LOG.md`, `PHASE2A_BUILD_REPORT.md`,
+`PHASE2A_SAFETY_REVIEW.md`, and `PHASE2A_ROLLBACK_PLAN.md` (mirrored here from that
+branch) for full detail. That branch's own build status is **PENDING LOCAL BUILD**
+— the cloud sandbox's `update.flipperzero.one` block was re-confirmed (no substitute
+toolchain used this time); a real compile still requires the local Windows path
+already established for the base build.
 
 ---
 
