@@ -1,122 +1,109 @@
 # Phase 2A — Build Report
 
-## Build environment
+**This is v2 of this document**, covering both the real local Windows build failure
+against v1 of this branch and the fix applied in v2. See
+`PHASE2A_INTEGRATION_LOG.md` for the full explanation of what was wrong and what
+changed.
 
-- Container: same ephemeral cloud sandbox used throughout this project (no physical
-  Flipper Zero, permanent constraint — see `KNOWN_ISSUES.md` on the documentation
-  branch).
-- Branch: `integration/phase2a-first-batch`, HEAD at commit `42e08a9` (after all 5
-  app imports).
-- Working tree: clean (`git status` shows nothing outstanding beyond this doc being
-  written).
+## Real build attempt #1 (v1 of this branch) — FAILED, reported by the project owner
 
-## Exact command attempted
+| Field | Value |
+|---|---|
+| Machine | Windows 11, repo at `C:\Github\Custom-Flipper-phase2a-build` |
+| Branch / commit tested | `integration/phase2a-first-batch` @ `2f2e208a1fb26a8be53f23e4013b6db4db22653b` (v1, no longer exists — branch was force-pushed) |
+| `git status` before build | clean |
+| `.\fbt.cmd COMPACT=1 DEBUG=0` | **FAILED** |
+| `.\fbt.cmd COMPACT=1 DEBUG=0 updater_package` | **FAILED** |
+| `firmware.dfu` | missing |
+| updater `.tgz` | missing |
+| `git status` after build | clean |
 
-```
-cd /home/user/Custom-Flipper
-./fbt
-```
-
-No arguments — a plain default build, matching how Phase 0/4's baseline build was
-first attempted. Official, **unmodified** `fbt`/`fbtenv.sh` — no substitute
-toolchain, no `-Wno-error` patches, nothing non-canonical. `site_scons/cc.scons` is
-byte-for-byte the upstream Unleashed file (verified during the base-import commit).
-
-## Result: BLOCKED (same root cause as documented in Phase 0/4, re-confirmed fresh)
+Reported error:
 
 ```
-Checking for tar..yes
-Checking if downloaded toolchain tgz exists..no
-Checking curl..yes
-Downloading toolchain:
-curl: (56) CONNECT tunnel failed, response 403
-Failed to download https://update.flipperzero.one/builds/toolchain/gcc-arm-none-eabi-12.3-x86_64-linux-flipper-39.tar.gz
+Git: fetch failed
+scons: *** [build\f7-firmware-C\assets\compiled\protobuf_version.h]
+    Failed to process git tags for protobuf versioning
 ```
 
-Cross-checked against the sandbox's own proxy status endpoint immediately after:
+This is a real, informative failure — it happened **before any of the 5 imported
+apps' code was ever reached by the build**, at asset/version generation for the
+base firmware itself. Diagnosed and fixed this session; full root-cause explanation
+in `PHASE2A_INTEGRATION_LOG.md`. Per instruction, this was not patched around by
+hardcoding a protobuf version — the actual structural cause (flattened submodules
+lacking git metadata) was fixed instead.
 
-```json
-{
-  "ts": "2026-07-05T14:32:09.978Z",
-  "kind": "connect_rejected",
-  "detail": "gateway answered 403 to CONNECT (policy denial or upstream failure)",
-  "host": "update.flipperzero.one:443"
-}
-```
+## What changed between v1 and v2
 
-This is a **policy denial**, not a transient failure, and per this environment's own
-operating rules a policy denial is reported, not routed around. **No substitute
-toolchain was used this time** (unlike the earlier Phase 0/4 cloud experiment, which
-was explicitly reverted out of the tree and is not being repeated per this phase's
-instructions).
+Only the base commit's construction method: submodules are now real `git submodule`
+entries instead of flattened plain files. No firmware source was modified, no app
+was changed, `site_scons/cc.scons` and every other build-system file remain
+byte-for-byte upstream Unleashed. The 5 imported apps' own content is unchanged.
 
-- **Firmware build (`./fbt`): NOT ATTEMPTED TO COMPLETION** — blocked before any
-  compilation could start.
-- **Updater package (`./fbt updater_package`): NOT ATTEMPTED** — no point running it
-  when the prerequisite plain build can't get past toolchain acquisition.
-- **Artifact paths**: none produced.
-- **Warnings/errors**: the single fatal error above; nothing else ran.
+## Diagnostics performed in this cloud sandbox after the failure report
 
-## What was done instead: static/source validation
+- Located and read the exact failing code path:
+  `scripts/fbt_tools/fbt_assets.py`'s `_proto_ver_generator`, which runs
+  `git fetch --tags` then `git describe --tags --abbrev=0` inside `assets/protobuf`.
+- Reproduced the missing precondition directly: confirmed v1's `assets/protobuf`
+  had no `.git` metadata (flattened), so those commands had nothing valid to run
+  against.
+- Rebuilt the base with `assets/protobuf` (and all 11 other submodules) as real git
+  submodules pinned to the exact commit Unleashed itself uses.
+- **Directly verified the fix**, on this rebuilt tree, in this cloud sandbox:
+  ```
+  $ cd assets/protobuf && git describe --tags --abbrev=0
+  0.29
+  ```
+  This is the exact command the build step runs and the exact output format it
+  expects (`MAJOR.MINOR`) — confirms the specific failure is resolved.
+- Also checked the *other* git-dependent version-generation path
+  (`scripts/fbt/version.py`, used for the main firmware's own version banner) for a
+  similar risk. It uses `git describe --always --dirty --all --long` (note
+  `--always`, which falls back to a plain commit hash if no tag matches) and
+  `git show -s --format=%ct` (just the current commit's timestamp) — **neither
+  requires network access or pre-existing tag history**, so this path was not at
+  risk and needed no fix.
+- Re-attempted the real, unmodified `./fbt` once more in this cloud sandbox (not to
+  claim a build pass — this environment still can't reach the toolchain host — but
+  to reconfirm the *same* blocker as before, unrelated to this fix):
+  ```
+  Failed to download https://update.flipperzero.one/builds/toolchain/...
+  ```
+  Still policy-blocked (`403`, confirmed fresh against the proxy status endpoint),
+  exactly as documented throughout this project. This cloud sandbox cannot verify a
+  full compile either way — only the local Windows path can.
 
-Per instruction, no build pass is faked. The following was actually checked, per
-app, and is real evidence (not inferred):
+## Build status: **PENDING LOCAL BUILD (rebuild required — please re-run)**
 
-| Check | Method | Result (all 5 apps) |
-|---|---|---|
-| `application.fam` syntax | `python3 -c "ast.parse(...)"` (the `.fam` format is plain Python function-call syntax) | All 5 parse cleanly |
-| `appid` uniqueness | Grepped each new `appid` against `applications/` (base) and against each other | All 5 unique, no collisions |
-| Referenced files exist | Directory listing cross-checked against files actually copied | All referenced icons/sources present |
-| Brace balance (real syntax check, not superficial) | Custom comment/string-aware brace checker written this session (a naive `grep -o "{"` count gave false positives on `chess`'s font-data and SAM-engine files — investigated directly, not dismissed or treated as a real error until confirmed) | All `.c`/`.cpp` files in all 5 apps balanced |
-| Capability/API grep (GPIO, Sub-GHz, Infrared, NFC/RFID/iButton, BLE, USB/HID) | `grep -rlE` for real Flipper HAL function names across each app's actual source | Zero hits across all 5 apps (see `PHASE2A_SAFETY_REVIEW.md` for the full breakdown) |
-| Dependency declarations (`requires`, `fap_libs`) | Read every `application.fam` directly, not just Phase 1.6's narrower check | `flipper95` declares `fap_libs=["mbedtls"]`, already present in the base — no new dependency. No other app declares `requires`/`fap_libs`. |
+This is explicitly **not** claimed as fixed until you rebuild and it actually
+passes. What's confirmed here is that the specific reported error's root cause has
+a verified fix for the exact failing command — not that the rest of the build
+(actual app compilation, linking, `updater_package`) will succeed. Static
+verification has limits; only your local build can confirm the rest.
 
-None of this is a substitute for an actual compile — a real build could still fail on
-things static checks can't catch (macro expansion issues, linker errors, API
-signature mismatches against this exact Unleashed commit's headers, etc.). It rules
-out the most common trivial failure classes (malformed manifest, missing files,
-gross syntax errors, appid collisions) but is explicitly **not** claimed as
-build-equivalent.
-
-## Build status: **PENDING LOCAL BUILD**
-
-Consistent with the project's established pattern (see the documentation branch's
-`LOCAL_WINDOWS_BUILD_HANDOFF.md`, which already got a real local Windows build to
-PASS for the unmodified base). The same path applies here:
-
-### To actually build this branch locally
+### To re-run
 
 ```powershell
-git clone <this repo URL> custom-flipper-phase2a
-cd custom-flipper-phase2a
+cd C:\Github\Custom-Flipper-phase2a-build
+git fetch origin
 git checkout integration/phase2a-first-batch
+git reset --hard origin/integration/phase2a-first-batch
+git submodule update --init --recursive
 .\fbt.cmd COMPACT=1 DEBUG=0
+.\fbt.cmd COMPACT=1 DEBUG=0 updater_package
 ```
 
-Expected artifact on success: `build\f7-firmware-C\firmware.dfu` (or `-D` suffix
-without `DEBUG=0`), same as the base build. To confirm the 5 new apps specifically
-built as loadable `.fap` files:
-
-```powershell
-.\fbt.cmd COMPACT=1 DEBUG=0 fap_network_subnet fap_programmercalc fap_vin_decoder fap_flipper95 fap_chess
-```
-
-(Exact `fap_<appid>` target names per each app's declared `appid` — see
-`PHASE2A_INTEGRATION_LOG.md` for the five appids used.)
+The `git reset --hard` + fresh `git submodule update --init --recursive` matters
+this time — the branch was force-pushed with different history, and the new commits
+require the submodules to actually be initialized (they weren't present as
+submodules in v1 at all).
 
 ### What to send back
 
-Same as the existing local-build handoff protocol: the full captured log, the
-toolchain version line, confirmation of artifact paths + sizes, and — specifically
-for this phase — confirmation that all 5 `.fap` targets built without error, not
-just the base firmware image. If any of the 5 fails, report exactly which one and
-the exact compiler/linker error; per this phase's rules, a build failure in one app
-should be diagnosed on its own, not batch-fixed alongside the others.
-
-## Do not confuse this with a build pass
-
-To be explicit, since this matters: **no compilation of this branch's code has
-happened anywhere in this project yet.** The base firmware's own clean build
-(confirmed PASS) was performed against unmodified Unleashed, before any of these 5
-apps existed in the tree. This branch, with the 5 apps added, has not been
-compiled by anyone, in any environment, as of this report.
+Same as before: exact commands used, full result (PASS/FAIL) for both the plain
+build and `updater_package`, artifact paths + sizes if produced, the toolchain
+version line, and — if it fails again — the exact, unparaphrased error, plus
+confirmation of which step it failed at this time (asset generation again, or
+somewhere in actual app compilation, which would be a new and different class of
+issue specific to one of the 5 apps rather than the base).

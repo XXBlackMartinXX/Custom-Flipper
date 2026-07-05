@@ -37,18 +37,29 @@ used the official, unpatched `site_scons/cc.scons`.
 | Feature integration | **PHASE 2A IN PROGRESS** — see below |
 | Hardware tested | **NOT PERFORMED** |
 
-## Phase 2A update: first app-integration batch
+## Phase 2A update: first app-integration batch (v2 — rebuilt after a real local build failure)
 
-A separate branch, `integration/phase2a-first-batch`, was created (orphan branch,
-no shared history with this documentation branch) containing an unmodified snapshot
-of this exact Unleashed base commit plus 5 individually source-audited RogueMaster
-apps (`network_subnet`, `programmer_calc`, `vin_decoder`, `flipper95`, `chess`),
-each its own commit. See `PHASE2A_INTEGRATION_LOG.md`, `PHASE2A_BUILD_REPORT.md`,
+A separate branch, `integration/phase2a-first-batch`, contains 5 individually
+source-audited RogueMaster apps (`network_subnet`, `programmer_calc`, `vin_decoder`,
+`flipper95`, `chess`) on top of this exact Unleashed base commit, each its own
+commit. See `PHASE2A_INTEGRATION_LOG.md`, `PHASE2A_BUILD_REPORT.md`,
 `PHASE2A_SAFETY_REVIEW.md`, and `PHASE2A_ROLLBACK_PLAN.md` (mirrored here from that
-branch) for full detail. That branch's own build status is **PENDING LOCAL BUILD**
-— the cloud sandbox's `update.flipperzero.one` block was re-confirmed (no substitute
-toolchain used this time); a real compile still requires the local Windows path
-already established for the base build.
+branch) for full detail.
+
+**The first version of that branch failed a real local Windows build.** It had
+flattened all of Unleashed's git submodules into plain files (no `.git` metadata),
+which broke a real build step: `fbt_assets.py` runs `git fetch --tags` /
+`git describe --tags` inside `assets/protobuf` at build time to stamp
+`protobuf_version.h`, and a flattened directory has nothing valid for those commands
+to run against. The project owner's real build log showed exactly this:
+`"Failed to process git tags for protobuf versioning"`. The branch was rebuilt with
+all 12 submodules (plus 4 further nested ones) as genuine git submodules pinned to
+the exact commits Unleashed itself uses, and force-pushed. The specific failing
+command was verified fixed directly in this cloud sandbox
+(`cd assets/protobuf && git describe --tags --abbrev=0` → `0.29`), but **the branch
+has not yet been rebuilt-and-confirmed on a real local Windows machine** — that
+re-run is the next step, not yet done. Status remains **PENDING LOCAL BUILD**, now
+more precisely "pending a repeat of the local build against the corrected branch."
 
 ---
 
