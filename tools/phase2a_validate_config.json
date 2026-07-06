@@ -1,0 +1,139 @@
+{
+  "_comment": "Phase 2A automated validation configuration. Consumed by tools/phase2a_validate.ps1. Docs-only/tooling artifact - not firmware source.",
+
+  "expectedBranch": "integration/phase2a-first-batch",
+
+  "expectedLatestKnownCommit": "e12bd9e3df525e0d4ecf611d6a77a31c1752672e",
+
+  "priorVerifiedBuildCommit": {
+    "commit": "5e5e0ecf225be947a754e537670a6421838b939b",
+    "note": "Commit actually flashed/build-tested locally on Windows before Phase 2A docs/tooling commits were added on top. The validation runner's -ExpectedCommit parameter should be set to whatever commit you are currently validating; this field is historical context, not a hard requirement."
+  },
+
+  "expectedApps": [
+    {
+      "id": "network_subnet",
+      "appid": "network_subnet",
+      "path": "applications_user/network_subnet",
+      "category": "Tools",
+      "displayName": "Network Subnet Helper"
+    },
+    {
+      "id": "programmer_calc",
+      "appid": "programmercalc",
+      "path": "applications_user/programmer_calc",
+      "category": "Tools",
+      "displayName": "Programmer Calculator"
+    },
+    {
+      "id": "vin_decoder",
+      "appid": "vin_decoder",
+      "path": "applications_user/vin_decoder",
+      "category": "Tools",
+      "displayName": "VIN Decoder"
+    },
+    {
+      "id": "flipper95",
+      "appid": "flipper95",
+      "path": "applications_user/flipper95",
+      "category": "Tools",
+      "displayName": "Flipper95"
+    },
+    {
+      "id": "chess",
+      "appid": "chess",
+      "path": "applications_user/chess",
+      "category": "Games",
+      "displayName": "Chess"
+    }
+  ],
+
+  "expectedArtifacts": {
+    "firmwareDfu": {
+      "relativePath": "build\\f7-firmware-C\\firmware.dfu",
+      "knownGoodSizeBytes": 862825,
+      "knownGoodAtCommit": "5e5e0ecf225be947a754e537670a6421838b939b",
+      "sizeToleranceNote": "Size is recorded for reference/anomaly-spotting only. A different size at a different commit is expected and is NOT itself a failure - only flag as NEEDS_REVIEW if the size differs at the *same* commit this was recorded against, or if the size is drastically different (e.g. near-zero or absurdly large) at any commit."
+    },
+    "updaterPackage": {
+      "relativePath": "dist\\f7-C\\flipper-z-f7-update-local.tgz",
+      "knownGoodSizeBytes": 2732909,
+      "knownGoodAtCommit": "5e5e0ecf225be947a754e537670a6421838b939b",
+      "sizeToleranceNote": "Same handling as firmwareDfu above."
+    }
+  },
+
+  "expectedFapOutputDir": "build\\f7-firmware-C\\.extapps",
+
+  "allowedSourcePaths": [
+    "applications_user/network_subnet",
+    "applications_user/programmer_calc",
+    "applications_user/vin_decoder",
+    "applications_user/flipper95",
+    "applications_user/chess"
+  ],
+
+  "samRemovalScanPath": "applications_user/chess",
+
+  "samRemovalForbiddenKeywords": [
+    "sam",
+    "stm32_sam",
+    "flipchess_voice",
+    "speech",
+    "voice"
+  ],
+
+  "samRemovalFileExtensions": [".c", ".h", ".cpp", ".fam"],
+
+  "forbiddenRiskyKeywords": [
+    "furi_hal_subghz",
+    "furi_hal_nfc",
+    "furi_hal_rfid",
+    "furi_hal_ibutton",
+    "furi_hal_hid",
+    "furi_hal_usb_hid",
+    "furi_hal_gpio_write",
+    "furi_hal_infrared_async_tx_start",
+    "ble",
+    "badusb",
+    "password",
+    "credential",
+    "token",
+    "exfil",
+    "brute",
+    "jam",
+    "deauth"
+  ],
+
+  "riskyKeywordScanFileExtensions": [".c", ".h", ".cpp"],
+
+  "riskyKeywordScanNote": "This is a broad, case-insensitive SUBSTRING scan, not a word-boundary or semantic scan. It is expected to produce false positives (e.g. 'ble' matches inside 'possible', 'variable', 'double', 'available', 'enabled', 'table'; 'jam' matches inside unrelated identifiers or data like manufacturer codes). The validation runner must list every match, not silently filter any out - a human reviews the list to confirm each match is benign. Any match at all should be reported as NEEDS_REVIEW for that check, never auto-suppressed to PASS.",
+
+  "knownAcceptableBaseFirmwareKeywordsOutsidePhase2A": {
+    "note": "The base Unleashed firmware (applications/, lib/, everything outside applications_user/<phase2a-app>) legitimately and extensively uses furi_hal_subghz, furi_hal_nfc, furi_hal_bt/ble, furi_hal_gpio, furi_hal_infrared, and furi_hal_usb_hid, because it IS the platform providing those subsystems to all apps. The risky-keyword scan in this tooling is scoped ONLY to the 5 Phase 2A app directories listed in allowedSourcePaths above, and must never be run against applications/, lib/, assets/, or any other base-firmware path - doing so would produce meaningless, alarming false 'fails' against Unleashed's own legitimate platform code.",
+    "keywords": [
+      "furi_hal_subghz",
+      "furi_hal_nfc",
+      "furi_hal_bt",
+      "ble_profile",
+      "furi_hal_gpio",
+      "furi_hal_infrared",
+      "furi_hal_usb_hid"
+    ]
+  },
+
+  "expectedAppPrivateStoragePaths": {
+    "chess": "/ext/apps_data/flipchess/",
+    "network_subnet": null,
+    "programmercalc": null,
+    "vin_decoder": null,
+    "flipper95": null
+  },
+
+  "expectedAppPrivateStoragePathsNote": "null means the app is not expected to persist any file under normal use (confirmed by source inspection in PHASE2A_HARDWARE_SMOKE_TEST_CHECKLIST.md); any storage write by these apps outside their own entry (or any write at all, for the null-path apps) is a fail condition per the hardware smoke-test plan, not something this static config enumerates further.",
+
+  "toolchain": {
+    "vendorToolchainHost": "update.flipperzero.one",
+    "note": "The real pinned Flipper toolchain is downloaded by fbt from this host on first build. If network policy blocks this host (as it does in the cloud sandbox this project has used - confirmed via repeated 403s against the proxy), Build mode must be marked BLOCKED with that exact reason, never faked as PASS or worked around with an unofficial substitute toolchain in this project's own history/artifacts."
+  }
+}
