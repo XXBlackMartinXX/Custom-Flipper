@@ -146,6 +146,27 @@ Reports are written to `reports\phase2a\` (created if missing) as both a JSON
 file (machine-readable, full detail) and a Markdown file (human-readable table)
 per run, timestamped so old runs are never overwritten.
 
+## GitHub-hosted Windows validation path
+
+If a real Windows machine with Claude Desktop or local Claude Code isn't
+available (as is currently the case for this project), the same Static and
+Build validation can be run on a real Windows machine via GitHub Actions
+instead — no local Windows setup required at all.
+
+Workflow: **`.github/workflows/phase2a-windows-validation.yml`**, named
+**"Phase 2A Windows Validation"** in the Actions UI. Runs on `windows-latest`,
+triggered automatically on every push to `integration/phase2a-first-batch`,
+or manually via **Actions tab → Phase 2A Windows Validation → Run workflow**.
+It runs the same `-Mode Static` then `-Mode Build` sequence described above
+against `$env:GITHUB_SHA`, uploads the JSON/Markdown reports plus
+`firmware.dfu`/the updater `.tgz` as workflow artifacts, and **never** invokes
+`-Mode HardwareAssisted` — there is no code path in the workflow that could
+call it, and no physical device attached to a GitHub-hosted runner regardless.
+
+Full explanation of what this path does and does not prove, how to read its
+output, and why it exists at all:
+`docs/PHASE2A_GITHUB_ACTIONS_VALIDATION.md`.
+
 ## Why hardware-assisted mode is still not the same as full release validation
 
 Even a fully green `HardwareAssisted` run with a device connected only proves:
