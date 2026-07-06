@@ -22,8 +22,18 @@ checkpoint that comes before that decision is made at all.
    Must reach PASS with both `firmware.dfu` and the updater `.tgz` present and
    non-empty, and all 5 `.fap` outputs present. If this environment cannot
    build (see `PHASE2A_AUTOMATED_VALIDATION_RESULTS.md` for this project's own
-   BLOCKED example), run it on the Windows machine that already has a working
-   toolchain.
+   BLOCKED example), run it on a real Windows machine instead.
+
+   **Since the project owner does not currently have Claude Desktop or local
+   Claude Code available to drive their own Windows machine, the primary way
+   to run this step is now the GitHub Actions workflow**:
+   **Actions tab → "Phase 2A Windows Validation" → Run workflow** (or simply
+   push to `integration/phase2a-first-batch`, which triggers it
+   automatically). This runs Static then Build on a real GitHub-hosted
+   Windows runner and uploads the reports + `firmware.dfu`/updater `.tgz` as
+   workflow artifacts. See `docs/PHASE2A_GITHUB_ACTIONS_VALIDATION.md` for
+   the full explanation, and `.github/workflows/phase2a-windows-validation.yml`
+   for the workflow itself.
 
 3. **Optionally run Hardware-Assisted validation** — only if a Flipper Zero is
    physically connected and you deliberately choose to run it:
@@ -58,6 +68,17 @@ checkpoint that comes before that decision is made at all.
      benign. Resolve/review each one, then re-run to reach a clean
      classification before proceeding.
 
+   When Static + Build both come back clean via the **GitHub Actions**
+   path specifically (the real Windows-machine confirmation this project
+   currently relies on), record the status as:
+   **`CI WINDOWS VALIDATION PASS / HARDWARE NOT TESTED / NOT RELEASE READY`**
+   — this is deliberately a more specific label than the generic
+   `AUTOMATED VALIDATION PASS` above: it names *where* the confirmation came
+   from (a GitHub-hosted Windows runner, not the project owner's own
+   machine, and not a full release audit) and repeats, in the label itself,
+   that hardware testing and release-readiness are still separate, unmet
+   requirements.
+
 ## What this gate does not authorize
 
 - **Passing this gate does not start Phase 2B.** Phase 2B (further app
@@ -71,26 +92,27 @@ checkpoint that comes before that decision is made at all.
   requires the project's full release-gate checklist, which spans more than
   Phase 2A alone.
 
-## Current status against this gate (as of this document — Phase 2A.6)
+## Current status against this gate (as of this document — Phase 2A.7)
 
 | Step | Status |
 |---|---|
-| Static validation | **Actually executed** (PowerShell 7.6.3 installed in the cloud sandbox specifically for this) against commit `ff4ba635fda0bf3e0e54188ba6da51335cd924f6` — PASS after review of the one NEEDS_REVIEW (risky-keyword substring matches, all confirmed benign). Two real script bugs were found and fixed in the process (a null-array `.Count` crash, and a build-failure misclassification) — see `PHASE2A_AUTOMATED_VALIDATION_RESULTS.md`. |
-| Build validation | **BLOCKED** in the cloud sandbox — this sandbox cannot execute `fbt.cmd` at all (it's a Windows batch file; this sandbox is Linux), a more basic limitation than but the same category as the previously-documented toolchain-host `403`. Independently known-PASS via the project owner's manual local Windows build at commit `5e5e0ecf225be947a754e537670a6421838b939b` — still not yet reproduced through this tooling itself; running the now-fixed `tools/phase2a_validate.ps1 -Mode Build` on the real Windows machine remains the next concrete step. |
-| Hardware-assisted validation | **NOT RUN** — deliberately not attempted this round, per explicit instruction. No device connected to this sandbox regardless; this sandbox is also not Windows. |
-| Overall classification | **NEEDS REVIEW** (see `PHASE2A_AUTOMATED_VALIDATION_RESULTS.md` for the full reasoning) |
+| Static validation | Actually executed once already (Phase 2A.6, in the cloud sandbox) — PASS after review. Two real script bugs found and fixed in that pass (a null-array `.Count` crash, and a build-failure misclassification) — see `PHASE2A_AUTOMATED_VALIDATION_RESULTS.md`. |
+| Build validation | Still not yet reproduced through this tooling on any environment that can complete a real build. Independently known-PASS via the project owner's manual local Windows build at commit `5e5e0ecf225be947a754e537670a6421838b939b`. The cloud sandbox is structurally BLOCKED (can't execute `fbt.cmd` at all, being Linux); the project owner does not currently have Claude Desktop / local Claude Code to drive their own Windows machine. **This is why Phase 2A.7 added `.github/workflows/phase2a-windows-validation.yml`** — a GitHub-hosted `windows-latest` runner that can run this tooling's Build mode for real, with no local Windows setup required. **Not yet run as of this document** — running it (Actions tab → "Phase 2A Windows Validation" → Run workflow, or push to this branch) is the immediate next step. |
+| Hardware-assisted validation | **NOT RUN** — not attempted anywhere, and never will be by the GitHub Actions path either: that workflow contains no code path capable of invoking `-Mode HardwareAssisted`, by design (see `PHASE2A_GITHUB_ACTIONS_VALIDATION.md`). |
+| Overall classification | **NEEDS REVIEW** — pending the first GitHub Actions run |
 
-**Important scope note**: this cloud sandbox is not, and cannot substitute
-for, the project owner's own Windows machine
-(`C:\Github\Custom-Flipper-phase2a-build`). Everything above ran in an
-isolated Linux container with no access to that machine. The real next step
-is for the project owner to run the now-hardened `tools/phase2a_validate.ps1`
-there themselves, in both Static and Build modes, to get this tooling's first
-genuine Windows-machine result — Build mode in particular has never been
-exercised by this tooling anywhere that can actually complete a build.
+**Immediate next action**: trigger the "Phase 2A Windows Validation" workflow
+(manually via the Actions tab, or by pushing to
+`integration/phase2a-first-batch`) and review its uploaded reports. If Static
++ Build both come back clean there, record status as
+**`CI WINDOWS VALIDATION PASS / HARDWARE NOT TESTED / NOT RELEASE READY`**. If
+the workflow fails or is blocked, diagnose from the uploaded reports/logs and
+fix the underlying validator, workflow, or (if a real app defect is proven)
+firmware issue before re-running — do not proceed to Phase 2B in the
+meantime.
 
 **Not proceeding to Phase 2B.** This document defines the gate for future
 runs of this tooling; it does not, on its own, close the gate — that requires
-an actual run of `tools/phase2a_validate.ps1` on the real Windows build
-machine, review of its output, and (separately, when the project owner
-chooses) real hardware-assisted testing.
+an actual passing run of `tools/phase2a_validate.ps1` (via GitHub Actions or
+a real Windows machine), review of its output, and (separately, when the
+project owner chooses) real hardware-assisted testing.
