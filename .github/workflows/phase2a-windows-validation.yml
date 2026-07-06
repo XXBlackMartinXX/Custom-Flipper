@@ -20,6 +20,17 @@
 #
 # Reports and build artifacts are uploaded as workflow artifacts only - this
 # workflow never commits anything back to the repository.
+#
+# Exit-code semantics (Phase 2A.8): tools/phase2a_validate.ps1's risky-keyword
+# substring scan can return PASS_WITH_REVIEWED_FALSE_POSITIVES (exit 0, same
+# as plain PASS) when every match it finds is individually accounted for by
+# a file+line+keyword+line-content-hash entry in
+# tools/phase2a_validate_config.json's reviewedFalsePositives list. A green
+# run of this workflow therefore does NOT mean "zero risky-keyword
+# substrings" - it means "zero risky-keyword substrings that haven't already
+# been reviewed and confirmed benign," with any genuinely new/unreviewed
+# match (especially against a high-confidence-unsafe keyword) still failing
+# the job. See docs/PHASE2A_AUTOMATED_VALIDATION.md for the full mechanism.
 
 name: Phase 2A Windows Validation
 
