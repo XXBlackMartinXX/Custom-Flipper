@@ -131,7 +131,7 @@ $script:Results = New-Object System.Collections.Generic.List[object]
 function Add-Result {
     param(
         [Parameter(Mandatory)][string]$Name,
-        [Parameter(Mandatory)][ValidateSet('PASS', 'FAIL', 'NEEDS_REVIEW', 'NOT_RUN', 'BLOCKED')][string]$Status,
+        [Parameter(Mandatory)][ValidateSet('PASS', 'PASS_WITH_REVIEWED_FALSE_POSITIVES', 'FAIL', 'NEEDS_REVIEW', 'NOT_RUN', 'BLOCKED')][string]$Status,
         [string]$Detail = '',
         [object]$Evidence = $null
     )
@@ -144,11 +144,12 @@ function Add-Result {
     $script:Results.Add($entry) | Out-Null
 
     $color = switch ($Status) {
-        'PASS'         { 'Green' }
-        'FAIL'         { 'Red' }
-        'NEEDS_REVIEW' { 'Yellow' }
-        'BLOCKED'      { 'Yellow' }
-        default        { 'Gray' }
+        'PASS'                                { 'Green' }
+        'PASS_WITH_REVIEWED_FALSE_POSITIVES'  { 'Green' }
+        'FAIL'                                { 'Red' }
+        'NEEDS_REVIEW'                        { 'Yellow' }
+        'BLOCKED'                             { 'Yellow' }
+        default                               { 'Gray' }
     }
     Write-Host ("[{0,-12}] {1}" -f $Status, $Name) -ForegroundColor $color
     if ($Detail) {
@@ -167,6 +168,32 @@ function Invoke-GitCapture {
     finally {
         Pop-Location
     }
+}
+
+# Used by the reviewed-false-positive mechanism below: a match is only ever
+# treated as reviewed when file + line number + keyword + this hash of the
+# exact trimmed line text all match an entry in the config's
+# reviewedFalsePositives list. Any edit to the matched line changes the hash
+# and the match reverts to unreviewed automatically - there is no way for a
+# stale allowlist entry to keep silently covering changed code.
+function Get-LineSha256 {
+    param([Parameter(Mandatory)][AllowEmptyString()][string]$Text)
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($Text)
+        $hashBytes = $sha256.ComputeHash($bytes)
+        return -join ($hashBytes | ForEach-Object { $_.ToString('x2') })
+    }
+    finally {
+        $sha256.Dispose()
+    }
+}
+
+function Get-RepoRelativePath {
+    param([Parameter(Mandatory)][string]$FullPath)
+    $repoRootFull = $RepoRoot.TrimEnd('\', '/')
+    $rel = $FullPath.Substring($repoRootFull.Length).TrimStart('\', '/')
+    return ($rel -replace '\\', '/')
 }
 
 Write-Host ''
@@ -344,29 +371,77 @@ else {
 }
 
 # 9. Risky keyword scan (all 5 Phase 2A app dirs, substring, not word-bounded)
-$riskyMatches = New-Object System.Collections.Generic.List[string]
+#
+# Reviewed-false-positive mechanism (tools/phase2a_validate_config.json's
+# reviewedFalsePositives): a live match only counts as "reviewed" when ALL
+# FOUR of (file path, line number, keyword, SHA-256 hash of the exact
+# trimmed line text) match an allowlist entry exactly. This is deliberately
+# not a blanket suppression of a keyword or a directory - if a matched line
+# is edited, moved, or renamed, the match reverts to unreviewed automatically.
+#
+# Three-way split, most severe first:
+#   - unreviewed match on a highConfidenceUnsafeKeywords keyword -> hard FAIL
+#   - unreviewed match on any other forbidden keyword           -> NEEDS_REVIEW
+#   - every match accounted for by a reviewed entry              -> PASS_WITH_REVIEWED_FALSE_POSITIVES
+#   - zero matches at all                                        -> PASS
 $riskyExtensions = $Config.riskyKeywordScanFileExtensions
-$riskyPattern = ($Config.forbiddenRiskyKeywords | ForEach-Object { [regex]::Escape($_) }) -join '|'
+$riskyKeywordList = @($Config.forbiddenRiskyKeywords)
+$highConfidenceKeywords = @($Config.highConfidenceUnsafeKeywords)
+
+$reviewedLookup = @{}
+foreach ($r in @($Config.reviewedFalsePositives)) {
+    $key = "$($r.file)|$($r.line)|$($r.keyword)|$($r.lineSha256)"
+    $reviewedLookup[$key] = $r
+}
+
+$reviewedMatches = New-Object System.Collections.Generic.List[string]
+$genericUnreviewed = New-Object System.Collections.Generic.List[string]
+$highConfidenceUnreviewed = New-Object System.Collections.Generic.List[string]
+
 foreach ($app in $Config.expectedApps) {
     $appPath = Join-Path $RepoRoot ($app.path -replace '/', '\')
     if (-not (Test-Path $appPath)) { continue }
     $files = Get-ChildItem -Path $appPath -Recurse -File | Where-Object { $riskyExtensions -contains $_.Extension }
     foreach ($file in $files) {
-        $lineHits = Select-String -Path $file.FullName -Pattern $riskyPattern -AllMatches
-        foreach ($hit in $lineHits) {
-            $riskyMatches.Add("$($hit.Path):$($hit.LineNumber): $($hit.Line.Trim())") | Out-Null
+        $relPath = Get-RepoRelativePath -FullPath (Resolve-Path $file.FullName).Path
+        $lines = @(Get-Content -Path $file.FullName)
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            $lineText = $lines[$i]
+            $lineNumber = $i + 1
+            foreach ($kw in $riskyKeywordList) {
+                if ($lineText -imatch [regex]::Escape($kw)) {
+                    $trimmed = $lineText.Trim()
+                    $hash = Get-LineSha256 -Text $trimmed
+                    $key = "$relPath|$lineNumber|$kw|$hash"
+                    if ($reviewedLookup.ContainsKey($key)) {
+                        $entry = $reviewedLookup[$key]
+                        $reviewedMatches.Add("${relPath}:${lineNumber} [$kw]: $($entry.reason)") | Out-Null
+                    }
+                    elseif ($highConfidenceKeywords -contains $kw) {
+                        $highConfidenceUnreviewed.Add("${relPath}:${lineNumber} [$kw]: $trimmed") | Out-Null
+                    }
+                    else {
+                        $genericUnreviewed.Add("${relPath}:${lineNumber} [$kw]: $trimmed") | Out-Null
+                    }
+                }
+            }
         }
     }
 }
-if ($riskyMatches.Count -eq 0) {
-    Add-Result -Name 'Risky keyword scan (Phase 2A app dirs only)' -Status 'PASS' -Detail 'Zero substring matches for any forbidden keyword across all 5 Phase 2A app directories'
+
+$totalRiskyMatches = $reviewedMatches.Count + $genericUnreviewed.Count + $highConfidenceUnreviewed.Count
+
+if ($highConfidenceUnreviewed.Count -gt 0) {
+    Add-Result -Name 'Risky keyword scan (Phase 2A app dirs only)' -Status 'FAIL' -Detail "$($highConfidenceUnreviewed.Count) UNREVIEWED high-confidence unsafe API/capability match(es) found (of $totalRiskyMatches total match(es)). These keywords ($($highConfidenceKeywords -join ', ')) require an explicit, narrowly-justified entry in tools/phase2a_validate_config.json's reviewedFalsePositives before they can pass - none currently covers these specific line(s). This is a hard FAIL, not a review item." -Evidence ($highConfidenceUnreviewed -join "`n")
+}
+elseif ($genericUnreviewed.Count -gt 0) {
+    Add-Result -Name 'Risky keyword scan (Phase 2A app dirs only)' -Status 'NEEDS_REVIEW' -Detail "$($genericUnreviewed.Count) unreviewed substring match(es) found (of $totalRiskyMatches total). Review each one below and, if benign, add a reviewedFalsePositives entry (file + line + keyword + line-content hash + reason) to tools/phase2a_validate_config.json. This scan is intentionally broad and commonly flags benign words (e.g. 'possible', 'variable', 'double' all contain 'ble'). NEVER auto-classify this as PASS without reviewing the evidence." -Evidence ($genericUnreviewed -join "`n")
+}
+elseif ($totalRiskyMatches -gt 0) {
+    Add-Result -Name 'Risky keyword scan (Phase 2A app dirs only)' -Status 'PASS_WITH_REVIEWED_FALSE_POSITIVES' -Detail "$totalRiskyMatches substring match(es) found; all $($reviewedMatches.Count) matched an exact, individually-reviewed entry in tools/phase2a_validate_config.json (file + line + keyword + line-content hash - any future edit to a matched line reverts it to unreviewed automatically). Zero unreviewed matches, zero high-confidence-unsafe matches." -Evidence ($reviewedMatches -join "`n")
 }
 else {
-    # Deliberately NEEDS_REVIEW, not FAIL: this is a broad substring scan and is
-    # expected to hit benign false positives (e.g. "ble" inside "possible",
-    # "variable", "double"). Every match is listed, none are hidden or
-    # auto-dismissed - a human must confirm each one is benign.
-    Add-Result -Name 'Risky keyword scan (Phase 2A app dirs only)' -Status 'NEEDS_REVIEW' -Detail "$($riskyMatches.Count) substring match(es) found - review each one below; this scan is intentionally broad and commonly flags benign words (e.g. 'possible', 'variable', 'double', 'enabled', 'disable', 'table' all contain 'ble'). NEVER auto-classify this as PASS without reviewing the evidence." -Evidence ($riskyMatches -join "`n")
+    Add-Result -Name 'Risky keyword scan (Phase 2A app dirs only)' -Status 'PASS' -Detail 'Zero substring matches for any forbidden keyword across all 5 Phase 2A app directories'
 }
 
 # ---------------------------------------------------------------------------
@@ -619,6 +694,10 @@ function Get-TrackClassification {
     if ($Entries | Where-Object { $_.Status -eq 'FAIL' }) { return 'FAIL' }
     if ($Entries | Where-Object { $_.Status -eq 'BLOCKED' }) { return 'BLOCKED' }
     if ($Entries | Where-Object { $_.Status -eq 'NEEDS_REVIEW' }) { return 'NEEDS_REVIEW' }
+    # Checked before plain PASS so a track that includes a reviewed-false-positive
+    # entry (and nothing worse) is labeled accurately rather than collapsed into
+    # an indistinguishable plain PASS.
+    if ($Entries | Where-Object { $_.Status -eq 'PASS_WITH_REVIEWED_FALSE_POSITIVES' }) { return 'PASS_WITH_REVIEWED_FALSE_POSITIVES' }
     if ($Entries | Where-Object { $_.Status -eq 'PASS' }) { return 'PASS' }
     return 'NOT_RUN'
 }

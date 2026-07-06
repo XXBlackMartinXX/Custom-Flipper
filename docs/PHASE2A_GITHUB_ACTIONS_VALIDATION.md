@@ -129,6 +129,35 @@ real problem — e.g. the risky-keyword scan's substring matches, which are
 known to include benign false positives that still need a human's eyes on
 the list at least once per reviewed commit.
 
+### Worked example: Run `28808570107` (Phase 2A.7 → 2A.8)
+
+The very first run of this workflow (run ID `28808570107`, head SHA
+`6920b408...`) is a useful worked example of the distinction above. GitHub
+Actions reported the workflow **conclusion as `failure`** — but the *actual*
+Windows Build step passed cleanly: `firmware.dfu` (862,825 bytes) and the
+updater `.tgz` (2,732,904 bytes) both built, all 5 apps' `.fap` outputs
+existed, SAM removal verification passed. The failure came entirely from
+Static mode's risky-keyword scan reporting `NEEDS_REVIEW` (exit code 2) for
+104 substring matches that had *already* been manually reviewed and
+confirmed benign back in Phase 2A.5/2A.6 — the validator simply had no way,
+before Phase 2A.8, to record "this exact match was already reviewed and is
+fine," so it re-reported the same 104 already-known-benign matches as
+needing review, forever, on every run.
+
+**This was a CI policy/validator gap, not a firmware defect, not a hardware
+result, and not a release-readiness claim.** Phase 2A.8 fixed it by adding a
+structured, per-line reviewed-false-positive allowlist to
+`tools/phase2a_validate_config.json` (never a blanket "ignore this keyword"
+rule — see `PHASE2A_AUTOMATED_VALIDATION.md`'s "Reviewed-false-positive
+allowlist" section for the exact mechanism). A subsequent run against a
+commit that includes that fix is expected to show a real green workflow run
+for the same underlying Windows Build result. If you see a red X on a run of
+this workflow, always check *which* step and *which specific check* failed
+before assuming the firmware or apps are broken — the uploaded reports name
+the exact check, and the reviewed-false-positive mechanism means a red X is
+much more likely to reflect a genuinely new or high-confidence finding now
+than a stale, already-reviewed one.
+
 ## What has not changed
 
 **Hardware flashing/testing remains NOT PERFORMED.** **Release status

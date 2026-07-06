@@ -1,12 +1,18 @@
 # Phase 2A — Automated Validation Runner
 
-**v2 (Phase 2A.6).** Updated after the script's first real executions found
-and fixed two bugs (see `PHASE2A_AUTOMATED_VALIDATION_RESULTS.md` for the
-full account) — this version reflects the fixed behavior. Docs + tooling
-only. No firmware code changed by this document or by
-`tools/phase2a_validate.ps1` / `tools/phase2a_validate_config.json`. This
-explains what the validation runner does, what it does not (and cannot) prove,
-and how to run and interpret it.
+**v3 (Phase 2A.8).** Updated after the first GitHub Actions run (CI run
+`28808570107`) produced a real Windows Build PASS but an overall workflow
+failure, because the risky-keyword scan's 104 already-reviewed benign
+substring matches had no way to be recorded as reviewed and so still
+reported `NEEDS_REVIEW` (exit 2) every run. This version adds a structured,
+auditable reviewed-false-positive allowlist so that already-reviewed benign
+matches no longer fail CI, while any genuinely new or high-confidence-unsafe
+match still does. See `PHASE2A_AUTOMATED_VALIDATION_RESULTS.md` for the full
+account. v2 (Phase 2A.6) covered the script's first real executions and the
+two bugs found then. Docs + tooling only. No firmware code changed by this
+document or by `tools/phase2a_validate.ps1` / `tools/phase2a_validate_config.json`.
+This explains what the validation runner does, what it does not (and cannot)
+prove, and how to run and interpret it.
 
 ## What this is
 
@@ -53,6 +59,41 @@ you like. It checks:
   `password`, `credential`, `jam`, etc.) — **every match is listed, never
   hidden**, because this scan is intentionally broad and is expected to catch
   benign substrings (see below)
+
+### Reviewed-false-positive allowlist (Phase 2A.8)
+
+The risky-keyword scan splits every match it finds into three buckets:
+
+1. **Reviewed** — the match exactly matches an entry in
+   `tools/phase2a_validate_config.json`'s `reviewedFalsePositives` array. An
+   entry only applies when **all four** of (file path, line number, keyword,
+   SHA-256 hash of the exact trimmed line text) match exactly — edit, move,
+   or rename the matched line and the hash/line-number no longer lines up, so
+   the match reverts to unreviewed automatically. This is a per-line,
+   individually-justified allowlist, never a blanket "ignore this keyword" or
+   "ignore this directory" rule (the config explicitly forbids that pattern
+   in its own `reviewedFalsePositivesPolicy` note).
+2. **Unreviewed, generic keyword** (e.g. `ble`, `password`) — reported
+   `NEEDS_REVIEW`. Review the match; if it's genuinely benign, add a
+   `reviewedFalsePositives` entry with a specific reason.
+3. **Unreviewed, high-confidence-unsafe keyword** — the keyword is in
+   `highConfidenceUnsafeKeywords` (`furi_hal_subghz`, `furi_hal_nfc`,
+   `furi_hal_rfid`, `furi_hal_ibutton`, `furi_hal_hid`, `furi_hal_usb_hid`,
+   `furi_hal_gpio_write`, `furi_hal_infrared_async_tx_start`, `badusb`,
+   `deauth`, `jam`, `brute`, `credential`, `token`, `exfil`). An **unreviewed**
+   match here is a hard **FAIL**, not a review item — these names are far
+   more likely to indicate a real capability than the generic keywords, so
+   the bar to let one through silently is intentionally much higher. A match
+   against one of these *can* still be marked reviewed, via the exact same
+   narrow per-line mechanism as any other entry — as of this writing, that
+   has happened exactly twice (both `jam`, both confirmed non-jamming: a VIN
+   manufacturer code and a surname) — but there is no separate, looser path
+   for these 15 keywords.
+
+Overall check result: `FAIL` if any high-confidence-unsafe match is
+unreviewed; else `NEEDS_REVIEW` if any generic match is unreviewed; else
+`PASS_WITH_REVIEWED_FALSE_POSITIVES` if every match found was reviewed; else
+plain `PASS` if zero matches were found at all.
 
 ### `-Mode Build`
 
@@ -202,13 +243,14 @@ here rather than assumed away — see
 
 ## How to interpret results
 
-Every check produces one of five statuses:
+Every check produces one of six statuses:
 
 | Status | Meaning |
 |---|---|
 | `PASS` | The check ran and found no problem. |
+| `PASS_WITH_REVIEWED_FALSE_POSITIVES` | The check ran and found only matches that were individually reviewed and confirmed benign ahead of time (currently only the risky-keyword scan can produce this). Rolls up as a pass for classification/exit-code purposes, but is labeled distinctly so it's never confused with a scan that found nothing at all. |
 | `FAIL` | The check ran and found a real problem — investigate before proceeding. |
-| `NEEDS_REVIEW` | The check ran, but the result requires a human judgment call (e.g. the risky-keyword scan found substring matches that are very likely benign, but the script cannot tell for certain). |
+| `NEEDS_REVIEW` | The check ran, but the result requires a human judgment call before it can be trusted (e.g. an unreviewed generic risky-keyword match — likely benign, but not yet confirmed). |
 | `NOT_RUN` | The check was not attempted, either because the mode didn't call for it or a precondition (e.g. no device detected) wasn't met. |
 | `BLOCKED` | The check could not run due to an environment limitation (e.g. toolchain host unreachable) — not the same as FAIL, since it says nothing about the firmware itself. |
 
@@ -216,10 +258,12 @@ Three independent classifications are reported — **Static**, **Build**,
 **Hardware** — plus one **Overall** classification that rolls all checks
 together:
 
-- **AUTOMATED VALIDATION PASS** — every check that ran came back PASS.
+- **AUTOMATED VALIDATION PASS** — every check that ran came back PASS or
+  PASS_WITH_REVIEWED_FALSE_POSITIVES.
 - **NEEDS REVIEW** — at least one NEEDS_REVIEW or BLOCKED entry exists; read
   every one before treating the run as clean.
-- **AUTOMATED VALIDATION FAILED** — at least one real FAIL exists.
+- **AUTOMATED VALIDATION FAILED** — at least one real FAIL exists (this
+  includes any unreviewed match against a high-confidence-unsafe keyword).
 
 None of these three labels is a substitute for reading the individual checks —
 they exist to triage, not to replace review. See

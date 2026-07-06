@@ -92,24 +92,28 @@ checkpoint that comes before that decision is made at all.
   requires the project's full release-gate checklist, which spans more than
   Phase 2A alone.
 
-## Current status against this gate (as of this document — Phase 2A.7)
+## Current status against this gate (as of this document — Phase 2A.8)
 
 | Step | Status |
 |---|---|
-| Static validation | Actually executed once already (Phase 2A.6, in the cloud sandbox) — PASS after review. Two real script bugs found and fixed in that pass (a null-array `.Count` crash, and a build-failure misclassification) — see `PHASE2A_AUTOMATED_VALIDATION_RESULTS.md`. |
-| Build validation | Still not yet reproduced through this tooling on any environment that can complete a real build. Independently known-PASS via the project owner's manual local Windows build at commit `5e5e0ecf225be947a754e537670a6421838b939b`. The cloud sandbox is structurally BLOCKED (can't execute `fbt.cmd` at all, being Linux); the project owner does not currently have Claude Desktop / local Claude Code to drive their own Windows machine. **This is why Phase 2A.7 added `.github/workflows/phase2a-windows-validation.yml`** — a GitHub-hosted `windows-latest` runner that can run this tooling's Build mode for real, with no local Windows setup required. **Not yet run as of this document** — running it (Actions tab → "Phase 2A Windows Validation" → Run workflow, or push to this branch) is the immediate next step. |
+| Static validation | Executed against the Phase 2A.8 fix commit (`8d21138`, cloud sandbox) — `PASS_WITH_REVIEWED_FALSE_POSITIVES` (exit 0). All 104 risky-keyword substring matches now resolve via the new reviewed-false-positive allowlist; zero unreviewed, zero high-confidence-unreviewed. |
+| Build validation | **Real Windows Build PASS already achieved** via GitHub Actions run `28808570107` (head SHA `6920b408...`): `firmware.dfu` 862,825 bytes, updater `.tgz` 2,732,904 bytes, all 5 `.fap` outputs present, SAM removal verified. **That specific run's overall workflow conclusion was `failure`**, but purely because of the now-fixed Static/risky-keyword-scan gap (see `PHASE2A_AUTOMATED_VALIDATION_RESULTS.md`'s "Phase 2A.8" section) — not a Build problem. The fix (commit `8d21138`) has not yet been exercised through an actual new GitHub Actions run as of this document. |
 | Hardware-assisted validation | **NOT RUN** — not attempted anywhere, and never will be by the GitHub Actions path either: that workflow contains no code path capable of invoking `-Mode HardwareAssisted`, by design (see `PHASE2A_GITHUB_ACTIONS_VALIDATION.md`). |
-| Overall classification | **NEEDS REVIEW** — pending the first GitHub Actions run |
+| Overall classification | **NEEDS REVIEW** — pending a real re-run of the GitHub Actions workflow against the fix commit, to confirm the same real Build PASS now comes with a genuinely green overall workflow result |
 
 **Immediate next action**: trigger the "Phase 2A Windows Validation" workflow
-(manually via the Actions tab, or by pushing to
-`integration/phase2a-first-batch`) and review its uploaded reports. If Static
-+ Build both come back clean there, record status as
+again (manually via the Actions tab, or by pushing to
+`integration/phase2a-first-batch`, which this round's commits already did)
+against a commit that includes the Phase 2A.8 fix (`8d21138` or later), and
+confirm the workflow's overall conclusion is now green. If it is, record
+status as
 **`CI WINDOWS VALIDATION PASS / HARDWARE NOT TESTED / NOT RELEASE READY`**. If
-the workflow fails or is blocked, diagnose from the uploaded reports/logs and
-fix the underlying validator, workflow, or (if a real app defect is proven)
-firmware issue before re-running — do not proceed to Phase 2B in the
-meantime.
+it still fails, diagnose from the uploaded reports/logs before assuming
+anything about the firmware — check whether it's a genuinely new/unreviewed
+risky-keyword match, a real build problem, or another validator/workflow gap
+— and fix the underlying validator, workflow, or (only if a real app defect
+is proven) firmware issue before re-running. Do not proceed to Phase 2B in
+the meantime.
 
 **Not proceeding to Phase 2B.** This document defines the gate for future
 runs of this tooling; it does not, on its own, close the gate — that requires

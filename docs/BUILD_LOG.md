@@ -34,7 +34,7 @@ used the official, unpatched `site_scons/cc.scons`.
 | Base selected | **Unleashed** (`dev` @ `5cdf9b33745f41f1a0405a6da44821128c233f5c`) |
 | Clean official build | **PASS** (confirmed on local Windows 11, official toolchain) |
 | Release status | **TEST-READY ONLY / NOT RELEASE-READY** |
-| Feature integration | **PHASE 2A: SAM license item resolved, post-removal build PASS; Phase 2A.6 validation tooling executed and hardened** — see below |
+| Feature integration | **PHASE 2A: SAM license item resolved, post-removal build PASS; validation tooling executed, hardened, and run in real Windows CI (Phase 2A.7/2A.8)** — see below |
 | Hardware tested | **NOT PERFORMED** |
 
 ## Phase 2A update: first app-integration batch — local build PASS
@@ -126,6 +126,58 @@ flashing/testing: **NOT PERFORMED** (unchanged). The next concrete step is
 for the project owner to run the now-hardened
 `tools/phase2a_validate.ps1 -Mode Build` on their real Windows machine to get
 this tooling's own, real, Windows-machine Build result.
+
+## Phase 2A.7/2A.8 update: real Windows CI via GitHub Actions, and a validator false-failure fixed
+
+The project owner does not currently have Claude Desktop or local Claude
+Code available to drive their own Windows machine, so Phase 2A.7 replaced
+that plan with **`.github/workflows/phase2a-windows-validation.yml`** ("Phase
+2A Windows Validation") — a GitHub-hosted `windows-latest` CI runner that
+runs `tools/phase2a_validate.ps1` in Static then Build mode against
+`integration/phase2a-first-batch`, triggered automatically on push or
+manually from the Actions tab. It never invokes `-Mode HardwareAssisted`
+(no code path in the workflow can call it), never flashes anything, and
+uploads reports/artifacts as workflow artifacts only — nothing is committed
+back to the repository by the workflow itself.
+
+**The first real run (CI run `28808570107`, head SHA `6920b408...`)
+produced a genuine Windows Build PASS**: `build\f7-firmware-C\firmware.dfu`
+(**862,825 bytes**) and `dist\f7-C\flipper-z-f7-update-local.tgz`
+(**2,732,904 bytes**) both built, all 5 apps' `.fap` outputs present, SAM
+removal re-verified clean. **The workflow's overall conclusion was
+`failure` anyway** — not because of the build, but because Static mode's
+risky-keyword scan re-reported its familiar 104 substring matches (102
+`ble`, 2 `jam` — the same ones manually reviewed and confirmed benign back
+in Phase 2A.5/2A.6) as `NEEDS_REVIEW`, since the validator had no mechanism
+yet to record that they'd already been reviewed. **This was a CI
+policy/validator gap, not a firmware/app defect, not a hardware-test result,
+and not a release-readiness claim.**
+
+**Fixed in Phase 2A.8** (commit `8d21138` on `integration/phase2a-first-batch`,
+`tools/` only): added a structured, per-line `reviewedFalsePositives`
+allowlist to `tools/phase2a_validate_config.json` — each of the 104 entries
+is keyed on file path + line number + keyword + a SHA-256 hash of the exact
+trimmed line text, so any edit to a matched line reverts it to unreviewed
+automatically; this is deliberately not a blanket "ignore this keyword"
+rule. Also split `forbiddenRiskyKeywords` so that 15 higher-severity
+keywords (`furi_hal_subghz`, `furi_hal_nfc`, `furi_hal_rfid`,
+`furi_hal_ibutton`, `furi_hal_hid`, `furi_hal_usb_hid`,
+`furi_hal_gpio_write`, `furi_hal_infrared_async_tx_start`, `badusb`,
+`deauth`, `jam`, `brute`, `credential`, `token`, `exfil`) hard-**FAIL** the
+run if an unreviewed match ever appears against them — only 2 entries (both
+`jam`, both individually justified: a VIN manufacturer code and a surname)
+are currently reviewed at that tier; the other 14 remain at zero reviewed
+entries, so a real future match would still fail immediately. Verified
+locally (this cloud sandbox) both that all 104 current matches now resolve
+correctly, and — by deliberately corrupting one hash in a scratch copy of
+the config — that an unmatched/stale entry correctly reverts to unreviewed
+and fails, before restoring the real file.
+
+**This fix has not yet been re-verified through an actual new GitHub Actions
+run as of this document** — that is the immediate next step. **Hardware
+flashing/testing remains NOT PERFORMED.** **Release status remains
+TEST-READY ONLY / NOT RELEASE-READY.** No firmware/app source was touched by
+either the validator fix or this documentation.
 
 ---
 
