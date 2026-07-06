@@ -34,7 +34,7 @@ used the official, unpatched `site_scons/cc.scons`.
 | Base selected | **Unleashed** (`dev` @ `5cdf9b33745f41f1a0405a6da44821128c233f5c`) |
 | Clean official build | **PASS** (confirmed on local Windows 11, official toolchain) |
 | Release status | **TEST-READY ONLY / NOT RELEASE-READY** |
-| Feature integration | **PHASE 2A: SAM license item resolved, post-removal build PASS** — see below |
+| Feature integration | **PHASE 2A: SAM license item resolved, post-removal build PASS; Phase 2A.6 validation tooling executed and hardened** — see below |
 | Hardware tested | **NOT PERFORMED** |
 
 ## Phase 2A update: first app-integration batch — local build PASS
@@ -84,6 +84,48 @@ present (862,825 bytes), `dist\f7-C\flipper-z-f7-update-local.tgz` present
 is closed and the post-removal build is confirmed passing, but release-readiness
 still requires hardware testing and the project's full release-gate checklist,
 neither of which has been done.
+
+## Phase 2A.5/2A.6 update: automated validation tooling, executed and hardened
+
+An automated validation runner (`tools/phase2a_validate.ps1` +
+`tools/phase2a_validate_config.json`) was added (Phase 2A.5) to automate the
+repetitive Static (repo/source/manifest/keyword-scan) and Build (`fbt.cmd`
+invocation + artifact verification) checks this project had been doing by
+hand, plus a still-unused HardwareAssisted mode gated behind explicit
+confirmation and containing no code path for RF/Sub-GHz/NFC/RFID/iButton/
+BadUSB/BLE/GPIO/IR or any unauthorized-access behavior. Phase 2A.5 could only
+manually reproduce the script's checks (no PowerShell was available in that
+session); Phase 2A.6 **installed PowerShell 7.6.3 and executed the script for
+real** for the first time.
+
+That real execution found and fixed **two genuine bugs**, both in the
+tooling only (no firmware/app code touched): (1) a null-array `.Count` crash
+that, left unfixed, would have crashed the script on the exact scenario that
+should be its clean/successful path — zero problems found, nothing to
+review; (2) a build-launch failure (the process couldn't even start) being
+misreported as a generic FAIL instead of the more accurate BLOCKED, which
+also caused misleading FAIL/stale-PASS results on the downstream artifact
+checks. Both are fixed in commit `ff4ba63` on `integration/phase2a-first-batch`.
+
+**Important scope note**: this execution happened in a cloud sandbox with no
+access to the project owner's actual Windows machine
+(`C:\Github\Custom-Flipper-phase2a-build`) — that specific request was not,
+and could not be, fulfilled this round. What was achieved instead: a fresh
+Static run against commit `ff4ba635fda0bf3e0e54188ba6da51335cd924f6` came back
+clean (the one broad risky-keyword substring scan's 104 matches were, again,
+all manually confirmed benign — zero matches for any real Flipper HAL/
+capability API). Build mode came back **BLOCKED** in this sandbox (it cannot
+execute `fbt.cmd` at all, being Linux) — this does not change the
+independently-known real Build PASS from the project owner's own Windows
+build recorded above; it only means this new tooling itself has not yet
+reproduced that PASS. Hardware-assisted mode was deliberately not run this
+round. Full detail: `PHASE2A_AUTOMATED_VALIDATION_RESULTS.md`.
+
+**Release status: TEST-READY ONLY / NOT RELEASE-READY** (unchanged). Hardware
+flashing/testing: **NOT PERFORMED** (unchanged). The next concrete step is
+for the project owner to run the now-hardened
+`tools/phase2a_validate.ps1 -Mode Build` on their real Windows machine to get
+this tooling's own, real, Windows-machine Build result.
 
 ---
 

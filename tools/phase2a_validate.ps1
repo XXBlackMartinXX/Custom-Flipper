@@ -224,9 +224,12 @@ else {
 
 # 4. Submodule initialization
 $submoduleStatusResult = Invoke-GitCapture -GitArgs @('submodule', 'status', '--recursive')
-$submoduleLines = $submoduleStatusResult.Output -split "`n" | Where-Object { $_.Trim() -ne '' }
-$uninitializedSubmodules = $submoduleLines | Where-Object { $_.TrimStart().StartsWith('-') }
-$outOfSyncSubmodules = $submoduleLines | Where-Object { $_.TrimStart().StartsWith('+') }
+# Wrapped in @(...): a Where-Object pipeline that matches zero items returns $null,
+# not an empty array, and $null.Count throws under Set-StrictMode -Version Latest.
+# @(...) guarantees an array (possibly empty) so .Count is always safe below.
+$submoduleLines = @($submoduleStatusResult.Output -split "`n" | Where-Object { $_.Trim() -ne '' })
+$uninitializedSubmodules = @($submoduleLines | Where-Object { $_.TrimStart().StartsWith('-') })
+$outOfSyncSubmodules = @($submoduleLines | Where-Object { $_.TrimStart().StartsWith('+') })
 if ($submoduleLines.Count -eq 0) {
     Add-Result -Name 'Submodule initialization' -Status 'NEEDS_REVIEW' -Detail 'git submodule status returned no lines - is .gitmodules present and populated?'
 }
@@ -286,7 +289,7 @@ else {
 }
 
 # 7. App ID uniqueness (across the 5 Phase 2A apps, and against base applications/)
-$duplicateAppIds = $discoveredAppIds | Group-Object | Where-Object { $_.Count -gt 1 }
+$duplicateAppIds = @($discoveredAppIds | Group-Object | Where-Object { $_.Count -gt 1 })
 if ($duplicateAppIds.Count -gt 0) {
     Add-Result -Name 'App ID uniqueness (within Phase 2A batch)' -Status 'FAIL' -Detail "Duplicate appid(s): $(($duplicateAppIds | ForEach-Object { $_.Name }) -join ', ')"
 }
@@ -384,15 +387,25 @@ if ($Mode -eq 'Build' -or $Mode -eq 'HardwareAssisted') {
         Add-Result -Name 'Updater package build (.\fbt.cmd COMPACT=1 DEBUG=0 updater_package)' -Status 'NOT_RUN' -Detail '-SkipBuild was passed; only checking pre-existing artifacts.'
     }
     else {
+        # Distinguish two different failure kinds, which need different
+        # classifications: the *process could not be launched at all* (a
+        # native "failed to start" exception - an environment problem, e.g.
+        # fbt.cmd isn't natively executable on this OS, or a permissions
+        # issue) versus the *process launched and exited non-zero* (a real
+        # build failure worth investigating as a possible source defect).
+        # Conflating these into one generic FAIL would misclassify an
+        # environment problem as a firmware problem.
         $buildLogPath = Join-Path $ReportDir "build_firmware_$RunTimestampForFilename.log"
+        $buildLaunchFailed = $false
         Push-Location $RepoRoot
         try {
             & .\fbt.cmd COMPACT=1 DEBUG=0 *> $buildLogPath
             $buildExit = $LASTEXITCODE
         }
         catch {
+            $buildLaunchFailed = $true
             $buildExit = 1
-            Add-Content -Path $buildLogPath -Value "EXCEPTION: $($_.Exception.Message)"
+            Add-Content -Path $buildLogPath -Value "LAUNCH EXCEPTION (process could not be started - this is an environment problem, not evidence of a source defect): $($_.Exception.Message)"
         }
         finally {
             Pop-Location
@@ -401,20 +414,25 @@ if ($Mode -eq 'Build' -or $Mode -eq 'HardwareAssisted') {
             Add-Result -Name 'Firmware build (.\fbt.cmd COMPACT=1 DEBUG=0)' -Status 'PASS' -Detail "Exit code 0. Full log: $buildLogPath"
             $buildRan = $true
         }
+        elseif ($buildLaunchFailed) {
+            Add-Result -Name 'Firmware build (.\fbt.cmd COMPACT=1 DEBUG=0)' -Status 'BLOCKED' -Detail "fbt.cmd could not be launched as a process on this machine/OS (see $buildLogPath for the exact exception). This is an environment limitation, not a build failure or firmware defect - it means this environment cannot run the build at all, so nothing about the source was actually tested."
+        }
         else {
-            Add-Result -Name 'Firmware build (.\fbt.cmd COMPACT=1 DEBUG=0)' -Status 'FAIL' -Detail "Exit code $buildExit. Full log: $buildLogPath. Check the log for the real root cause (e.g. blocked toolchain download vs. an actual source error) before assuming this is a firmware defect."
+            Add-Result -Name 'Firmware build (.\fbt.cmd COMPACT=1 DEBUG=0)' -Status 'FAIL' -Detail "fbt.cmd launched and exited $buildExit. Full log: $buildLogPath. Check the log for the real root cause (e.g. blocked toolchain download vs. an actual source error) before assuming this is a firmware defect."
         }
 
         if ($buildExit -eq 0) {
             $updaterLogPath = Join-Path $ReportDir "build_updater_$RunTimestampForFilename.log"
+            $updaterLaunchFailed = $false
             Push-Location $RepoRoot
             try {
                 & .\fbt.cmd COMPACT=1 DEBUG=0 updater_package *> $updaterLogPath
                 $updaterExit = $LASTEXITCODE
             }
             catch {
+                $updaterLaunchFailed = $true
                 $updaterExit = 1
-                Add-Content -Path $updaterLogPath -Value "EXCEPTION: $($_.Exception.Message)"
+                Add-Content -Path $updaterLogPath -Value "LAUNCH EXCEPTION (process could not be started - this is an environment problem, not evidence of a source defect): $($_.Exception.Message)"
             }
             finally {
                 Pop-Location
@@ -422,8 +440,11 @@ if ($Mode -eq 'Build' -or $Mode -eq 'HardwareAssisted') {
             if ($updaterExit -eq 0) {
                 Add-Result -Name 'Updater package build (.\fbt.cmd COMPACT=1 DEBUG=0 updater_package)' -Status 'PASS' -Detail "Exit code 0. Full log: $updaterLogPath"
             }
+            elseif ($updaterLaunchFailed) {
+                Add-Result -Name 'Updater package build (.\fbt.cmd COMPACT=1 DEBUG=0 updater_package)' -Status 'BLOCKED' -Detail "fbt.cmd could not be launched as a process on this machine/OS (see $updaterLogPath). Environment limitation, not a build failure."
+            }
             else {
-                Add-Result -Name 'Updater package build (.\fbt.cmd COMPACT=1 DEBUG=0 updater_package)' -Status 'FAIL' -Detail "Exit code $updaterExit. Full log: $updaterLogPath"
+                Add-Result -Name 'Updater package build (.\fbt.cmd COMPACT=1 DEBUG=0 updater_package)' -Status 'FAIL' -Detail "fbt.cmd launched and exited $updaterExit. Full log: $updaterLogPath"
             }
         }
         else {
@@ -431,32 +452,51 @@ if ($Mode -eq 'Build' -or $Mode -eq 'HardwareAssisted') {
         }
     }
 
-    # Artifact verification (runs regardless of whether we just built, in case
-    # -SkipBuild was used to check a prior build's output)
-    foreach ($artifactKey in @('firmwareDfu', 'updaterPackage')) {
-        $artifactConfig = $Config.expectedArtifacts.$artifactKey
-        $artifactPath = Join-Path $RepoRoot $artifactConfig.relativePath
-        if (-not (Test-Path $artifactPath)) {
-            Add-Result -Name "Artifact present: $($artifactConfig.relativePath)" -Status 'FAIL' -Detail 'File does not exist.'
-            continue
+    # Artifact verification. Only meaningful if either this run's build
+    # actually succeeded ($buildRan), or the caller explicitly asked to check
+    # pre-existing artifacts via -SkipBuild. If the build was BLOCKED (couldn't
+    # even launch) or FAILED (launched but exited non-zero) and -SkipBuild was
+    # NOT passed, checking Test-Path here would either report a misleading
+    # FAIL ("file does not exist", as if today's build should have produced it
+    # when it never really tried) or a misleading PASS on a stale artifact
+    # left over from a previous, unrelated run - reports must record this
+    # run's own results, not stale values. So: skip with NOT_RUN instead.
+    $artifactCheckApplicable = $SkipBuild -or $buildRan
+    if (-not $artifactCheckApplicable) {
+        foreach ($artifactKey in @('firmwareDfu', 'updaterPackage')) {
+            $artifactConfig = $Config.expectedArtifacts.$artifactKey
+            Add-Result -Name "Artifact present: $($artifactConfig.relativePath)" -Status 'NOT_RUN' -Detail "Not checked - this run's own build did not succeed (see the build check above), so any file found here would be stale from a prior run, not evidence about this run. Re-run with a working build, or pass -SkipBuild if you intend to check a pre-existing artifact deliberately."
         }
-        $actualSize = (Get-Item $artifactPath).Length
-        $knownSize = $artifactConfig.knownGoodSizeBytes
-        $detail = "Size: $actualSize bytes (previously recorded good size at commit $($artifactConfig.knownGoodAtCommit): $knownSize bytes)"
-        if ($actualSize -le 0) {
-            Add-Result -Name "Artifact present: $($artifactConfig.relativePath)" -Status 'FAIL' -Detail "File exists but is empty or unreadable ($actualSize bytes)."
-        }
-        elseif ($currentCommit -eq $artifactConfig.knownGoodAtCommit -and $actualSize -ne $knownSize) {
-            Add-Result -Name "Artifact present: $($artifactConfig.relativePath)" -Status 'NEEDS_REVIEW' -Detail "$detail - size differs from the previously recorded value AT THE SAME COMMIT. Investigate before trusting this artifact."
-        }
-        else {
-            Add-Result -Name "Artifact present: $($artifactConfig.relativePath)" -Status 'PASS' -Detail $detail
+    }
+    else {
+        foreach ($artifactKey in @('firmwareDfu', 'updaterPackage')) {
+            $artifactConfig = $Config.expectedArtifacts.$artifactKey
+            $artifactPath = Join-Path $RepoRoot $artifactConfig.relativePath
+            if (-not (Test-Path $artifactPath)) {
+                Add-Result -Name "Artifact present: $($artifactConfig.relativePath)" -Status 'FAIL' -Detail 'File does not exist.'
+                continue
+            }
+            $actualSize = (Get-Item $artifactPath).Length
+            $knownSize = $artifactConfig.knownGoodSizeBytes
+            $detail = "Size: $actualSize bytes (previously recorded good size at commit $($artifactConfig.knownGoodAtCommit): $knownSize bytes)"
+            if ($actualSize -le 0) {
+                Add-Result -Name "Artifact present: $($artifactConfig.relativePath)" -Status 'FAIL' -Detail "File exists but is empty or unreadable ($actualSize bytes)."
+            }
+            elseif ($currentCommit -eq $artifactConfig.knownGoodAtCommit -and $actualSize -ne $knownSize) {
+                Add-Result -Name "Artifact present: $($artifactConfig.relativePath)" -Status 'NEEDS_REVIEW' -Detail "$detail - size differs from the previously recorded value AT THE SAME COMMIT. Investigate before trusting this artifact."
+            }
+            else {
+                Add-Result -Name "Artifact present: $($artifactConfig.relativePath)" -Status 'PASS' -Detail $detail
+            }
         }
     }
 
     # Expected FAP outputs per app
     $fapDir = Join-Path $RepoRoot $Config.expectedFapOutputDir
-    if (-not (Test-Path $fapDir)) {
+    if (-not $artifactCheckApplicable) {
+        Add-Result -Name 'Per-app FAP output verification' -Status 'NOT_RUN' -Detail "Not checked - this run's own build did not succeed, so .fap files found here (if any) would be stale from a prior run. See the build check above."
+    }
+    elseif (-not (Test-Path $fapDir)) {
         Add-Result -Name 'Per-app FAP output verification' -Status 'NOT_RUN' -Detail "FAP output directory not found at $fapDir - build may not have run, or fbt's output layout differs from this config's assumption ($($Config.expectedFapOutputDir)). If the build itself PASSED above, verify the real output path manually."
     }
     else {
@@ -620,9 +660,9 @@ else {
     $hardwareClassification = 'NOT_RUN'
 }
 
-$overallHasFail = ($script:Results | Where-Object { $_.Status -eq 'FAIL' }).Count -gt 0
-$overallHasBlocked = ($script:Results | Where-Object { $_.Status -eq 'BLOCKED' }).Count -gt 0
-$overallHasNeedsReview = ($script:Results | Where-Object { $_.Status -eq 'NEEDS_REVIEW' }).Count -gt 0
+$overallHasFail = @($script:Results | Where-Object { $_.Status -eq 'FAIL' }).Count -gt 0
+$overallHasBlocked = @($script:Results | Where-Object { $_.Status -eq 'BLOCKED' }).Count -gt 0
+$overallHasNeedsReview = @($script:Results | Where-Object { $_.Status -eq 'NEEDS_REVIEW' }).Count -gt 0
 
 if ($overallHasFail) {
     $overallClassification = 'AUTOMATED VALIDATION FAILED'

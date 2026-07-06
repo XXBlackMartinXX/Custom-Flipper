@@ -11,6 +11,13 @@
    `LOCAL_WINDOWS_BUILD_HANDOFF.md` §7. This item no longer blocks anything; kept here
    for the historical record and because the cloud sandbox itself is still blocked
    (relevant again only if a future cloud-only build is attempted).
+   **Phase 2A.6 update**: the new `tools/phase2a_validate.ps1 -Mode Build` was
+   confirmed, in this same cloud sandbox, to be blocked for a second, more basic
+   reason beyond the network policy above — `fbt.cmd` is a Windows batch file, and
+   this sandbox is Linux, so it can't even be launched as a process here (separate
+   from whether the toolchain download itself is reachable). Same category of
+   environment limitation, not a new issue: a real Build-mode result from this
+   tooling still requires the project owner's own Windows machine.
 2. **RESOLVED (was: substituted toolchain).** The cloud session's substitute toolchain
    experiment (Ubuntu `gcc-arm-none-eabi` 13.2 + pip Python/SCons, with two local
    `-Wno-error=` flags in a throwaway `/tmp` clone) is superseded by item 1 above and

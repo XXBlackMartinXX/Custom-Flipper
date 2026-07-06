@@ -1,6 +1,9 @@
 # Phase 2A — Automated Validation Runner
 
-Docs + tooling only. No firmware code changed by this document or by
+**v2 (Phase 2A.6).** Updated after the script's first real executions found
+and fixed two bugs (see `PHASE2A_AUTOMATED_VALIDATION_RESULTS.md` for the
+full account) — this version reflects the fixed behavior. Docs + tooling
+only. No firmware code changed by this document or by
 `tools/phase2a_validate.ps1` / `tools/phase2a_validate_config.json`. This
 explains what the validation runner does, what it does not (and cannot) prove,
 and how to run and interpret it.
@@ -67,10 +70,27 @@ Runs everything in Static mode, then:
   reading `firmware.scons` (`FBT_FAP_DEBUG_ELF_ROOT=fwenv["BUILD_DIR"].Dir(".extapps")`)
   and `scripts/fbt_tools/fbt_extapps.py`, not assumed
 
-If the toolchain can't be reached (this project's cloud sandbox has repeatedly
-hit a `403` from its network policy against `update.flipperzero.one` — see
-`BUILD_LOG.md`), or `fbt.cmd` itself doesn't exist on the machine you're running
-on, this mode reports **BLOCKED** with the specific reason, never a faked PASS.
+This mode distinguishes two different ways a build can not-succeed, and
+reports each honestly rather than lumping them together:
+
+- **The build process could not even be launched** (e.g. `fbt.cmd` doesn't
+  exist at the repo root, or the OS/shell can't execute it at all) → reported
+  as **BLOCKED**. This says nothing about the firmware or apps — it means
+  this environment cannot even attempt a build. (This project's cloud sandbox
+  has hit this in two different ways across its history: a `403` from its
+  network policy against `update.flipperzero.one` when the toolchain tries to
+  download — see `BUILD_LOG.md` — and, separately, simply being Linux while
+  `fbt.cmd` is a Windows batch file.)
+- **The build process launched and exited non-zero** → reported as **FAIL**.
+  This is worth investigating as a possible real problem, though the log
+  should still be checked before assuming it's a source defect (it could
+  still be an environment issue, like a missing toolchain component).
+
+When the build didn't succeed for either reason, the downstream artifact and
+`.fap`-output checks are reported **NOT_RUN** (never a stale false PASS or a
+misleading FAIL) unless you pass `-SkipBuild`, in which case they check
+whatever pre-existing artifacts are actually on disk, since that's the
+explicit point of that flag.
 
 ### `-Mode HardwareAssisted`
 

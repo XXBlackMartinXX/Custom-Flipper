@@ -4,6 +4,16 @@ Docs only. This is an honest accounting of what the Phase 2A validation tooling
 (`tools/phase2a_validate.ps1`) can and cannot prove, so that a green run is
 never mistaken for more coverage than it actually provides.
 
+**Phase 2A.6 update**: the script was executed for real for the first time
+this round (in a cloud sandbox, with PowerShell installed specifically for
+this — not on the project owner's Windows machine; see
+`PHASE2A_AUTOMATED_VALIDATION_RESULTS.md`), which found and fixed two script
+bugs. Neither fix changes anything below — GUI-level app navigation still
+requires human observation or deeper firmware/RPC automation that doesn't
+exist, hardware flashing/testing is still not performed, and release-ready is
+still not claimed. This update exists only to confirm those limitations were
+re-checked, not to loosen any of them.
+
 ## What can be fully automated today
 
 These are checked by the script with no human involvement, in every
