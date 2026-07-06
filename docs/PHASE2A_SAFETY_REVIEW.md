@@ -1,14 +1,15 @@
 # Phase 2A — Safety Review
 
-**v3** — updated after `chess`'s unclear-license SAM voice feature was removed
-entirely (commit `6359f87`; see `PHASE2A_CHESS_SAM_LICENSE_REVIEW.md`). v2 was
-re-run against the rebuilt tree with real git submodules (see
-`PHASE2A_INTEGRATION_LOG.md`); this version only updates the `chess`/SAM row below
-to reflect the removal — every other finding is unchanged and was not re-verified
-again in this pass since nothing else changed.
+**v4** — the post-SAM-removal tree has now been real-build-confirmed (see
+`PHASE2A_BUILD_REPORT.md`: local Windows build PASS at commit `5e5e0ec`, both
+`fbt.cmd` targets, both artifacts present). v3 covered the removal itself (commit
+`6359f87`; see `PHASE2A_CHESS_SAM_LICENSE_REVIEW.md`) before that rebuild had
+happened. v2 was re-run against the rebuilt tree with real git submodules (see
+`PHASE2A_INTEGRATION_LOG.md`). Findings below are otherwise unchanged from v3 —
+nothing about app safety changed with the rebuild, only its confirmation status.
 
 Scope: the 5 apps imported this phase (`network_subnet`, `programmer_calc`,
-`vin_decoder`, `flipper95`, `chess`) as they exist in commit `6359f87` (current tip)
+`vin_decoder`, `flipper95`, `chess`) as they exist in commit `5e5e0ec` (current tip)
 on `integration/phase2a-first-batch`. Every line below is backed by a grep run
 directly against the copied source in this branch.
 
@@ -51,11 +52,13 @@ Result: **zero matches**, same as v1.
 ## Overall verdict
 
 All 5 imported apps meet every safety criterion in scope for this phase, confirmed
-on a real, independently-verified local Windows build (see
-`PHASE2A_BUILD_REPORT.md` — note that build predates the SAM removal; a rebuild
-against the current tip is pending). No app imported this phase performs radio
-transmission, wireless-protocol writes/attacks, keystroke injection, GPIO control,
-credential handling, network exfiltration, or unsafe shared-storage writes. The one
-previously-open item — `chess`'s SAM text-to-speech licensing question — is now
-closed: the component has been removed from the repository outright, not disabled
-or gated, so there is no remaining unclear-license code shipping in this branch.
+on a real, independently-verified local Windows build **at the current tip**
+(commit `5e5e0ec`, post-SAM-removal — see `PHASE2A_BUILD_REPORT.md`). No app
+imported this phase performs radio transmission, wireless-protocol writes/attacks,
+keystroke injection, GPIO control, credential handling, network exfiltration, or
+unsafe shared-storage writes. The one previously-open item — `chess`'s SAM
+text-to-speech licensing question — is closed: the component has been removed from
+the repository outright, not disabled or gated, and that removal itself is now
+build-confirmed, not just statically validated. **Hardware flashing/testing
+remains NOT PERFORMED** — a passing build is not a hardware test, and nothing here
+should be read as implying otherwise.

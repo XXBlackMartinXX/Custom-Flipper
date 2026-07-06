@@ -23,17 +23,25 @@
    testing there; none has been done yet — the local build pass so far was build-only,
    by explicit instruction (no flashing).
 
-## Firmware / content (open item)
+## Firmware / content (resolved item)
 
-4. **OPEN — `chess`'s bundled SAM text-to-speech component has no valid open-source
-   license.** `applications_user/chess/sam/stm32_sam.{h,cpp}` (Phase 2A,
-   `integration/phase2a-first-batch`) is a port of `s-macke/SAM`, whose own README
+4. **RESOLVED — `chess`'s bundled SAM text-to-speech component had no valid
+   open-source license.** `applications_user/chess/sam/stm32_sam.{h,cpp}` (Phase 2A,
+   `integration/phase2a-first-batch`) was a port of `s-macke/SAM`, whose own README
    explicitly states the code is reverse-engineered 1980s "abandonware" from a
    defunct company, with no rights holder able to grant a license — only a
    speculative "might qualify as Fair Use" claim, not a license grant. Full
    investigation in `PHASE2A_CHESS_SAM_LICENSE_REVIEW.md`. Decision: **SAM LICENSE
-   UNCLEAR / DISABLE VOICE FEATURE**. Does not affect compilation or safety (the
-   component has no hardware-capability access) — this is a distribution/compliance
-   issue. Implementing the decision requires a code change (removing or gating
-   `sam/stm32_sam.{h,cpp}` and `helpers/flipchess_voice.{cpp,h}`) that has **not**
-   been made yet, pending separate approval before touching code.
+   UNCLEAR / REMOVE SAM VOICE FEATURE ENTIRELY** — implemented in commit `6359f87`:
+   `sam/stm32_sam.{h,cpp}` and `helpers/flipchess_voice.{cpp,h}` were deleted from
+   the repository outright (not merely gated out of the build), all call sites
+   removed, confirmed by a full grep sweep showing zero remaining
+   `sam`/`voice`/`speech` references anywhere in `chess`. The removal was never a
+   safety/hardware-capability issue (the component had no radio/GPIO/HID access) —
+   it was a distribution/compliance issue, and it is now closed. **Build-confirmed**:
+   the project owner's real local Windows build at commit
+   `5e5e0ecf225be947a754e537670a6421838b939b` passed both `.\fbt.cmd COMPACT=1
+   DEBUG=0` and `.\fbt.cmd COMPACT=1 DEBUG=0 updater_package`, with both artifacts
+   present (`firmware.dfu` 862,825 bytes; updater `.tgz` 2,732,909 bytes). Full
+   detail in `PHASE2A_BUILD_REPORT.md`. Hardware flashing/testing: **NOT
+   PERFORMED** — release status remains **TEST-READY ONLY / NOT RELEASE-READY**.

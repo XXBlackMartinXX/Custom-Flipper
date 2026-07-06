@@ -34,7 +34,7 @@ used the official, unpatched `site_scons/cc.scons`.
 | Base selected | **Unleashed** (`dev` @ `5cdf9b33745f41f1a0405a6da44821128c233f5c`) |
 | Clean official build | **PASS** (confirmed on local Windows 11, official toolchain) |
 | Release status | **TEST-READY ONLY / NOT RELEASE-READY** |
-| Feature integration | **PHASE 2A: SAM license item resolved, rebuild pending** — see below |
+| Feature integration | **PHASE 2A: SAM license item resolved, post-removal build PASS** — see below |
 | Hardware tested | **NOT PERFORMED** |
 
 ## Phase 2A update: first app-integration batch — local build PASS
@@ -59,23 +59,31 @@ checkout, `assets/protobuf` version tag resolved correctly (`0.29`), both
 `.\fbt.cmd COMPACT=1 DEBUG=0` and `.\fbt.cmd COMPACT=1 DEBUG=0 updater_package`
 passed, both artifacts present. Hardware flashing/testing: **NOT PERFORMED**.
 
-**The one open licensing item is now resolved and implemented**: `chess` bundled a
-ported SAM text-to-speech component whose original upstream project (`s-macke/SAM`)
-has no valid open-source license — self-described "abandonware" with only a
-speculative Fair Use claim, confirmed by fetching that project's own README
-directly. Decision: **SAM LICENSE UNCLEAR / REMOVE SAM VOICE FEATURE ENTIRELY**
-(full investigation in `PHASE2A_CHESS_SAM_LICENSE_REVIEW.md`). Implemented in
-commit `6359f87`: the SAM engine and its wrapper were deleted from the repository
-outright (not just excluded from the build), all call sites removed, confirmed by a
-full grep sweep showing zero remaining `sam`/`voice`/`speech` references anywhere in
-`chess`. Scope confirmed confined to `applications_user/chess/` — no core/firmware
-files touched. **This change has not been compiled anywhere yet** — the build PASS
-above (commit `6b5cc53`) predates it; a rebuild against the current tip (`5e5e0ec`)
-is the next step, pending.
+**The one open licensing item is now resolved, implemented, and build-confirmed**:
+`chess` bundled a ported SAM text-to-speech component whose original upstream
+project (`s-macke/SAM`) has no valid open-source license — self-described
+"abandonware" with only a speculative Fair Use claim, confirmed by fetching that
+project's own README directly. Decision: **SAM LICENSE UNCLEAR / REMOVE SAM VOICE
+FEATURE ENTIRELY** (full investigation in `PHASE2A_CHESS_SAM_LICENSE_REVIEW.md`).
+Implemented in commit `6359f87`: the SAM engine and its wrapper were deleted from
+the repository outright (not just excluded from the build), all call sites
+removed, confirmed by a full grep sweep showing zero remaining
+`sam`/`voice`/`speech` references anywhere in `chess`. Scope confirmed confined to
+`applications_user/chess/` — no core/firmware files touched.
+
+**The rebuild against this removal has now passed**: the project owner's real
+local Windows build at commit `5e5e0ecf225be947a754e537670a6421838b939b`
+(`integration/phase2a-first-batch`) reported `git status` clean before and after,
+both `.\fbt.cmd COMPACT=1 DEBUG=0` and
+`.\fbt.cmd COMPACT=1 DEBUG=0 updater_package` PASS, `build\f7-firmware-C\firmware.dfu`
+present (862,825 bytes), `dist\f7-C\flipper-z-f7-update-local.tgz` present
+(2,732,909 bytes). Hardware flashing/testing: **NOT PERFORMED**. Full detail in
+`PHASE2A_BUILD_REPORT.md`.
 
 **Release status: TEST-READY ONLY / NOT RELEASE-READY.** The SAM license question
-is closed, but release-readiness still requires a rebuild confirming the removal
-compiles cleanly, hardware testing, and the project's full release-gate checklist.
+is closed and the post-removal build is confirmed passing, but release-readiness
+still requires hardware testing and the project's full release-gate checklist,
+neither of which has been done.
 
 ---
 

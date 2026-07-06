@@ -73,8 +73,8 @@ in the Phase 2A safety review and integration log.
 
 ## Decision
 
-**SAM LICENSE UNCLEAR / REMOVE SAM VOICE FEATURE ENTIRELY** (final — implemented,
-see "Implementation" below)
+**SAM LICENSE UNCLEAR / REMOVE SAM VOICE FEATURE ENTIRELY** (final — implemented
+and build-confirmed, see "Implementation" and "Build status" below)
 
 Rationale: the rest of `chess` (game logic, UI, `smallchesslib`) is cleanly
 licensed and has clear ongoing value; only the SAM-based voice easter-egg is in
@@ -114,5 +114,15 @@ word boundaries) across every `.c`/`.h`/`.cpp`/`.fam` file in `applications_user
 zero matches. `chess`'s remaining content (Struan Clark's MIT-licensed game/UI code,
 `smallchesslib`'s CC0-licensed engine) is unaffected and unchanged.
 
-Build status: **PENDING LOCAL REBUILD** — this change has not been compiled
-anywhere yet; see `PHASE2A_BUILD_REPORT.md`.
+Build status: **PASS.** The project owner's real local Windows build against
+commit `5e5e0ecf225be947a754e537670a6421838b939b` (the docs commit immediately on
+top of this removal, same tree) completed successfully: both `.\fbt.cmd
+COMPACT=1 DEBUG=0` and `.\fbt.cmd COMPACT=1 DEBUG=0 updater_package` passed,
+`firmware.dfu` (862,825 bytes) and the updater `.tgz` (2,732,909 bytes) both
+produced, `git status` clean before and after. Full detail in
+`PHASE2A_BUILD_REPORT.md`. Hardware flashing/testing: **NOT PERFORMED** — this
+confirms the code compiles, not that it has been run on a device.
+
+**This closes the SAM license investigation for Phase 2A**: the unclear-license
+code is removed from the repository, and the removal itself is now confirmed to
+build cleanly, not just statically validated.
