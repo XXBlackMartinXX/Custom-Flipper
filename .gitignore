@@ -62,6 +62,11 @@ null.d
 # openocd output file
 openocd.log
 
+# Generated Phase 2A validation reports (tools/phase2a_validate.ps1 output).
+# Timestamped JSON/Markdown dumps from each local run - not committed; the
+# curated, human-written summary lives in docs/PHASE2A_AUTOMATED_VALIDATION_RESULTS.md.
+/reports
+
 # PVS Studio temporary files
 .PVS-Studio/
 PVS-Studio.log
