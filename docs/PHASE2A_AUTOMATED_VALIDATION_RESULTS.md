@@ -1,11 +1,65 @@
 # Phase 2A — Automated Validation Results
 
-**v3 (Phase 2A.8) — CI hardening after the first real Windows GitHub Actions
-run.** See the "Phase 2A.8" section immediately below for the current state.
-v2 (Phase 2A.6, preserved further down this document) recorded the script's
-first real executions in the cloud sandbox and the two bugs found/fixed
-then. v1 (Phase 2A.5) recorded a manual reproduction of the validator's
-checks before it had been executed anywhere.
+**v4 (Phase 2A.9) — first genuinely green CI run, gate passed.** See the
+"Phase 2A.9" section immediately below. v3 (Phase 2A.8, preserved further
+down) recorded the first real Windows GitHub Actions run (which had a
+real Build PASS but a false overall failure) and the reviewed-false-positive
+fix for it. v2 (Phase 2A.6) recorded the script's first real executions in
+the cloud sandbox and the two bugs found/fixed then. v1 (Phase 2A.5)
+recorded a manual reproduction of the validator's checks before it had been
+executed anywhere.
+
+## Phase 2A.9 — first genuinely green CI run
+
+Following the Phase 2A.8 reviewed-false-positive fix (commit `8d21138`) and
+its accompanying docs commit (`718eec5`), pushing to
+`integration/phase2a-first-batch` automatically re-triggered the "Phase 2A
+Windows Validation" workflow. That run is the first to produce a fully green
+result end to end.
+
+| Field | Value |
+|---|---|
+| Workflow | Phase 2A Windows Validation |
+| Run ID | `28814008347` |
+| Run URL | https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28814008347 |
+| Head SHA | `718eec5fe115c9e0467a8d07d974947a85b27cf6` |
+| Workflow conclusion (verified via GitHub API `get_workflow_run`) | **success** |
+| Static validation | **PASS_WITH_REVIEWED_FALSE_POSITIVES** |
+| Build validation | **PASS** |
+| Hardware-assisted validation | **NOT_RUN** |
+| Firmware artifact | `build\f7-firmware-C\firmware.dfu` — **862,825 bytes** |
+| Updater artifact | `dist\f7-C\flipper-z-f7-update-local.tgz` — **2,733,074 bytes** |
+| Per-app FAP verification | PASS (all 5) |
+| SAM removal verification | PASS |
+| High-confidence unsafe API/capability matches | **zero** |
+| Reviewed risky-keyword false positives | 104 hash-reviewed entries, all matched |
+| Hardware flashing/testing | NOT PERFORMED |
+| Release status | TEST-READY ONLY / NOT RELEASE-READY |
+
+Independently confirmed (not just taken from the task description) via the
+GitHub Actions API: `get_workflow_run` on run `28814008347` returns
+`"status":"completed","conclusion":"success"`; `list_workflow_jobs` shows
+every step succeeded individually, including "Run Static validation"
+(`success`) and "Run Build validation" (`success`, ran 18:28:41–18:33:32
+UTC — about 5 minutes, consistent with a real `fbt.cmd` build including
+toolchain bootstrap on a fresh runner, not a skipped step).
+
+**Overall classification: `CI WINDOWS VALIDATION PASS WITH REVIEWED FALSE
+POSITIVES`.** This is the label this project uses specifically for a green
+GitHub Actions run of this workflow — see `PHASE2A_NEXT_GATE.md` for why
+this differs from a generic `AUTOMATED VALIDATION PASS` and from any
+release-readiness claim.
+
+The formal, locked acceptance record derived from this run is
+`docs/PHASE2A_ACCEPTANCE_RECORD.md`; the artifact inventory (with download
+locations and hash-verification instructions) is
+`docs/PHASE2A_ARTIFACT_MANIFEST.md`.
+
+**Hardware-assisted validation remains NOT RUN. Hardware testing remains NOT
+PERFORMED. Release status remains TEST-READY ONLY / NOT RELEASE-READY** —
+none of these change as a result of this green CI run.
+
+---
 
 ## Phase 2A.8 — first real Windows CI run, and the fix for its false failure
 

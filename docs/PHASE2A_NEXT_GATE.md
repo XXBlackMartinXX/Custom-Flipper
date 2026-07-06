@@ -79,44 +79,62 @@ checkpoint that comes before that decision is made at all.
    that hardware testing and release-readiness are still separate, unmet
    requirements.
 
-## What this gate does not authorize
-
-- **Passing this gate does not start Phase 2B.** Phase 2B (further app
-  imports, or any expanded scope) requires its own separate, explicit approval
-  from the project owner, independent of this gate's outcome.
-- **Passing this gate does not constitute hardware testing.** Hardware testing
-  is `docs/PHASE2A_HARDWARE_SMOKE_TEST_CHECKLIST.md` actually being run on a
-  real device by a human, with results recorded in a filled-in copy of
-  `docs/PHASE2A_HARDWARE_TEST_RESULTS_TEMPLATE.md` — nothing less.
-- **Passing this gate does not constitute release-readiness.** That also
-  requires the project's full release-gate checklist, which spans more than
-  Phase 2A alone.
-
-## Current status against this gate (as of this document — Phase 2A.8)
+## Current status against this gate (as of this document — Phase 2A.9): GATE PASSED
 
 | Step | Status |
 |---|---|
-| Static validation | Executed against the Phase 2A.8 fix commit (`8d21138`, cloud sandbox) — `PASS_WITH_REVIEWED_FALSE_POSITIVES` (exit 0). All 104 risky-keyword substring matches now resolve via the new reviewed-false-positive allowlist; zero unreviewed, zero high-confidence-unreviewed. |
-| Build validation | **Real Windows Build PASS already achieved** via GitHub Actions run `28808570107` (head SHA `6920b408...`): `firmware.dfu` 862,825 bytes, updater `.tgz` 2,732,904 bytes, all 5 `.fap` outputs present, SAM removal verified. **That specific run's overall workflow conclusion was `failure`**, but purely because of the now-fixed Static/risky-keyword-scan gap (see `PHASE2A_AUTOMATED_VALIDATION_RESULTS.md`'s "Phase 2A.8" section) — not a Build problem. The fix (commit `8d21138`) has not yet been exercised through an actual new GitHub Actions run as of this document. |
-| Hardware-assisted validation | **NOT RUN** — not attempted anywhere, and never will be by the GitHub Actions path either: that workflow contains no code path capable of invoking `-Mode HardwareAssisted`, by design (see `PHASE2A_GITHUB_ACTIONS_VALIDATION.md`). |
-| Overall classification | **NEEDS REVIEW** — pending a real re-run of the GitHub Actions workflow against the fix commit, to confirm the same real Build PASS now comes with a genuinely green overall workflow result |
+| Static validation | `PASS_WITH_REVIEWED_FALSE_POSITIVES` — CI run `28814008347`. All 104 risky-keyword substring matches resolved via the reviewed-false-positive allowlist; zero unreviewed, zero high-confidence-unreviewed. |
+| Build validation | **PASS** — same CI run. `firmware.dfu` 862,825 bytes, updater `.tgz` 2,733,074 bytes, all 5 `.fap` outputs present, SAM removal verified. |
+| Hardware-assisted validation | **NOT RUN** — not attempted anywhere, and never will be by the GitHub Actions path: that workflow contains no code path capable of invoking `-Mode HardwareAssisted`, by design. |
+| Overall CI conclusion (verified via GitHub API) | **success** |
+| Recorded classification | **`CI WINDOWS VALIDATION PASS WITH REVIEWED FALSE POSITIVES`** |
 
-**Immediate next action**: trigger the "Phase 2A Windows Validation" workflow
-again (manually via the Actions tab, or by pushing to
-`integration/phase2a-first-batch`, which this round's commits already did)
-against a commit that includes the Phase 2A.8 fix (`8d21138` or later), and
-confirm the workflow's overall conclusion is now green. If it is, record
-status as
-**`CI WINDOWS VALIDATION PASS / HARDWARE NOT TESTED / NOT RELEASE READY`**. If
-it still fails, diagnose from the uploaded reports/logs before assuming
-anything about the firmware — check whether it's a genuinely new/unreviewed
-risky-keyword match, a real build problem, or another validator/workflow gap
-— and fix the underlying validator, workflow, or (only if a real app defect
-is proven) firmware issue before re-running. Do not proceed to Phase 2B in
-the meantime.
+**This gate is now PASSED**, at commit `718eec5fe115c9e0467a8d07d974947a85b27cf6`
+on `integration/phase2a-first-batch`, per CI run
+[`28814008347`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28814008347).
+The formal, locked record of exactly what this does and does not mean is
+`docs/PHASE2A_ACCEPTANCE_RECORD.md` — its final classification is
+**`PHASE 2A ACCEPTED FOR NON-HARDWARE CI BASELINE ONLY`**, which is narrower
+than "gate passed" might otherwise suggest: it covers source/build/static
+verification only, nothing about hardware or release-readiness.
 
-**Not proceeding to Phase 2B.** This document defines the gate for future
-runs of this tooling; it does not, on its own, close the gate — that requires
-an actual passing run of `tools/phase2a_validate.ps1` (via GitHub Actions or
-a real Windows machine), review of its output, and (separately, when the
-project owner chooses) real hardware-assisted testing.
+## Next allowed paths (Phase 2A.9)
+
+With the gate passed, exactly two paths are authorized from here — nothing
+else, and neither happens automatically:
+
+**Path A — Hardware-assisted validation**, only if/when the project owner
+has physical access to a Flipper Zero and explicitly requests it. This means
+running `tools/phase2a_validate.ps1 -Mode HardwareAssisted` (device
+detection + read-only preflight only, per its own design) and, separately,
+walking through `docs/PHASE2A_HARDWARE_SMOKE_TEST_CHECKLIST.md` on the real
+device, recording results in a filled-in copy of
+`docs/PHASE2A_HARDWARE_TEST_RESULTS_TEMPLATE.md`. Nothing about this path is
+scheduled or assumed — it starts only when the project owner says so.
+
+**Path B — Phase 2B planning only**, not import, and only once the project
+owner explicitly requests it. "Planning only" means: identifying and
+proposing a small, safe next batch of candidate apps (drawing on the
+existing Phase 1/1.6 audit work), subject to the exact same gates this batch
+went through — individual source/license audit, safety review, Static+Build
+CI validation, and this same acceptance-record discipline. It does **not**
+mean starting to import code. **Phase 2B code import must not start until
+the project owner explicitly requests it** — this document, on its own,
+never authorizes that step, no matter how clean Phase 2A's CI result is.
+
+Both paths are optional and mutually non-exclusive; picking one does not
+foreclose the other, and picking neither (staying at the current accepted
+baseline) is also a valid outcome.
+
+## What this gate does not authorize (still true after acceptance)
+
+- **Does not start Phase 2B.** See Path B above — planning only, on explicit
+  request, and even then, import is a separate step requiring its own
+  further explicit request.
+- **Does not constitute hardware testing.** Hardware testing is
+  `docs/PHASE2A_HARDWARE_SMOKE_TEST_CHECKLIST.md` actually being run on a
+  real device by a human, with results recorded in a filled-in copy of
+  `docs/PHASE2A_HARDWARE_TEST_RESULTS_TEMPLATE.md` — nothing less.
+- **Does not constitute release-readiness.** That also requires the
+  project's full release-gate checklist, which spans more than Phase 2A
+  alone.

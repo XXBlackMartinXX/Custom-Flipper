@@ -179,6 +179,42 @@ flashing/testing remains NOT PERFORMED.** **Release status remains
 TEST-READY ONLY / NOT RELEASE-READY.** No firmware/app source was touched by
 either the validator fix or this documentation.
 
+## Phase 2A.9 update: CI-validated baseline formally accepted
+
+Pushing the Phase 2A.8 fix automatically re-triggered the "Phase 2A Windows
+Validation" workflow. **That run, CI run
+[`28814008347`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28814008347)
+(head SHA `718eec5fe115c9e0467a8d07d974947a85b27cf6`), is the first to come
+back fully green** — independently confirmed via the GitHub Actions API
+(`get_workflow_run` → `"conclusion":"success"`; `list_workflow_jobs` → every
+step succeeded, including "Run Static validation" and "Run Build
+validation" individually). Static: `PASS_WITH_REVIEWED_FALSE_POSITIVES`
+(all 104 reviewed matches, zero unreviewed, zero high-confidence-unreviewed).
+Build: **PASS** — `firmware.dfu` **862,825 bytes**, updater `.tgz`
+**2,733,074 bytes**, all 5 `.fap` outputs present, SAM removal verified.
+Hardware-assisted: **NOT RUN**, as designed.
+
+This result is now locked into a formal, auditable acceptance record:
+**`docs/PHASE2A_ACCEPTANCE_RECORD.md`**, final classification **PHASE 2A
+ACCEPTED FOR NON-HARDWARE CI BASELINE ONLY** — covering source/build/static
+verification only, explicitly not hardware-tested and not release-ready.
+The two backing GitHub Actions artifacts (firmware+updater; validation
+reports) are inventoried in **`docs/PHASE2A_ARTIFACT_MANIFEST.md`**, along
+with a new local helper, **`tools/phase2a_artifact_manifest.ps1`**, for
+generating real SHA-256 hashes once an artifact is downloaded and extracted
+(no such per-file hash has been generated yet — none has been downloaded by
+any AI session).
+
+`docs/PHASE2A_NEXT_GATE.md` now records this gate as **PASSED** and defines
+exactly two authorized next steps, neither automatic: (A) hardware-assisted
+validation, only if/when the project owner has a device and explicitly
+requests it; (B) Phase 2B **planning only** (not import) on explicit
+request, with import itself requiring a further separate explicit request.
+
+**Hardware flashing/testing remains NOT PERFORMED.** **Release status
+remains TEST-READY ONLY / NOT RELEASE-READY.** No firmware/app source was
+touched by this round (docs + one new read-only PowerShell helper only).
+
 ---
 
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
