@@ -71,14 +71,23 @@ checkpoint that comes before that decision is made at all.
   requires the project's full release-gate checklist, which spans more than
   Phase 2A alone.
 
-## Current status against this gate (as of this document)
+## Current status against this gate (as of this document — Phase 2A.6)
 
 | Step | Status |
 |---|---|
-| Static validation | Manually reproduced and reviewed in the cloud sandbox — PASS (see `PHASE2A_AUTOMATED_VALIDATION_RESULTS.md`). The script itself (`tools/phase2a_validate.ps1`) has not yet been executed anywhere, including this check. |
-| Build validation | BLOCKED in the cloud sandbox (toolchain host policy-denied, same root cause documented throughout this project). Independently known-PASS via the project owner's manual local Windows build at commit `5e5e0ecf225be947a754e537670a6421838b939b` — not yet re-verified through this new tooling on that machine. |
-| Hardware-assisted validation | NOT RUN — no device connected to this sandbox; this sandbox is also not Windows. |
+| Static validation | **Actually executed** (PowerShell 7.6.3 installed in the cloud sandbox specifically for this) against commit `ff4ba635fda0bf3e0e54188ba6da51335cd924f6` — PASS after review of the one NEEDS_REVIEW (risky-keyword substring matches, all confirmed benign). Two real script bugs were found and fixed in the process (a null-array `.Count` crash, and a build-failure misclassification) — see `PHASE2A_AUTOMATED_VALIDATION_RESULTS.md`. |
+| Build validation | **BLOCKED** in the cloud sandbox — this sandbox cannot execute `fbt.cmd` at all (it's a Windows batch file; this sandbox is Linux), a more basic limitation than but the same category as the previously-documented toolchain-host `403`. Independently known-PASS via the project owner's manual local Windows build at commit `5e5e0ecf225be947a754e537670a6421838b939b` — still not yet reproduced through this tooling itself; running the now-fixed `tools/phase2a_validate.ps1 -Mode Build` on the real Windows machine remains the next concrete step. |
+| Hardware-assisted validation | **NOT RUN** — deliberately not attempted this round, per explicit instruction. No device connected to this sandbox regardless; this sandbox is also not Windows. |
 | Overall classification | **NEEDS REVIEW** (see `PHASE2A_AUTOMATED_VALIDATION_RESULTS.md` for the full reasoning) |
+
+**Important scope note**: this cloud sandbox is not, and cannot substitute
+for, the project owner's own Windows machine
+(`C:\Github\Custom-Flipper-phase2a-build`). Everything above ran in an
+isolated Linux container with no access to that machine. The real next step
+is for the project owner to run the now-hardened `tools/phase2a_validate.ps1`
+there themselves, in both Static and Build modes, to get this tooling's first
+genuine Windows-machine result — Build mode in particular has never been
+exercised by this tooling anywhere that can actually complete a build.
 
 **Not proceeding to Phase 2B.** This document defines the gate for future
 runs of this tooling; it does not, on its own, close the gate — that requires
