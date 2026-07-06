@@ -127,8 +127,25 @@ FEATURE ENTIRELY**, implemented in commit `6359f87`:
   `\bspeech\b`, `\bvoice\b`, word-bounded) across every `.c`/`.h`/`.cpp`/`.fam` file
   in `applications_user/chess/` returns zero matches. All modified files re-checked
   with the comment/string-aware brace checker (all balanced).
-- Build status: **PENDING LOCAL REBUILD** — this change has not been compiled
-  anywhere yet; see `PHASE2A_BUILD_REPORT.md`.
+- Build status: **PASS.** The project owner's real local Windows build against
+  commit `5e5e0ec` (the docs commit immediately on top of this removal, same tree)
+  completed successfully — both `.\fbt.cmd COMPACT=1 DEBUG=0` and
+  `.\fbt.cmd COMPACT=1 DEBUG=0 updater_package` passed, `firmware.dfu` (862,825
+  bytes) and the updater `.tgz` (2,732,909 bytes) both produced, `git status` clean
+  before and after. Full detail in `PHASE2A_BUILD_REPORT.md`. Hardware
+  flashing/testing: **NOT PERFORMED**.
+
+## Final Phase 2A status
+
+- Base (Unleashed, real git submodules): imported, build-confirmed.
+- 5 apps (`network_subnet`, `programmer_calc`, `vin_decoder`, `flipper95`,
+  `chess`): imported, build-confirmed.
+- `chess`'s unclear-license SAM voice feature: removed entirely, build-confirmed
+  post-removal.
+- **Phase 2A local Windows build: PASS** (post-SAM-removal, commit `5e5e0ec`).
+- **Release status: TEST-READY ONLY / NOT RELEASE-READY.**
+- **Hardware test: NOT PERFORMED.**
+- Not proceeding to Phase 2B without separate approval.
 
 ## Deliberately not imported this phase
 
