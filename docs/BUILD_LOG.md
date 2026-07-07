@@ -418,6 +418,56 @@ ONLY / NOT RELEASE-READY.
 
 ---
 
+## Phase 2B.2 update: cleared batch imported, statically clean, and real CI build PASS
+
+Imported exactly the 3 cleared apps from `docs/PHASE2B_1_GO_NO_GO.md`,
+one commit each, on a new branch `integration/phase2b-first-batch`
+(created from `integration/phase2a-first-batch`, leaving that branch and
+its own baseline tags untouched): `flipfetch`, `quadratic_solver`,
+`sudoku` — fetched fresh from `RogueMaster/flipperzero-firmware-wPlugins`
+at the exact same commit (`472f6925e8aca9bd031cb37e3cb80b551772c957`)
+verified in Phase 2B.1, copied verbatim (LICENSE/README/source/assets),
+no refactor, no compile fix needed. Each import commit ran a real safety
+scan against the actual committed files before being accepted: zero real
+matches against the 19-keyword unsafe-capability list; 6 total
+`ble`-substring false positives, all inside "double"/"enabled", with
+exact line numbers and SHA-256 hashes recorded.
+
+Added a new `tools/phase2b_validate_config.json` (a superset of the
+frozen `tools/phase2a_validate_config.json`, which is untouched) covering
+all 8 apps, and a corresponding
+`.github/workflows/phase2b-windows-validation.yml` that reuses the
+existing Phase 2A CI pattern verbatim. Added one small, backward-compatible
+`-ConfigPath` parameter to the shared `tools/phase2a_validate.ps1` so it
+could point at the new config without touching Phase 2A's own default
+behavior.
+
+This session's own git submodules initialized successfully for the first
+time (`raw.githubusercontent.com`/`github.com` git-clone access is not
+blocked, unlike `update.flipperzero.one`, the pinned vendor toolchain
+host, which is still `403`) — letting local Static validation run
+cleanly against all 8 apps. Local **Build** remains genuinely BLOCKED /
+ENVIRONMENT for the same toolchain-host reason documented since Phase 0;
+no substitute toolchain was used.
+
+**The pushed branch's own CI workflow then ran for real** on a GitHub-hosted
+Windows runner: run
+[`28877810474`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28877810474),
+conclusion **success**, verified via the GitHub API (not claimed on
+trust). Static: `PASS_WITH_REVIEWED_FALSE_POSITIVES` (all 110 substring
+matches, 104 pre-existing + 6 new, individually reviewed). Build: `PASS`
+— `firmware.dfu` 862,825 bytes (identical to the Phase 2A baseline,
+confirming the base firmware itself is unchanged), updater package
+2,742,659 bytes (larger, expected - 3 more compiled FAPs embedded), all 8
+`.fap` outputs present. This is the first real, CI-confirmed build of the
+8-app batch together.
+
+**Hardware flashing/testing remains NOT PERFORMED** (out of scope for this
+phase by explicit instruction - no HardwareAssisted run, no device, no
+flash). **Release status remains TEST-READY ONLY / NOT RELEASE-READY.**
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is

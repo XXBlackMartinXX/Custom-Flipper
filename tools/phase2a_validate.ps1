@@ -63,6 +63,14 @@
     already-existing artifacts (useful for re-running artifact/keyword checks
     without a full rebuild).
 
+.PARAMETER ConfigPath
+    Optional. Path to an alternate config JSON (same schema as
+    phase2a_validate_config.json). Defaults to tools\phase2a_validate_config.json
+    alongside this script - existing invocations without this parameter are
+    unaffected. Added so later batches (e.g. Phase 2B) can validate their own
+    app list/branch/reviewed-false-positives without touching the frozen Phase 2A
+    config.
+
 .EXAMPLE
     .\phase2a_validate.ps1
     Runs Static mode with defaults. Safe to run anywhere, any time.
@@ -92,7 +100,9 @@ param(
 
     [switch]$ConfirmHardwareFlash,
 
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+
+    [string]$ConfigPath = ''
 )
 
 Set-StrictMode -Version Latest
@@ -115,7 +125,9 @@ if (-not (Test-Path $ReportDir)) {
     New-Item -ItemType Directory -Path $ReportDir -Force | Out-Null
 }
 
-$ConfigPath = Join-Path $ScriptRoot 'phase2a_validate_config.json'
+if (-not $ConfigPath) {
+    $ConfigPath = Join-Path $ScriptRoot 'phase2a_validate_config.json'
+}
 if (-not (Test-Path $ConfigPath)) {
     throw "Config file not found at '$ConfigPath'. This script requires tools\phase2a_validate_config.json to exist alongside it."
 }
@@ -321,7 +333,7 @@ if ($duplicateAppIds.Count -gt 0) {
     Add-Result -Name 'App ID uniqueness (within Phase 2A batch)' -Status 'FAIL' -Detail "Duplicate appid(s): $(($duplicateAppIds | ForEach-Object { $_.Name }) -join ', ')"
 }
 else {
-    Add-Result -Name 'App ID uniqueness (within Phase 2A batch)' -Status 'PASS' -Detail 'All 5 appids are unique within this batch'
+    Add-Result -Name 'App ID uniqueness (within Phase 2A batch)' -Status 'PASS' -Detail "All $($discoveredAppIds.Count) appids are unique within this batch"
 }
 
 $baseApplicationsPath = Join-Path $RepoRoot 'applications'
@@ -441,7 +453,7 @@ elseif ($totalRiskyMatches -gt 0) {
     Add-Result -Name 'Risky keyword scan (Phase 2A app dirs only)' -Status 'PASS_WITH_REVIEWED_FALSE_POSITIVES' -Detail "$totalRiskyMatches substring match(es) found; all $($reviewedMatches.Count) matched an exact, individually-reviewed entry in tools/phase2a_validate_config.json (file + line + keyword + line-content hash - any future edit to a matched line reverts it to unreviewed automatically). Zero unreviewed matches, zero high-confidence-unsafe matches." -Evidence ($reviewedMatches -join "`n")
 }
 else {
-    Add-Result -Name 'Risky keyword scan (Phase 2A app dirs only)' -Status 'PASS' -Detail 'Zero substring matches for any forbidden keyword across all 5 Phase 2A app directories'
+    Add-Result -Name 'Risky keyword scan (Phase 2A app dirs only)' -Status 'PASS' -Detail "Zero substring matches for any forbidden keyword across all $($Config.expectedApps.Count) configured app directories"
 }
 
 # ---------------------------------------------------------------------------
@@ -583,7 +595,7 @@ if ($Mode -eq 'Build' -or $Mode -eq 'HardwareAssisted') {
             }
         }
         if ($missingFaps.Count -eq 0) {
-            Add-Result -Name 'Per-app FAP output verification' -Status 'PASS' -Detail "All 5 expected .fap files found in $fapDir"
+            Add-Result -Name 'Per-app FAP output verification' -Status 'PASS' -Detail "All $($Config.expectedApps.Count) expected .fap files found in $fapDir"
         }
         else {
             Add-Result -Name 'Per-app FAP output verification' -Status 'FAIL' -Detail "Missing .fap for: $($missingFaps -join ', ') in $fapDir"
@@ -634,7 +646,7 @@ if ($Mode -eq 'HardwareAssisted') {
         Write-Host '  - docs/PHASE2A_FLASHING_PRECHECK.md (backup, rollback path identified)' -ForegroundColor Yellow
         Write-Host ''
 
-        Add-Result -Name 'Hardware scope confirmation' -Status 'PASS' -Detail 'This run is scoped only to the 5 Phase 2A apps listed above. No RF/Sub-GHz/NFC/RFID/iButton/BadUSB/BLE/GPIO/IR feature testing is performed by this script, for any app, under any flag.'
+        Add-Result -Name 'Hardware scope confirmation' -Status 'PASS' -Detail "This run is scoped only to the $($Config.expectedApps.Count) app(s) listed in the active config. No RF/Sub-GHz/NFC/RFID/iButton/BadUSB/BLE/GPIO/IR feature testing is performed by this script, for any app, under any flag."
 
         if (-not $ConfirmHardwareFlash) {
             Add-Result -Name 'Hardware flash/write operations' -Status 'NOT_RUN' -Detail '-ConfirmHardwareFlash was not passed. This run performed detection and preflight summary only - strictly read-only. No data was written to the device.'
