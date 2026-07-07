@@ -26,3 +26,5 @@
 # added one at a time as each app is reviewed/imported)
 !/sd_info/
 !/sd_info/**
+!/docviewlite/
+!/docviewlite/**
