@@ -144,6 +144,10 @@ local-sandbox toolchain/OS limitation described above, which is an
 established, unrelated environment limitation — not a Phase 2C code
 defect.
 
+## Phase 2C.3 artifact hash finalization
+
+Real SHA-256 hashes of the `firmware.dfu`/updater `.tgz` shown above were finalized by the `Phase 2C Finalize Baseline` workflow (run [`28899393035`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28899393035)) - see `docs/PHASE2C_3_ARTIFACT_HASHES.md` for the values. Phase 2C.3 finalized this build's artifacts; nothing about the build result itself changed.
+
 ## Conclusion
 
 **Local build: BUILD BLOCKED / ENVIRONMENT** (same root cause as every

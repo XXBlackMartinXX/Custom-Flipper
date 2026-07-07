@@ -735,6 +735,18 @@ hardware-connected validation mode was run. Phase 2D was not started.
 Hardware flashing/testing remains NOT PERFORMED. Release status remains
 TEST-READY ONLY / NOT RELEASE-READY.**
 
+**Finalization workflow executed for real** (run
+[`28899393035`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28899393035),
+success, ~46 seconds): real SHA-256 hashes computed on a GitHub-hosted
+Windows runner — `firmware.dfu` 862,825 bytes,
+`236ea92dfa826fe2459df3413e18952e0807775ed1f5c65737581e5c5c1934e8`;
+updater `.tgz` 2,757,340 bytes,
+`d2fd4847830c311b487457e29f3ca285b009b2ca6735257739a4198711157632`.
+Both `phase2c-ci-baseline-20260707` and `phase2c-acceptance-record-20260707`
+tags created fresh and pushed; Phase 2A's and Phase 2B's own tags
+confirmed untouched. See `docs/PHASE2C_3_ARTIFACT_HASHES.md` and
+`docs/PHASE2C_3_GO_NO_GO.md` for full detail.
+
 ---
 
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
