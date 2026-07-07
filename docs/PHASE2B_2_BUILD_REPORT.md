@@ -124,6 +124,10 @@ Phase 2A FAPs (per "All 8 expected .fap files found"): `flipfetch.fap`,
 toolchain-host block described above, which is an established, unrelated
 environment limitation — not a Phase 2B code defect.
 
+## Phase 2B.3 artifact hash finalization
+
+Real SHA-256 hashes of the `firmware.dfu`/updater `.tgz` shown above were finalized by the `Phase 2B Finalize Baseline` workflow (run [`28879790603`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28879790603)) - see `docs/PHASE2B_3_ARTIFACT_HASHES.md` for the values. Phase 2B.3 finalized this build's artifacts; nothing about the build result itself changed.
+
 ## Conclusion
 
 **Local build: BUILD BLOCKED / ENVIRONMENT** (same root cause as every

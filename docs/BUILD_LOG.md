@@ -468,6 +468,52 @@ flash). **Release status remains TEST-READY ONLY / NOT RELEASE-READY.**
 
 ---
 
+## Phase 2B.3 update: CI baseline acceptance record and artifact hash finalization (real, verified)
+
+Locked in the Phase 2B CI baseline (8 apps: 5 Phase 2A + 3 Phase 2B) at
+commit `50dfe2fadb2e587f4e8ed67edbf7f60e42b90159`, mirroring the exact
+acceptance-record and finalization discipline already used for Phase 2A
+(2A.9/2A.11). Added `docs/PHASE2B_3_ACCEPTANCE_RECORD.md`,
+`docs/PHASE2B_3_ARTIFACT_MANIFEST.md`, `docs/PHASE2B_3_ARTIFACT_HASHES.md`
+(initially honestly PENDING, no hash fabricated), `docs/PHASE2B_3_GO_NO_GO.md`,
+`docs/PHASE2B_NEXT_GATE.md`, and
+`.github/workflows/phase2b-finalize-baseline.yml` (modeled directly on the
+already-proven `phase2a-finalize-baseline.yml`).
+
+Triggered the finalization workflow for real via the GitHub API
+(`actions_run_trigger` → `run_workflow`) against
+`integration/phase2b-first-batch`. One real environment discovery along
+the way: the workflow could not be dispatched until its file was also
+mirrored to `claude/flipper-custom-firmware-cxrcer` — every other indexed
+workflow's catalog URL resolves to that branch, indicating it is this
+repository's actual default branch (distinct from any `integration/*`
+branch) - resolved by mirroring there, not by merging into any
+release/main branch.
+
+Run [`28879790603`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28879790603)
+completed in ~32 seconds with conclusion **success** (verified via
+`get_workflow_run`/`list_workflow_jobs`/`get_job_logs` - the real,
+unedited job log). Real results: `firmware.dfu` SHA-256
+`f74cf3be4b7d9e7fe87a08aec3f77a55982d0d6fcd08c61d46cc84a3237a3e75`
+(862,825 bytes), updater package SHA-256
+`6be763ec646c30261ccd943dd6c71f2cde3525b87c468eb574db67d7d840b9d7`
+(2,742,659 bytes). Both baseline tags created and pushed fresh:
+`phase2b-ci-baseline-20260707` → `50dfe2fadb2e587f4e8ed67edbf7f60e42b90159`,
+`phase2b-acceptance-record-20260707` →
+`ff44e82d5139717315960273917db064c9deeff1` (the finalization workflow's
+own docs commit) — both verified by dereferencing the annotated tag
+objects to their target commits, matching the job log's own reported
+output exactly.
+
+**Classification: PHASE 2B.3 BASELINE ACCEPTANCE PASS.** No app source
+was imported or modified. No `applications/` or `applications_user/`
+changes. No firmware binary committed to the repository - only real
+hashes, as text. No hardware was touched. Hardware flashing/testing
+remains NOT PERFORMED. Release status remains TEST-READY ONLY / NOT
+RELEASE-READY.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
