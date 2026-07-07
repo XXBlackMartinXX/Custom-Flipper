@@ -114,3 +114,63 @@ hardware was touched, no hardware-connected validation mode was run.
 Hardware flashing/testing remains **NOT PERFORMED**. Release status
 remains **TEST-READY ONLY / NOT RELEASE-READY**, unchanged from the
 Phase 2B baseline this plan builds on.
+
+---
+
+## Phase 2C.1 update: pre-import verification result
+
+**Phase 2C.1 classification: `PHASE 2C.1 NEEDS REVIEW`.** See
+`docs/PHASE2C_1_GO_NO_GO.md`, `docs/PHASE2C_1_SOURCE_LICENSE_VERIFICATION.md`,
+and `docs/PHASE2C_1_IMPORT_READINESS_MATRIX.md` for full detail.
+
+Real, direct network access to the actual upstream RogueMaster source
+(commit `472f6925e8aca9bd031cb37e3cb80b551772c957`, the same commit every
+prior audit in this project has cited) resolved the license-evidence gap
+this document originally flagged for 2 of the 3 recommended apps:
+
+- **`sd_info`**: **CONFIRMED — GPLv3**, real `LICENSE` file read directly
+  from the vendored source. Also carries a real, material correction: this
+  app is not zero-storage as this document and the planning package
+  assumed — it performs a real, transient, self-cleaning, explicitly
+  user-initiated SD-card read/write benchmark at `/ext/sdtest.tmp*` (not
+  app-private, not persistent, not automatic, not a safety-exclusion-list
+  capability). Cleared for import with this corrected risk understanding.
+- **`docviewlite`**: **CONFIRMED — MIT**, real `LICENSE` file read
+  directly from the vendored source. Storage behavior confirmed exactly as
+  assumed (read-only, user-selected file only). Cleared for import, with
+  one build-risk note (a manifest field referencing a non-existent
+  `images/` asset directory, to be observed at Static/Build validation
+  time).
+- **`fcc_id_lookup`**: **Not resolved — elevated to DEFER.** The
+  RogueMaster-vendored copy of this app has no `LICENSE` file, no SPDX
+  header, and no copyright notice anywhere in its source. Strong
+  corroborating evidence (a real, confirmed MIT license, same author, same
+  project, found at the exact upstream repository this app's manifest
+  links to) exists, but is not commit-pinned to the specific historical
+  revision RogueMaster vendored — per this phase's own license canary,
+  that is not sufficient to declare the license proven. This is a
+  materially lower-severity DEFER than `c_book`'s (no unresolved copyright
+  question, no commercial content, no capability concern — a clear,
+  low-effort resolution path exists) but it is real and unresolved as of
+  this update. The 8.9MB reference database originally flagged for a
+  provenance check turned out not to be part of the vendored source tree
+  at all, narrowing rather than widening this app's licensing surface.
+
+**The original 3-app batch does not remain fully valid.** It shrinks to a
+**2-app cleared batch**: `sd_info`, `docviewlite`. `fcc_id_lookup` is
+deferred, not substituted with a different app, per this phase's explicit
+instruction not to auto-substitute.
+
+This document's original "GO WITH CONDITIONS" recommendation and its
+numbered conditions list above are **superseded for condition #3
+specifically** (the license-read condition — now satisfied for 2 of the 3
+apps, still open for the third) but otherwise still apply in full — in
+particular, condition #1 (the project owner's own explicit request is
+still required to start implementation) remains exactly as written; this
+verification pass satisfies condition #2 for all 3 apps (fresh source was
+read for all 3) and condition #3 for 2 of the 3, but does not itself
+constitute condition #1.
+
+**No app code was imported in Phase 2C.1.** Hardware flashing/testing
+remains **NOT PERFORMED**. Release status remains **TEST-READY ONLY / NOT
+RELEASE-READY**.
