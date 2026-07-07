@@ -836,6 +836,74 @@ remains TEST-READY ONLY / NOT RELEASE-READY.**
 
 ---
 
+## Phase 2D.1 update: pre-import source/license/safety verification — all 3 apps cleared
+
+Real, fresh network access to `RogueMaster/flipperzero-firmware-wPlugins`
+at the pinned commit `472f6925e8aca9bd031cb37e3cb80b551772c957` (the same
+commit every prior audit in this project has cited, confirmed via `git
+rev-parse FETCH_HEAD` with no discrepancy from the Phase 2D planning
+docs). Fetched and read the actual `application.fam`, `LICENSE`, README,
+and full source for `resistors`, `crypto_dictionary`, and `2048` into a
+scratch clone outside this repository — mirroring exactly the Phase
+2B.1/2C.1 verification discipline.
+
+**All 3 apps had a real, readable `LICENSE` file present directly in the
+vendored source** — `resistors` and `2048`: MIT; `crypto_dictionary`:
+GPLv3 — a materially cleaner outcome than Phase 2C.1, where
+`fcc_id_lookup`'s vendored copy had no `LICENSE` file at all. A full
+22-keyword safety/API scan (the original 18 plus this phase's new
+`seed`/`wallet`/`private key`/`secret`) found zero real matches across all
+3 apps, including inside `crypto_dictionary`'s own bundled glossary text,
+and zero `furi_hal_*` references of any kind in any of the 3.
+
+**`resistors`**: confirmed zero storage API usage and zero hardware-API
+usage directly from source (not merely cited). Its planning-flagged
+"~2.3MB bundled asset footprint" turned out to be almost entirely
+non-build-input catalog/documentation directories
+(`.flipcorg/`/`design/`/`img/`/`screenshots/`) that `application.fam`
+does not reference at all — the actual build inputs are ~28KB of
+original 1-bit icon art. Two files within the non-build-input material
+(`design/resistor_{4,5}_src.*`, apparent photographic reference images)
+have unclear provenance; resolved by excluding those directories from any
+future import scope entirely, the same strategy already used for
+`fcc_id_lookup`'s database in Phase 2C.1.
+
+**`crypto_dictionary`**: confirmed the bundled glossary text (14
+symmetric-cipher reference cards) is original, non-copyrightable technical
+content in a distinctive personal authorial style, with zero matches for
+any credential/secret/wallet/seed/token/password term anywhere — cleaner
+than the Phase 2D risk register's own cautious anticipation. Directly
+confirmed `FSAM_READ`/`FSOM_OPEN_EXISTING`-only file access (no write call
+anywhere in the source) and no cryptographic operations performed on any
+data.
+
+**`2048`**: confirmed the high-score save is app-scoped
+(`/ext/apps_data/game_2048/`), with a real, directly-observed nuance not
+predicted by the planning citation — the path is built from a hardcoded
+literal string rather than the idiomatic `APP_DATA_PATH` appid macro
+`chess`/`sudoku` use, and the app additionally performs a one-time,
+silently-no-op-on-fresh-install legacy-path migration check. Neither
+nuance changes the app's clearance; both are documented precisely.
+
+**Result: all 3 apps CLEARED FOR IMPORT** (`docs/PHASE2D_1_GO_NO_GO.md`).
+The original 3-app batch remains fully valid — no reduction, no
+substitution needed. Full evidence in
+`docs/PHASE2D_1_SOURCE_LICENSE_VERIFICATION.md` and
+`docs/PHASE2D_1_IMPORT_READINESS_MATRIX.md`; `docs/PHASE2D_LICENSE_REVIEW.md`
+and `docs/PHASE2D_GO_NO_GO.md` were both updated in place with a Phase
+2D.1 section, preserving their original planning-phase content as the
+historical record.
+
+**No app code was imported. No `applications/` or `applications_user/`
+changes. No build attempted. No hardware touched, no hardware-connected
+validation mode run. Phase 2D implementation/import was not started —
+that requires the project owner's own separate, explicit request. Hardware
+flashing/testing remains NOT PERFORMED. Release status remains TEST-READY
+ONLY / NOT RELEASE-READY. `fcc_id_lookup` remains deferred, unresolved,
+and untouched by this phase.**
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is

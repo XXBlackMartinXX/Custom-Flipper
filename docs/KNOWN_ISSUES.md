@@ -122,4 +122,9 @@
    re-reviewed, and not part of the recommended Phase 2D batch (see
    `docs/PHASE2D_CANDIDATE_REVIEW.md`). Still open, unaffected by this
    planning phase, until its own dedicated license-confirmation
-   follow-up happens.
+   follow-up happens. **Phase 2D.1 update**: `fcc_id_lookup` was again
+   explicitly excluded from Phase 2D.1's pre-import verification pass, per
+   the project owner's own instruction not to import or re-review it in
+   that phase (see `docs/PHASE2D_1_GO_NO_GO.md`). Not touched, not
+   re-reviewed, not resolved by that pass. Still open until its own
+   dedicated license-confirmation follow-up happens.

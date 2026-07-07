@@ -88,3 +88,114 @@ assuming either from the Phase 1.6 description alone. Until that
 happens, this document does not declare any of these 3 apps
 license-clear, consistent with never claiming a license is confirmed
 without having actually read it.
+
+---
+
+## Phase 2D.1 verification update (real source read — supersedes the "routine NEEDS REVIEW" status above for all 3 apps)
+
+**This section adds new, direct evidence gathered in Phase 2D.1. The
+planning-phase content above is left unmodified as the historical record
+of what was and wasn't known at that time; do not read this section as
+retroactively editing it.**
+
+In Phase 2D.1, this environment had real, working network access to fetch
+actual upstream source. A real `git fetch`/`checkout` of
+`RogueMaster/flipperzero-firmware-wPlugins` at commit
+`472f6925e8aca9bd031cb37e3cb80b551772c957` (the exact commit every prior
+audit in this project has cited, confirmed via `git rev-parse FETCH_HEAD`
+with no discrepancy) retrieved each app's actual `LICENSE` file — all 3
+were present, and all 3 were read in full:
+
+| App | Declared license (confirmed by direct read) | Copyright holder |
+|---|---|---|
+| `resistors` | **MIT** (full, unmodified text) | Lewis Westbury (2023) |
+| `crypto_dictionary` | **GPLv3** (full, unmodified FSF text) | Not individually named in-file (standard for many hobbyist GPLv3 projects) |
+| `2048` | **MIT** (full, unmodified text) | Eugene Kirzhanov (2022) |
+
+**All 3 apps had a real `LICENSE` file present directly in the exact
+vendored artifact this project would import** — a materially different
+(and better) outcome than Phase 2C.1, where `fcc_id_lookup`'s vendored
+copy had no `LICENSE` file at all. No license-evidence gap exists for any
+of these 3 apps' own code.
+
+**`resistors` — MIT compatibility**: same reasoning already applied to
+`flipfetch`/`quadratic_solver`/`sudoku`/`docviewlite`. **Attribution
+required**: yes, per MIT's standard terms, crediting Lewis Westbury and
+the `shalebridge` fork `README.md` itself already credits for the 1.4
+feature set.
+
+**`resistors` — the bundled-asset-provenance question, resolved by scope,
+not by guessing.** The planning-phase content above flagged this app's
+"~2.3MB bundled asset footprint" for a specific provenance check. The
+real source read found this figure describes the *upstream repository*
+as a whole, not the build's actual inputs: `application.fam` only
+references `resistors.png` (4K) and `images/` (24K) — small, original,
+1-bit pixel-art icons with no provenance concern. The remaining ~2.3MB
+(`.flipcorg/`, `design/`, `img/`, `screenshots/`) is not consumed by the
+build at all, and two files within it
+(`design/resistor_{4,5}_src.jpg`/`.webp`) have genuinely unclear
+photographic-reference provenance (no EXIF, no credit, no separate
+asset license). **Resolution**: those directories are excluded from the
+import scope entirely — the same strategy this project used for
+`fcc_id_lookup`'s 8.9MB database in Phase 2C.1 (scope the import to what
+is actually needed and has clear provenance, rather than either
+guessing the unclear material is fine or blocking the whole app over
+content it doesn't need to ship). This is a **narrowing, not a
+disqualification** — `resistors` remains cleared.
+
+**`crypto_dictionary` — GPLv3 compatibility**: the most direct possible
+compatibility case — the app is licensed under the exact same license as
+this project's own firmware base (same class of finding as `sd_info` in
+Phase 2C.1). **Attribution required**: yes, per GPLv3's standard terms.
+
+**`crypto_dictionary` — glossary-provenance question, resolved
+favorably.** The planning-phase content above (and the Phase 2D risk
+register) flagged a specific concern that the glossary text might contain
+copied third-party material, or might itself trigger safety-keyword
+false positives (e.g. "credential," "brute force"). The real source read
+found the 14 bundled `resources/symmetric_cipher/*.txt` files are short,
+distinctively hand-authored ASCII-art reference cards (a consistent
+personal style, including idiosyncratic spelling) describing only public,
+non-copyrightable cipher specifications (key size, block size, rounds) —
+no verbatim third-party text, and a full keyword scan (including this
+phase's new `seed`/`wallet`/`private key`/`secret` terms) found **zero
+matches anywhere**, including inside the glossary text itself. The app
+was also directly confirmed to open its glossary files with
+`FSAM_READ`/`FSOM_OPEN_EXISTING` only (no write call anywhere in the
+source) and to perform no cryptographic operations on any data — it only
+displays static reference text. This fully confirms, rather than merely
+accepts on citation, the special-caution requirement that this app
+handles no user credentials, wallet keys, tokens, seed phrases,
+passwords, or secrets.
+
+**`2048` — MIT compatibility**: same reasoning as `resistors` above.
+**Attribution required**: yes, per MIT's standard terms; `README.md`
+already credits Eugene Kirzhanov (2022).
+
+**`2048` — storage behavior, confirmed with a real nuance.** The
+planning-phase content above assumed a simple app-private high-score
+save, matching `chess`/`sudoku`'s precedent. The real source read
+confirms the save is effectively app-scoped
+(`/ext/apps_data/game_2048/game_2048.save`) but built from a **hardcoded
+literal path** rather than the idiomatic `APP_DATA_PATH` appid-based
+macro `chess`/`sudoku` use, and additionally performs a one-time,
+silently-no-op-on-fresh-install migration check against a legacy save
+location (`/ext/apps/Games/game_2048.save`). Neither nuance changes the
+app's clearance — the save remains non-colliding and non-shared — but
+both are recorded precisely rather than smoothed into an unqualified
+"zero-risk app-private save," the same discipline Phase 2C.1 applied to
+`sd_info`'s SD-benchmark writes (a materially larger finding there; this
+one is minor by comparison).
+
+### Updated summary (Phase 2D.1 supersedes the planning-phase rows above)
+
+| App | License status (Phase 2D.1) | Recommendation |
+|---|---|---|
+| `resistors` | **CONFIRMED — MIT, real LICENSE file read.** Bundled-asset-provenance question resolved by excluding the unclear-provenance, non-build-input directories from import scope | Cleared for import, with the import-scope condition recorded in `docs/PHASE2D_1_SOURCE_LICENSE_VERIFICATION.md` |
+| `crypto_dictionary` | **CONFIRMED — GPLv3, real LICENSE file read.** Glossary-provenance question resolved favorably — original, non-copyrightable technical content, zero sensitive-keyword matches | Cleared for import, no conditions beyond standard GPLv3 attribution |
+| `2048` | **CONFIRMED — MIT, real LICENSE file read.** Storage behavior confirmed app-scoped, with a documented hardcoded-path/legacy-migration nuance | Cleared for import, with the storage-documentation precision noted above |
+
+See `docs/PHASE2D_1_SOURCE_LICENSE_VERIFICATION.md` for the complete,
+per-app evidence (file listings, exact grep results, exact source
+excerpts) behind this update, and `docs/PHASE2D_1_GO_NO_GO.md` for the
+resulting batch recommendation.
