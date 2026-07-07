@@ -29,6 +29,23 @@
    The project owner has a local Windows machine and could perform real hardware
    testing there; none has been done yet — the local build pass so far was build-only,
    by explicit instruction (no flashing).
+5. **OPEN — cloud sandbox cannot download GitHub Actions artifacts or push git tags.**
+   Two separate, confirmed network/policy restrictions hit during Phase 2A.10:
+   (a) GitHub Actions artifact downloads always redirect to Azure Blob Storage
+   (`*.blob.core.windows.net`), and this session's egress policy returns a `403` for
+   that host (and for direct `api.github.com` calls made from this session's own
+   network path, as opposed to the separate MCP connector used for read-only API
+   calls) — so real SHA-256 hashes of `firmware.dfu`/the updater `.tgz` from CI run
+   `28814008347` could not be generated here; see `docs/PHASE2A_ARTIFACT_HASHES.md`
+   for the honest NOT-YET-GENERATED record and how to generate them elsewhere.
+   (b) Pushing git tags through this session's own git relay returns a `403` (ordinary
+   branch pushes through the same relay work fine), so two locally-created annotated
+   tags (`phase2a-ci-baseline-20260707`, `phase2a-acceptance-record-20260707`) exist
+   only in this session's local clone, not on GitHub. Neither restriction blocks
+   anything already accepted — the Phase 2A CI baseline and its acceptance record are
+   fully recorded via pushed branch commits regardless — but both remain genuinely
+   open until resolved from an environment with the relevant access (a machine with
+   real network access to GitHub for (a); a session/token with tag-push scope for (b)).
 
 ## Firmware / content (resolved item)
 

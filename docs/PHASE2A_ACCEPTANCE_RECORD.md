@@ -51,6 +51,30 @@ difference between different commits' packages is normal (see
 `PHASE2A_AUTOMATED_VALIDATION_RESULTS.md`'s Phase 2A.8 section for the same
 reasoning applied to the prior run).
 
+### Artifact hash finalization (Phase 2A.10)
+
+| Field | Value |
+|---|---|
+| Artifact hashes generated | **NO** — attempted, blocked by environment network policy (see below) |
+| Hash manifest file | `docs/PHASE2A_ARTIFACT_HASHES.md` |
+| CI artifact source | Run `28814008347` |
+
+Phase 2A.10 attempted to download both artifacts from run `28814008347` in
+order to compute real, independently-verified SHA-256 hashes of the actual
+`firmware.dfu` and updater `.tgz` files. This session's network egress
+policy blocks the Azure Blob Storage host GitHub Actions artifact downloads
+always redirect to (`productionresultssa12.blob.core.windows.net`) —
+confirmed by a direct `403` on the redirected download URL and by this
+session's own proxy status endpoint recording the same rejected host. This
+is the same class of environment limitation as the Flipper-toolchain-host
+block documented elsewhere in this project, not a defect in the artifacts,
+the firmware, or the apps. **`docs/PHASE2A_ARTIFACT_HASHES.md` records this
+plainly and gives the exact steps to generate real hashes on a machine with
+network access to GitHub — no hash value is fabricated here or there.**
+Hardware testing remains **NOT PERFORMED**; release status remains
+**TEST-READY ONLY / NOT RELEASE-READY**, unaffected by whether hash
+finalization has happened yet.
+
 ## Phase 2A apps included (5, unchanged since import)
 
 | App | appid | Category |

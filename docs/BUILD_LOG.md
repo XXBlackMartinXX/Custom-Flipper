@@ -215,6 +215,47 @@ request, with import itself requiring a further separate explicit request.
 remains TEST-READY ONLY / NOT RELEASE-READY.** No firmware/app source was
 touched by this round (docs + one new read-only PowerShell helper only).
 
+## Phase 2A.10 update: hash finalization attempted (blocked, documented); baseline tags created locally (not pushed)
+
+Two follow-up tasks were attempted: finalizing real artifact hashes, and
+tagging the accepted baseline.
+
+**Hash finalization**: attempted to download both GitHub Actions artifacts
+from CI run `28814008347` and hash the extracted `firmware.dfu`/updater
+`.tgz` with `tools/phase2a_artifact_manifest.ps1`. **Blocked** — this cloud
+sandbox's network egress policy rejects the Azure Blob Storage host
+(`productionresultssa12.blob.core.windows.net`) that GitHub Actions artifact
+downloads always redirect to (confirmed via a direct `403` and this
+session's own proxy status endpoint), and direct calls to `api.github.com`
+from this session's own network path are blocked too. Same category of
+environment limitation as the Flipper-toolchain-host block documented
+earlier in this log. **No hash was fabricated** —
+`docs/PHASE2A_ARTIFACT_HASHES.md` records the NOT-YET-GENERATED status
+explicitly and gives the exact steps to generate real hashes elsewhere
+(download + run the existing script on a machine with real GitHub network
+access, or add a self-hashing step to the CI workflow as a separate,
+explicitly-approved change).
+
+**Baseline tags**: two annotated tags were created locally —
+`phase2a-ci-baseline-20260707` (pointing at the CI-validated commit
+`718eec5fe115c9e0467a8d07d974947a85b27cf6`) and
+`phase2a-acceptance-record-20260707` (pointing at the Phase 2A.10 docs
+commit). **Pushing them failed with a `403`** from this session's own git
+relay — a different failure from the artifact-download block above (this
+one comes from the relay infrastructure itself, not GitHub; ordinary branch
+pushes through the same relay work fine, so this reads as a deliberate
+restriction on tag creation specifically, consistent with this project's
+"do not publish a public release" boundary). Per this project's standing
+rule against retrying policy denials, this was not repeatedly attempted —
+**both tags exist only in this session's local clone and are not on
+GitHub.** Pushing them (from a machine/session with tag-push permission) is
+a leftover step if permanent baseline tags are wanted; the branch commits
+and `docs/PHASE2A_ACCEPTANCE_RECORD.md` already serve as the durable,
+pushed record regardless.
+
+**Hardware flashing/testing remains NOT PERFORMED. Release status remains
+TEST-READY ONLY / NOT RELEASE-READY.** No firmware/app source was touched.
+
 ---
 
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
