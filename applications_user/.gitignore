@@ -35,3 +35,5 @@
 !/resistors/**
 !/crypto_dictionary/
 !/crypto_dictionary/**
+!/2048/
+!/2048/**
