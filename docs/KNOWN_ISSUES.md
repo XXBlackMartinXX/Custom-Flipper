@@ -116,4 +116,10 @@
    real in Phase 2C.2 (see `docs/PHASE2C_2_GO_NO_GO.md`); `fcc_id_lookup`
    was correctly **not** imported and no substitute app was added. This
    item remains open, unaffected by that import, until its own dedicated
-   license-confirmation follow-up happens.
+   license-confirmation follow-up happens. **Phase 2D planning update**:
+   `fcc_id_lookup` was explicitly excluded from Phase 2D candidate
+   consideration per the project owner's own instruction, not
+   re-reviewed, and not part of the recommended Phase 2D batch (see
+   `docs/PHASE2D_CANDIDATE_REVIEW.md`). Still open, unaffected by this
+   planning phase, until its own dedicated license-confirmation
+   follow-up happens.

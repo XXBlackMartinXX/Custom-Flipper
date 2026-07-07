@@ -792,6 +792,50 @@ TEST-READY ONLY / NOT RELEASE-READY.**
 
 ---
 
+## Phase 2D planning update: candidate review package (planning only, no import)
+
+Built the full Phase 2D planning package — `PHASE2D_CANDIDATE_REVIEW.md`,
+`PHASE2D_RECOMMENDED_BATCH.md`, `PHASE2D_RISK_REGISTER.md`,
+`PHASE2D_LICENSE_REVIEW.md`, `PHASE2D_INTEGRATION_PLAN.md`,
+`PHASE2D_GO_NO_GO.md`, and `PHASE2D_NEXT_GATE.md` — grounded entirely in
+the existing Phase 1.5/1.6 candidate-audit work and the Phase 2C
+planning/import record (no fresh source read; real source/license
+verification is explicitly deferred to a future Phase 2D.1).
+
+Re-screened the Phase 1.5 Top 25 against the now-10-app accepted
+baseline (`network_subnet`, `programmer_calc`, `vin_decoder`,
+`flipper95`, `chess`, `flipfetch`, `quadratic_solver`, `sudoku`,
+`sd_info`, `docviewlite`) plus 6 apps hard-deferred per explicit
+instruction and left unre-reviewed: `upython`, `iconedit` (real
+hardware-capability exposure), `c_book` (unresolved book-copyright
+question), `animation_switcher`/`theme_manager` (shared `/ext/dolphin/`
+writes), and `fcc_id_lookup` (still-open license-evidence gap, per
+`docs/KNOWN_ISSUES.md` item 6). This leaves a 9-app candidate pool.
+
+**Recommended tiny batch (3 apps, LOW risk each)**: `resistors`,
+`crypto_dictionary`, `2048` — the clearest zero-storage classification
+in the pool, a confirmed pure offline glossary with no crypto operations
+performed on user data, and a well-understood app-private high-score
+save (the same pattern already proven safe by `chess`/`sudoku`).
+Deliberately excluded `hex_viewer`/`qrcode`/`barcode_gen` from this
+specific slice — their existing Phase 1.6 storage descriptions don't
+explicitly rule out a write, and this project's own Phase 2C.1 finding
+with `sd_info` (assumed zero-storage in planning, found to have real
+SD-root writes on fresh source read) is the specific reason that kind of
+ambiguity is now treated as a reason to defer rather than assume
+read-only behavior for a first, most-conservative slice. Recommendation:
+**GO WITH CONDITIONS** — the next actual step is Phase 2D.1 pre-import
+source/license verification, not import; implementation still requires
+the project owner's own separate, explicit request even after that.
+
+**No app source was imported or read fresh. No `applications/` or
+`applications_user/` changes. No firmware built. No hardware touched, no
+hardware-connected validation mode run. Phase 2D implementation was not
+started. Hardware flashing/testing remains NOT PERFORMED. Release status
+remains TEST-READY ONLY / NOT RELEASE-READY.**
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
