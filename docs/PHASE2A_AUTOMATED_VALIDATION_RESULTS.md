@@ -1,13 +1,64 @@
 # Phase 2A — Automated Validation Results
 
-**v4 (Phase 2A.9) — first genuinely green CI run, gate passed.** See the
-"Phase 2A.9" section immediately below. v3 (Phase 2A.8, preserved further
-down) recorded the first real Windows GitHub Actions run (which had a
-real Build PASS but a false overall failure) and the reviewed-false-positive
-fix for it. v2 (Phase 2A.6) recorded the script's first real executions in
-the cloud sandbox and the two bugs found/fixed then. v1 (Phase 2A.5)
-recorded a manual reproduction of the validator's checks before it had been
-executed anywhere.
+**v5 (Phase 2A.10) — artifact hash finalization attempted; genuine
+environment blocker hit and documented, not worked around.** See the "Phase
+2A.10" section immediately below. v4 (Phase 2A.9, preserved further down)
+recorded the first genuinely green CI run and the resulting gate-passed
+acceptance. v3 (Phase 2A.8) recorded the first real Windows GitHub Actions
+run (real Build PASS, false overall failure) and its fix. v2 (Phase 2A.6)
+recorded the script's first real executions in the cloud sandbox and the two
+bugs found/fixed then. v1 (Phase 2A.5) recorded a manual reproduction of the
+validator's checks before it had been executed anywhere.
+
+## Phase 2A.10 — artifact hash finalization: blocked, honestly
+
+Phase 2A.10 set out to download the two GitHub Actions artifacts from CI run
+`28814008347` and run `tools/phase2a_artifact_manifest.ps1` against the
+extracted files to produce real, independently-computed SHA-256 hashes of
+`firmware.dfu` and the updater `.tgz`.
+
+**This was not possible in this session.** Every GitHub Actions artifact
+download redirects to Azure Blob Storage (`*.blob.core.windows.net`), and
+this cloud sandbox's network egress policy rejects that host — confirmed
+directly:
+
+1. Called the GitHub API to get a download URL for artifact `8118169559`
+   (`phase2a-firmware-artifacts`) — succeeded, returning a valid, time-limited
+   URL on `productionresultssa12.blob.core.windows.net`.
+2. Attempted to fetch that URL — `curl: (56) CONNECT tunnel failed, response 403`.
+3. Confirmed via this session's own proxy status endpoint that the most
+   recent relay failure is exactly this host, with
+   `"kind":"connect_rejected"` / `"detail":"gateway answered 403 to CONNECT
+   (policy denial or upstream failure)"`.
+4. Also confirmed direct calls to `api.github.com` from this session's own
+   network path (as opposed to the MCP connector used for the read-only
+   GitHub API calls elsewhere in this project) return `403` too — there is
+   no alternate route available from this sandbox for this specific
+   operation.
+
+This is the same category of environment limitation documented throughout
+this project (the Flipper vendor-toolchain-host block; this same sandbox's
+inability to execute `fbt.cmd` at all) — a real, external network policy
+denial, not a defect in the artifacts, the firmware, or the apps. **Per this
+project's standing rule, this is reported honestly rather than routed
+around, retried, or faked.**
+
+**No hash was fabricated.** `docs/PHASE2A_ARTIFACT_HASHES.md` records the
+NOT-YET-GENERATED status explicitly, along with the exact steps to generate
+real hashes (download + run `tools/phase2a_artifact_manifest.ps1` on any
+machine with real network access to GitHub, or add a self-hashing step to
+the CI workflow — either requires a decision from the project owner, not
+made unilaterally here).
+
+**What this does not affect**: the Phase 2A.9 acceptance itself. Both
+artifacts' *sizes* were already confirmed by the CI run's own report
+(`firmware.dfu` 862,825 bytes, updater `.tgz` 2,733,074 bytes) and are
+unaffected by whether an additional hash-based verification layer has been
+completed. **Hardware-assisted validation remains NOT RUN. Hardware testing
+remains NOT PERFORMED. Release status remains TEST-READY ONLY / NOT
+RELEASE-READY.**
+
+---
 
 ## Phase 2A.9 — first genuinely green CI run
 

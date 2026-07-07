@@ -79,7 +79,7 @@ checkpoint that comes before that decision is made at all.
    that hardware testing and release-readiness are still separate, unmet
    requirements.
 
-## Current status against this gate (as of this document — Phase 2A.9): GATE PASSED
+## Current status against this gate (as of this document — Phase 2A.10): GATE PASSED
 
 | Step | Status |
 |---|---|
@@ -88,6 +88,7 @@ checkpoint that comes before that decision is made at all.
 | Hardware-assisted validation | **NOT RUN** — not attempted anywhere, and never will be by the GitHub Actions path: that workflow contains no code path capable of invoking `-Mode HardwareAssisted`, by design. |
 | Overall CI conclusion (verified via GitHub API) | **success** |
 | Recorded classification | **`CI WINDOWS VALIDATION PASS WITH REVIEWED FALSE POSITIVES`** |
+| Artifact hash finalization (Phase 2A.10) | **Attempted, blocked by a genuine environment network-policy limitation** (this sandbox cannot reach the Azure Blob Storage host GitHub Actions artifact downloads redirect to — confirmed 403, same class as the toolchain-host block elsewhere in this project). **Not faked** — see `docs/PHASE2A_ARTIFACT_HASHES.md` and `docs/PHASE2A_AUTOMATED_VALIDATION_RESULTS.md`'s "Phase 2A.10" section. Does not affect the acceptance below (artifact sizes were already confirmed by the CI run itself). |
 
 **This gate is now PASSED**, at commit `718eec5fe115c9e0467a8d07d974947a85b27cf6`
 on `integration/phase2a-first-batch`, per CI run
@@ -98,7 +99,7 @@ The formal, locked record of exactly what this does and does not mean is
 than "gate passed" might otherwise suggest: it covers source/build/static
 verification only, nothing about hardware or release-readiness.
 
-## Next allowed paths (Phase 2A.9)
+## Next allowed paths (unchanged since Phase 2A.9)
 
 With the gate passed, exactly two paths are authorized from here — nothing
 else, and neither happens automatically:

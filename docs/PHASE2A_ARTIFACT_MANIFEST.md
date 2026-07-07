@@ -80,3 +80,17 @@ independently computed by any AI session (no artifact has been downloaded
 here), and this document does not fabricate them. If you run the script,
 consider appending its output to this file (or keeping it alongside) as the
 first real, independently-verified hash record for these binaries.
+
+## Final local hash manifest
+
+See **`docs/PHASE2A_ARTIFACT_HASHES.md`** — the dedicated document for
+recording real, downloaded-and-hashed SHA-256 values for this run's
+artifacts (Phase 2A.10 attempted this and hit a genuine environment
+blocker: the cloud sandbox's network policy blocks the Azure Blob Storage
+host GitHub Actions artifact downloads always redirect to, confirmed via a
+direct `403` and this session's own proxy status endpoint — the same class
+of block as this project's Flipper-toolchain-host restriction). That
+document states plainly that hashes are **NOT YET GENERATED** rather than
+fabricating values, and gives the exact steps to generate them (download +
+run `tools/phase2a_artifact_manifest.ps1` on any machine with real network
+access to GitHub).
