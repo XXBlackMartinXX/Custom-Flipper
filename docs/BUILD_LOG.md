@@ -651,6 +651,55 @@ TEST-READY ONLY / NOT RELEASE-READY.**
 
 ---
 
+## Phase 2C.2 update: cleared batch imported, statically clean, and real CI build PASS
+
+Imported the reduced, cleared 2-app Phase 2C batch — `sd_info` and
+`docviewlite` — one at a time, on a new branch
+`integration/phase2c-first-batch` created from
+`integration/phase2b-first-batch`. `fcc_id_lookup` was **not** imported
+(deferred per Phase 2C.1's license-evidence gap) and no substitute app
+was added.
+
+Each app's `LICENSE` was re-fetched from the same pinned RogueMaster
+commit (`472f6925e8aca9bd031cb37e3cb80b551772c957`) and re-hashed byte-
+identical to Phase 2C.1's evidence before import: `sd_info` is **GPLv3**
+(the same license as the firmware base itself — the most direct possible
+compatibility case), `docviewlite` is **MIT**. No source file in either
+app was modified; each app's `entry_point` was confirmed present in its
+own source before committing.
+
+Static scan of the real imported source found **zero real unsafe/
+capability matches** in either app — only benign `ble`-substring false
+positives (`double`, `enabled`, `variable`, `available`, `scrolling`
+words), the same class established throughout Phase 2A/2B. One real,
+material storage-risk correction was found and recorded, not hidden:
+`sd_info`'s SD-card speed test performs real (but transient,
+self-cleaning, user-initiated) writes at `/ext/sdtest.tmp*` — not
+zero-storage as the original Phase 2C planning pass assumed.
+`docviewlite` was confirmed read-only exactly as planned.
+
+The combined 10-app batch (8 Phase 2A/2B + `sd_info` + `docviewlite`) was
+validated via a new `tools/phase2c_validate_config.json` and
+`.github/workflows/phase2c-windows-validation.yml` (both modeled directly
+on their Phase 2B counterparts): local Static validation ran for real via
+`pwsh` in this sandbox (`PASS_WITH_REVIEWED_FALSE_POSITIVES`, 139
+substring matches all individually reviewed), local Build remains
+**BUILD BLOCKED / ENVIRONMENT** (same structural Linux-sandbox limitation
+as every prior phase), and **real CI Build validation PASSED** on a
+GitHub-hosted Windows runner (run `28897702247`, conclusion `success`):
+`firmware.dfu` 862,825 bytes (unchanged from baseline), updater `.tgz`
+2,757,340 bytes, all 10 `.fap` outputs present including `sd_info.fap`
+and `docviewlite.fap`.
+
+**Classification: `PHASE 2C.2 IMPORT PASS`.**
+
+**No core firmware (`applications/`) was changed. No hardware was
+touched, no hardware-connected validation mode was run. No release was
+published. Hardware flashing/testing remains NOT PERFORMED. Release
+status remains TEST-READY ONLY / NOT RELEASE-READY.**
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is

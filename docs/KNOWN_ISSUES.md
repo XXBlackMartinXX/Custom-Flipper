@@ -18,6 +18,10 @@
    from whether the toolchain download itself is reachable). Same category of
    environment limitation, not a new issue: a real Build-mode result from this
    tooling still requires the project owner's own Windows machine.
+   **Phase 2C.2 update**: reconfirmed a third time against the 10-app Phase 2C
+   batch (`sd_info`, `docviewlite` added) — same `BLOCKED` result, same reason.
+   Real CI Build validation (GitHub Actions, `windows-latest`) passed instead;
+   see `docs/PHASE2C_2_BUILD_REPORT.md`. Nothing new introduced by this update.
 2. **RESOLVED (was: substituted toolchain).** The cloud session's substitute toolchain
    experiment (Ubuntu `gcc-arm-none-eabi` 13.2 + pip Python/SCons, with two local
    `-Wno-error=` flags in a throwaway `/tmp` clone) is superseded by item 1 above and
@@ -96,3 +100,8 @@
    imported** (per `docs/PHASE2C_1_GO_NO_GO.md`, it is deferred, not part of
    the current 2-app cleared batch) and stays open until that specific
    license confirmation happens.
+   **Phase 2C.2 update**: `sd_info` and `docviewlite` were imported for
+   real in Phase 2C.2 (see `docs/PHASE2C_2_GO_NO_GO.md`); `fcc_id_lookup`
+   was correctly **not** imported and no substitute app was added. This
+   item remains open, unaffected by that import, until its own dedicated
+   license-confirmation follow-up happens.
