@@ -36,7 +36,12 @@
    where `Get-PnpDevice` itself is unavailable (Linux, not Windows) and no device
    is attached — see `docs/PHASE2A_HARDWARE_ASSISTED_RESULTS.md`. The underlying
    limitation is unchanged: this item stays open until run for real on a Windows
-   machine with a physical device attached.
+   machine with a physical device attached. **Phase 2B.4 update**:
+   `tools/phase2b_hardware_gate.ps1` extends the same gate to the full 8-app Phase
+   2B baseline; also only exercised in this same cloud sandbox, same result
+   (`HARDWARE VALIDATION BLOCKED - DEVICE NOT AVAILABLE`) for the same reason —
+   see `docs/PHASE2B_HARDWARE_ASSISTED_RESULTS.md`. Still open for the same
+   underlying reason; nothing new introduced by this update.
 5. **RESOLVED — cloud sandbox cannot download GitHub Actions artifacts or push git
    tags.** Two separate, confirmed network/policy restrictions were hit during
    Phase 2A.10: (a) GitHub Actions artifact downloads always redirect to Azure Blob

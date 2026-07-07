@@ -1,0 +1,98 @@
+{
+  "_comment": "Phase 2B.4 hardware-assisted validation gate configuration. Consumed by tools/phase2b_hardware_gate.ps1. Docs/tooling artifact - not firmware source. Superset of tools/phase2a_hardware_gate_config.json (which remains frozen/untouched for the accepted Phase 2A-only baseline) - covers all 8 apps (5 Phase 2A + 3 Phase 2B) now in the accepted Phase 2B baseline.",
+
+  "acceptedBaseline": {
+    "branch": "integration/phase2b-first-batch",
+    "ciBaselineSha": "50dfe2fadb2e587f4e8ed67edbf7f60e42b90159",
+    "ciValidationRunId": "28877810474",
+    "finalizationWorkflowRunId": "28879790603",
+    "note": "This is the exact commit and CI evidence the Phase 2B acceptance record (docs/PHASE2B_3_ACCEPTANCE_RECORD.md) covers. Hardware-assisted validation against a different commit is not itself wrong, but should be flagged for review rather than silently treated as validating this same accepted baseline."
+  },
+
+  "expectedArtifacts": {
+    "firmwareDfu": {
+      "fileName": "firmware.dfu",
+      "expectedSizeBytes": 862825,
+      "expectedSha256": "f74cf3be4b7d9e7fe87a08aec3f77a55982d0d6fcd08c61d46cc84a3237a3e75"
+    },
+    "updaterPackage": {
+      "fileName": "flipper-z-f7-update-local.tgz",
+      "expectedSizeBytes": 2742659,
+      "expectedSha256": "6be763ec646c30261ccd943dd6c71f2cde3525b87c468eb574db67d7d840b9d7"
+    },
+    "note": "These are the real, GitHub-Actions-generated values recorded in docs/PHASE2B_3_ARTIFACT_HASHES.md (Phase 2B.3, finalization run 28879790603) - not fabricated, not archive-level digests. HashVerify/HardwareAssisted modes compare a locally-downloaded artifact directory's actual files against these exact values."
+  },
+
+  "allowedArtifactFileNames": [
+    "firmware.dfu",
+    "flipper-z-f7-update-local.tgz"
+  ],
+
+  "allowedApps": [
+    { "id": "network_subnet", "appid": "network_subnet", "displayName": "Network Subnet Helper", "category": "Tools" },
+    { "id": "programmer_calc", "appid": "programmercalc", "displayName": "Programmer Calculator", "category": "Tools" },
+    { "id": "vin_decoder", "appid": "vin_decoder", "displayName": "VIN Decoder", "category": "Tools" },
+    { "id": "flipper95", "appid": "flipper95", "displayName": "Flipper95", "category": "Tools" },
+    { "id": "chess", "appid": "chess", "displayName": "Chess", "category": "Games" },
+    { "id": "flipfetch", "appid": "flipfetch", "displayName": "Flipfetch", "category": "Tools" },
+    { "id": "quadratic_solver", "appid": "quadratic_solver", "displayName": "Quadratic Solver", "category": "Tools" },
+    { "id": "sudoku", "appid": "sudoku", "displayName": "Sudoku", "category": "Games" }
+  ],
+
+  "expectedAppPrivateStoragePaths": {
+    "chess": "/ext/apps_data/flipchess/",
+    "network_subnet": null,
+    "programmercalc": null,
+    "vin_decoder": null,
+    "flipper95": null,
+    "flipfetch": null,
+    "quadratic_solver": null,
+    "sudoku": "/ext/apps_data/sudoku/"
+  },
+
+  "expectedAppPrivateStoragePathsNote": "null means the app is not expected to persist any file under normal use; any storage write by these apps outside their own entry (or any write at all, for the null-path apps) is a fail condition per the hardware smoke-test checklist. sudoku's path is derived from source-code analysis in Phase 2B.1/2B.2 (docs/PHASE2B_2_SAFETY_REVIEW.md): sudoku.c uses APP_DATA_PATH(\"save.dat\"), and the real storage-resolution source (storage.h's APP_DATA_PATH macro + storage_processing.c's /data -> /ext/apps_data/<appid> mapping) confirms this resolves to /ext/apps_data/sudoku/ for its own appid - not confirmed by an actual device/SD-card observation yet, same evidentiary bar chess's /ext/apps_data/flipchess/ entry was held to before this one existed.",
+
+  "forbiddenTestCategories": [
+    "Sub-GHz / RF transmit or receive",
+    "NFC read/write/emulate/clone",
+    "RFID/LFRFID read/write/emulate/clone",
+    "iButton read/write/emulate/clone",
+    "BadUSB / HID keystroke injection",
+    "BLE spam/beacon/profile interaction",
+    "Direct GPIO control",
+    "Infrared transmit",
+    "Credential, token, or password handling/extraction",
+    "Any cloning, brute force, jamming, deauth, or bypass behavior",
+    "Any unauthorized-access or security-abuse demonstration"
+  ],
+
+  "forbiddenTestCategoriesNote": "This script contains no code path for any of the above, for any app, under any flag or mode - this is not a configuration toggle to disable, it is simply not implemented anywhere in tools/phase2b_hardware_gate.ps1.",
+
+  "expectedHardwareStatusWording": {
+    "notRun": "Hardware-assisted validation: NOT RUN",
+    "notPerformed": "Hardware flashing/testing: NOT PERFORMED"
+  },
+
+  "expectedReleaseStatusWording": "TEST-READY ONLY / NOT RELEASE-READY",
+
+  "flashConfirmationPhrase": "I UNDERSTAND THIS WILL FLASH THE CONNECTED DEVICE",
+
+  "flashConfirmationNote": "The script never performs a flash itself under any circumstance - even after -AllowFlashPrompt and a correctly-typed confirmation phrase, flashing remains a manual, deliberate action performed by the operator using qFlipper or fbt flash_usb outside this script. The confirmation gate exists to make sure the operator has seen the artifact hashes and rollback warning before proceeding, not to automate the flash itself.",
+
+  "deviceDetection": {
+    "expectedFriendlyNameSubstring": "Flipper",
+    "expectedVidPid": "VID_0483&PID_5740",
+    "note": "Flipper Zero enumerates as a USB CDC-ACM serial device (ST Microelectronics VID 0483, PID 5740) when running normal firmware. Detection uses Windows PnP device enumeration (Get-PnpDevice) only - no serial communication, no RPC, no data exchange with the device."
+  },
+
+  "officialToolingDetection": {
+    "qFlipperExecutableNames": ["qFlipper.exe"],
+    "qFlipperCommonInstallDirs": [
+      "$env:ProgramFiles\\qFlipper",
+      "${env:ProgramFiles(x86)}\\qFlipper",
+      "$env:LOCALAPPDATA\\Programs\\qFlipper",
+      "$env:LOCALAPPDATA\\qFlipper"
+    ],
+    "note": "Best-effort detection only (PATH lookup, common install directories, and the Windows uninstall registry key). Absence of a detected install does not necessarily mean qFlipper isn't present under a nonstandard path - it means this script could not confirm it automatically, and flashing tooling should be classified BLOCKED / TOOLING NOT AVAILABLE rather than assumed present."
+  }
+}

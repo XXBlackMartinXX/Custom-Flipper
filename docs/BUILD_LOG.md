@@ -514,6 +514,50 @@ RELEASE-READY.
 
 ---
 
+## Phase 2B.4 update: hardware-assisted validation gate built and exercised (sandbox result: BLOCKED — no device)
+
+Added `tools/phase2b_hardware_gate.ps1` and its config: the Phase 2B
+counterpart to `tools/phase2a_hardware_gate.ps1` (untouched, still valid
+for the Phase 2A-only baseline) - same defensive, non-destructive-by-
+default design, extended to all 8 apps in the accepted Phase 2B baseline.
+Verifies branch/commit, verifies the real artifact hashes finalized in
+Phase 2B.3 (`firmware.dfu`
+`f74cf3be4b7d9e7fe87a08aec3f77a55982d0d6fcd08c61d46cc84a3237a3e75`,
+updater
+`6be763ec646c30261ccd943dd6c71f2cde3525b87c468eb574db67d7d840b9d7`),
+safe read-only Flipper Zero PnP detection, best-effort qFlipper
+detection, and a flash-confirmation gate that requires a detected device,
+PASS hashes, detected tooling, and an exact typed confirmation phrase
+before ever acknowledging a manual flash may proceed - the script never
+flashes a device under any mode or flag.
+
+Ran all 5 modes for real in this session's own sandbox (no Windows, no
+physical device), including a synthetic hash-mismatch scenario proving
+the comparison logic rejects a wrong artifact. Found and fixed a real,
+minor bug along the way: two runs launched within the same wall-clock
+second produced identical report filenames, silently overwriting one
+report with the other (the same second-granularity filename scheme
+`tools/phase2a_hardware_gate.ps1` already uses unchanged) - not a scoring
+defect, documented honestly, worked around by spacing the runs apart.
+Real result for this environment: **HARDWARE VALIDATION BLOCKED - DEVICE
+NOT AVAILABLE**. Recorded in `docs/PHASE2B_HARDWARE_ASSISTED_RESULTS.md`.
+
+Also adds `docs/PHASE2B_HARDWARE_ASSISTED_VALIDATION.md` (what this gate
+does/does not validate) and `docs/PHASE2B_HARDWARE_SMOKE_TEST_CHECKLIST.md`
+(all 8 apps - the 5 Phase 2A sections reproduced verbatim plus 3 new
+sections for `flipfetch`/`quadratic_solver`/`sudoku`, including a new
+sudoku save/load private-path check grounded in its real source). Updates
+`docs/PHASE2B_NEXT_GATE.md` with the hardware gate's real classification
+and the Phase 2C gating rules tied to it (planning may proceed only as
+clearly-labeled non-hardware-dependent planning while this stays
+BLOCKED, and only on the project owner's explicit further request).
+
+**Phase 2C was not started. No firmware or app source was touched.
+Hardware flashing/testing remains NOT PERFORMED. Release status remains
+TEST-READY ONLY / NOT RELEASE-READY.**
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
