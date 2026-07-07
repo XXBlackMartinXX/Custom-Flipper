@@ -21,3 +21,8 @@
 !/quadratic_solver/**
 !/sudoku/
 !/sudoku/**
+
+# Custom-Flipper Phase 2C tracked user apps (same explicit-exception pattern,
+# added one at a time as each app is reviewed/imported)
+!/sd_info/
+!/sd_info/**
