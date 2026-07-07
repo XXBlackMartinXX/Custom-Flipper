@@ -749,6 +749,49 @@ confirmed untouched. See `docs/PHASE2C_3_ARTIFACT_HASHES.md` and
 
 ---
 
+## Phase 2C.4 update: hardware-assisted validation gate built and exercised (sandbox result: BLOCKED — no device)
+
+Built `tools/phase2c_hardware_gate.ps1` and
+`tools/phase2c_hardware_gate_config.json`, modeled directly on the Phase
+2A/2B hardware gates, covering all 10 apps in the accepted Phase 2C
+baseline. `fcc_id_lookup` remains absent — deferred, not re-reviewed.
+
+Fixed a real, minor tooling limitation carried over from Phase 2A's and
+Phase 2B's own hardware gates: their report filenames used
+second-granularity timestamps, so rapid repeated invocations could
+silently overwrite each other's report. This script uses a
+millisecond-precision timestamp plus a random hex suffix instead,
+verified directly with a deliberate zero-delay rapid-invocation test (3
+back-to-back `-Mode ReportOnly` runs, 2 landing in the same wall-clock
+second) that produced zero collisions across all 9 test runs performed
+in this phase. Phase 2A's and Phase 2B's own scripts were left
+unmodified, per explicit instruction.
+
+Exercised all 5 modes for real via `pwsh` in this sandbox: Preflight,
+ReportOnly (×3), DetectDevice, HashVerify (no artifact dir, and against a
+deliberate synthetic random-data mismatch — proving the hash-comparison
+logic correctly rejects wrong artifacts rather than passing on size
+alone), and HardwareAssisted (no artifact dir, no device). Real result:
+**`HARDWARE VALIDATION BLOCKED - DEVICE NOT AVAILABLE`** — no Windows
+machine, no physical Flipper Zero, no qFlipper install in this sandbox;
+`Get-PnpDevice` itself is unavailable here (confirmed directly via the
+actual PowerShell error, not assumed).
+
+Added `docs/PHASE2C_HARDWARE_ASSISTED_VALIDATION.md`,
+`docs/PHASE2C_HARDWARE_ASSISTED_RESULTS.md` (full real per-run detail,
+including an honest explanation of the benign `NEEDS_REVIEW` results
+caused by commit drift and pre-commit tool-file state during testing),
+and `docs/PHASE2C_HARDWARE_SMOKE_TEST_CHECKLIST.md` (all 10 apps,
+including new `sd_info` SD-benchmark-cleanup and `docviewlite`
+read-only-confirmation sections). Updated `docs/PHASE2C_NEXT_GATE.md`
+with the real classification and Phase 2D gating rules.
+
+**Phase 2D was not started. No firmware or app source was touched.
+Hardware flashing/testing remains NOT PERFORMED. Release status remains
+TEST-READY ONLY / NOT RELEASE-READY.**
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is

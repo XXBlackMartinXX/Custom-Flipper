@@ -45,7 +45,19 @@
    2B baseline; also only exercised in this same cloud sandbox, same result
    (`HARDWARE VALIDATION BLOCKED - DEVICE NOT AVAILABLE`) for the same reason —
    see `docs/PHASE2B_HARDWARE_ASSISTED_RESULTS.md`. Still open for the same
-   underlying reason; nothing new introduced by this update.
+   underlying reason; nothing new introduced by this update. **Phase 2C.4
+   update**: `tools/phase2c_hardware_gate.ps1` extends the same gate to the
+   full 10-app Phase 2C baseline; also only exercised in this same cloud
+   sandbox, same result (`HARDWARE VALIDATION BLOCKED - DEVICE NOT AVAILABLE`)
+   for the same reason — see `docs/PHASE2C_HARDWARE_ASSISTED_RESULTS.md`.
+   This phase also fixed a separate, minor tooling limitation carried over
+   from Phase 2A's/2B's own hardware-gate scripts (second-granularity
+   report filenames could collide on rapid repeated invocations, though
+   this was never itself a tracked item here) — the Phase 2C script now
+   uses a millisecond-precision timestamp plus a random suffix, verified
+   collision-free under a deliberate rapid-invocation test. Still open for
+   the same underlying device/Windows-machine reason; nothing else new
+   introduced by this update.
 5. **RESOLVED — cloud sandbox cannot download GitHub Actions artifacts or push git
    tags.** Two separate, confirmed network/policy restrictions were hit during
    Phase 2A.10: (a) GitHub Actions artifact downloads always redirect to Azure Blob
