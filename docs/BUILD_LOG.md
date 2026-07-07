@@ -700,6 +700,43 @@ status remains TEST-READY ONLY / NOT RELEASE-READY.**
 
 ---
 
+## Phase 2C.3 update: CI baseline acceptance record and artifact hash finalization
+
+Locked in the real Phase 2C.2 CI PASS (run `28897702247`, commit
+`969054e`, conclusion `success`) as a formal acceptance record —
+`docs/PHASE2C_3_ACCEPTANCE_RECORD.md` — classified
+**`PHASE 2C ACCEPTED FOR NON-HARDWARE CI BASELINE ONLY`**, the same narrow
+scope every prior phase's own acceptance record has meant: source/build/
+static verification only, nothing about hardware or release-readiness.
+Added `docs/PHASE2C_3_ARTIFACT_MANIFEST.md` (real GitHub Actions artifact
+IDs and archive digests for run `28897702247`, fetched via the GitHub
+API) and a `docs/PHASE2C_3_ARTIFACT_HASHES.md` placeholder that honestly
+states hashes are pending, not fabricated.
+
+Added `.github/workflows/phase2c-finalize-baseline.yml`, modeled
+directly on `phase2b-finalize-baseline.yml`: runs entirely on a
+GitHub-hosted `windows-latest` runner (working around this sandbox's
+confirmed inability to download Actions artifacts or push tags),
+downloads the source run's artifacts via `gh run download`, computes real
+SHA-256 hashes with `Get-FileHash`, patches the acceptance record/manifest
+in place, and creates two immutable tags
+(`phase2c-ci-baseline-20260707`, `phase2c-acceptance-record-20260707`) —
+refusing to silently overwrite either tag if it already exists pointing
+elsewhere. Never invokes `-Mode HardwareAssisted`, never flashes hardware.
+
+Updated `docs/PHASE2C_NEXT_GATE.md` to reflect the real Phase 2C.1/2C.2/
+2C.3 results and define the next allowed paths: a Phase 2C hardware gate
+(only with real hardware and explicit request), Phase 2D planning only
+(only on explicit request), or a narrow follow-up specifically on
+`fcc_id_lookup`'s license gap.
+
+**No firmware/app source was touched. No hardware was touched, no
+hardware-connected validation mode was run. Phase 2D was not started.
+Hardware flashing/testing remains NOT PERFORMED. Release status remains
+TEST-READY ONLY / NOT RELEASE-READY.**
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
