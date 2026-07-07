@@ -28,3 +28,8 @@
 !/sd_info/**
 !/docviewlite/
 !/docviewlite/**
+
+# Custom-Flipper Phase 2D tracked user apps (same explicit-exception pattern,
+# added one at a time as each app is reviewed/imported)
+!/resistors/
+!/resistors/**
