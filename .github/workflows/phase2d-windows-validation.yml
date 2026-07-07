@@ -154,7 +154,12 @@ jobs:
       # uploaded so the real build output can be inspected directly, in
       # addition to tools/phase2a_validate.ps1's own pass/fail verification
       # of the same files against tools/phase2d_validate_config.json's
-      # expectedApps list.
+      # expectedApps list. include-hidden-files is required here because
+      # fbt's own output directory is `.extapps` (dot-prefixed) -
+      # actions/upload-artifact@v4 excludes dot-prefixed directories by
+      # default, which silently produced a "no files found" warning on this
+      # workflow's first real run even though the .fap files were genuinely
+      # present (confirmed separately by the validator's own check).
       - name: Upload per-app .fap artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -162,6 +167,7 @@ jobs:
           name: phase2d-fap-artifacts
           path: build/f7-firmware-C/.extapps/*.fap
           if-no-files-found: warn
+          include-hidden-files: true
           retention-days: 90
 
       - name: Hardware-assisted validation status
