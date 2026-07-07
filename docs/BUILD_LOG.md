@@ -558,6 +558,45 @@ TEST-READY ONLY / NOT RELEASE-READY.**
 
 ---
 
+## Phase 2C planning update: candidate review package (planning only, no import)
+
+Built the full Phase 2C planning package — `PHASE2C_CANDIDATE_REVIEW.md`,
+`PHASE2C_RECOMMENDED_BATCH.md`, `PHASE2C_RISK_REGISTER.md`,
+`PHASE2C_LICENSE_REVIEW.md`, `PHASE2C_INTEGRATION_PLAN.md`,
+`PHASE2C_GO_NO_GO.md`, and `PHASE2C_NEXT_GATE.md` — grounded entirely in
+the existing Phase 1.5/1.6 candidate-audit work and the Phase 2B planning/
+import record (no fresh source read; real source/license verification is
+explicitly deferred to a future Phase 2C.1, mirroring how Phase 2B.1
+followed Phase 2B's own planning phase).
+
+Re-screened the Phase 1.5 Top 25 against the now-8-app accepted baseline
+(`network_subnet`, `programmer_calc`, `vin_decoder`, `flipper95`, `chess`,
+`flipfetch`, `quadratic_solver`, `sudoku`) plus 5 apps hard-deferred per
+explicit instruction and left unre-reviewed: `upython`, `iconedit`
+(real hardware-capability exposure, unchanged from Phase 2B), `c_book`
+(unresolved book-copyright question, unchanged from Phase 2B), and
+`animation_switcher`/`theme_manager` (shared `/ext/dolphin/` writes,
+unchanged from Phase 2B). This leaves a 12-app candidate pool.
+
+**Recommended tiny batch (3 apps, LOW risk each)**: `sd_info`,
+`fcc_id_lookup`, `docviewlite` — all confirmed by the existing Phase 1.6
+audit to have zero hardware-capability hits and, notably, **zero storage
+writes of any kind** (read-only card info, bundled reference data, and a
+user-selected document, respectively) — an even more conservative slice
+than Phase 2A's/2B's own first batches, neither of which is a game or
+private-save-file app this time. Recommendation: **GO WITH CONDITIONS** —
+the next actual step is Phase 2C.1 pre-import source/license verification,
+not import; implementation still requires the project owner's own
+separate, explicit request even after that.
+
+**No app source was imported or read fresh. No `applications/` or
+`applications_user/` changes. No firmware built. No hardware touched, no
+hardware-connected validation mode run. Phase 2C implementation was not
+started. Hardware flashing/testing remains NOT PERFORMED. Release status
+remains TEST-READY ONLY / NOT RELEASE-READY.**
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
