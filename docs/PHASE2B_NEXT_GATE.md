@@ -39,7 +39,7 @@ Phase 2A batch.
    2A uses: `AUTOMATED VALIDATION PASS` / `AUTOMATED VALIDATION FAILED` /
    `NEEDS REVIEW`.
 
-## Current status against this gate (as of Phase 2B.3): GATE PASSED (CI), FINALIZATION IN PROGRESS
+## Current status against this gate (as of Phase 2B.3): GATE PASSED, BASELINE FINALIZED
 
 | Step | Status |
 |---|---|
@@ -48,7 +48,7 @@ Phase 2A batch.
 | Hardware-assisted validation | **NOT RUN** — not attempted anywhere, and never will be by the GitHub Actions path: neither `phase2b-windows-validation.yml` nor `phase2b-finalize-baseline.yml` contains a code path capable of invoking `-Mode HardwareAssisted`, by design. |
 | Overall CI conclusion (verified via GitHub API) | **success** |
 | Recorded classification | **`CI WINDOWS VALIDATION PASS WITH REVIEWED FALSE POSITIVES`** |
-| Artifact hash finalization (Phase 2B.3) | **In progress** — `.github/workflows/phase2b-finalize-baseline.yml` created in this phase; see `docs/PHASE2B_3_GO_NO_GO.md` for the real result once it has run. |
+| Artifact hash finalization (Phase 2B.3) | **Finalized.** `.github/workflows/phase2b-finalize-baseline.yml` ran successfully (run [`28879790603`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28879790603)) — real SHA-256 hashes generated for `firmware.dfu`/updater `.tgz`, both baseline tags (`phase2b-ci-baseline-20260707`, `phase2b-acceptance-record-20260707`) created and pushed. See `docs/PHASE2B_3_ARTIFACT_HASHES.md` and `docs/PHASE2B_3_GO_NO_GO.md`. |
 
 **This gate's CI portion is PASSED**, at commit
 `50dfe2fadb2e587f4e8ed67edbf7f60e42b90159` on
