@@ -375,6 +375,49 @@ RELEASE-READY.**
 
 ---
 
+## Phase 2B.1 update: pre-import source and license verification (real source read, no import)
+
+Resolved the one open condition from the Phase 2B planning package: all 3
+recommended apps (`flipfetch`, `quadratic_solver`, `sudoku`) had been
+marked license status `NEEDS REVIEW` only because no local source clone
+existed to read a `LICENSE` file from. This phase found that
+`raw.githubusercontent.com` and `github.com`'s git-over-HTTPS endpoint are
+*not* blocked by this session's network policy (unlike `api.github.com`
+and GitHub's HTML pages, which returned `403`, consistent with every
+prior phase) — so a real `git fetch`/`checkout` of
+`RogueMaster/flipperzero-firmware-wPlugins` at commit
+`472f6925e8aca9bd031cb37e3cb80b551772c957` (the exact commit
+`PHASE1_6_TOP25_SOURCE_AUDIT.md` had cited) was performed into a scratch
+directory outside this repository, and each of the 3 apps' actual
+`application.fam`, `LICENSE`, `README`, and full source was read directly.
+
+**Result: all 3 confirmed MIT-licensed** (SHA-256 of each `LICENSE` file
+recorded), GPLv3-compatible, requiring only standard attribution. Zero
+real unsafe-capability keyword matches across the mandatory 18-keyword
+scan; 6 total `ble`-substring false positives found (inside "double"/
+"enabled"), the same class of false positive Phase 2A's own scan resolved
+102 times. `sudoku` has a real but confirmed app-private-only save path
+(`APP_DATA_PATH("save.dat")`, same pattern as `chess`); `flipfetch` and
+`quadratic_solver` have no storage footprint at all. No bundled
+third-party code in any of the 3.
+
+**Classification: PHASE 2B.1 PRE-IMPORT VERIFICATION PASS.** All 3 apps
+`CLEARED FOR IMPORT`; the recommended batch is unchanged and does not need
+to shrink. Added `PHASE2B_1_SOURCE_LICENSE_VERIFICATION.md`,
+`PHASE2B_1_IMPORT_READINESS_MATRIX.md`, and `PHASE2B_1_GO_NO_GO.md`;
+updated (without erasing) `PHASE2B_LICENSE_REVIEW.md` and
+`PHASE2B_GO_NO_GO.md` with a Phase 2B.1 section each.
+
+**No app code was imported. No `applications/` or `applications_user/`
+changes to this repository** (the scratch clone used to read real source
+lives entirely outside it and was deleted after use). No firmware built.
+No hardware touched. Phase 2B implementation was not started — it still
+requires the project owner's own separate, explicit request. Hardware
+flashing/testing remains NOT PERFORMED. Release status remains TEST-READY
+ONLY / NOT RELEASE-READY.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is

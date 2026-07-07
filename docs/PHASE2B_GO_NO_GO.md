@@ -121,3 +121,37 @@ firmware or app source was read, modified, or built in this phase. No
 hardware was touched. Hardware flashing/testing remains **NOT PERFORMED**.
 Release status remains **TEST-READY ONLY / NOT RELEASE-READY**, unchanged
 from the Phase 2A baseline this plan builds on.
+
+---
+
+## Phase 2B.1 update: pre-import verification result
+
+**Phase 2B.1 classification: `PHASE 2B.1 PRE-IMPORT VERIFICATION PASS`.**
+See `docs/PHASE2B_1_GO_NO_GO.md`, `docs/PHASE2B_1_SOURCE_LICENSE_VERIFICATION.md`,
+and `docs/PHASE2B_1_IMPORT_READINESS_MATRIX.md` for full detail.
+
+The one condition this document originally flagged ("all 3 recommended
+apps marked license status NEEDS REVIEW because license text was not read
+directly") has been resolved: Phase 2B.1 obtained real, working network
+access to the actual upstream source (`RogueMaster/flipperzero-firmware-wPlugins`
+at commit `472f6925e8aca9bd031cb37e3cb80b551772c957`, the same commit the
+original Phase 1.6 audit cited) and read each of the 3 apps' actual
+`LICENSE` files directly. All 3 are **confirmed MIT**, a license
+compatible with this project's GPLv3-licensed firmware base, requiring
+only standard attribution.
+
+**All 3 apps remain cleared; the batch is unchanged and does not need to
+shrink.** No app outside the original recommendation was considered.
+
+This document's original "GO WITH CONDITIONS" recommendation and its
+numbered conditions list above are **superseded for condition #3
+specifically** (the license-read condition, now satisfied) but otherwise
+still apply in full — in particular, condition #1 (the project owner's own
+explicit request is still required to start implementation) and condition
+#2 (fresh source read at real import time) remain exactly as written; this
+verification pass satisfies condition #2 as well as condition #3, but does
+not itself constitute condition #1.
+
+**No app code was imported in Phase 2B.1.** Hardware flashing/testing
+remains **NOT PERFORMED**. Release status remains **TEST-READY ONLY / NOT
+RELEASE-READY**.

@@ -99,3 +99,71 @@ No license has been declared clean by this document for any app — "routine"
 above means the gap is the same ordinary read-the-license-file step every
 prior Phase 2A app also required, not a finding of an actual problem;
 "elevated" means an actual, specific, unresolved concern exists.
+
+---
+
+## Phase 2B.1 verification update (real source read — supersedes the "routine NEEDS REVIEW" status above for the 3 in-batch apps)
+
+**This section adds new, direct evidence gathered in Phase 2B.1. The
+planning-phase content above is left unmodified as the historical record
+of what was and wasn't known at that time; do not read this section as
+retroactively editing it.**
+
+In Phase 2B.1, this environment had real, working network access to fetch
+actual upstream source — something the original planning phase explicitly
+lacked. A real `git fetch`/`checkout` of
+`RogueMaster/flipperzero-firmware-wPlugins` at commit
+`472f6925e8aca9bd031cb37e3cb80b551772c957` (the exact commit the original
+Phase 1.6 audit cited) retrieved each app's actual `LICENSE` file, read in
+full:
+
+| App | Declared license (confirmed by direct read) | LICENSE file SHA-256 | Copyright holder |
+|---|---|---|---|
+| `flipfetch` | MIT | `82bf9aacd466c35be23d4f10bc73fa4ab175294cfcbb32d46ae4db44c6781c81` | Ismael A. Rodríguez (2026) |
+| `quadratic_solver` | MIT | `3b2dee56c094664bb9ec081ace3700495449254eeaf61eabedd1333561fb5eaa` | paul-sopin (2025) |
+| `sudoku` | MIT | `b65e22a506115b1466b23a0a5590406ff1360e6d93482b833bae57984de63758` | @profelis (2023) |
+
+**GPLv3 compatibility**: MIT is a permissive license. It imposes no
+restriction on inclusion within a GPLv3-licensed larger work — a
+GPLv3 project may include MIT-licensed components, and the combined
+distribution as a whole remains GPLv3-compliant, provided MIT's own two
+conditions are met (below). This is the standard, uncontested
+compatibility relationship between MIT and GPLv3 (MIT is on the FSF's own
+list of GPL-compatible free software licenses) — not a novel or contested
+determination.
+
+**Attribution required**: Yes, for all 3 — MIT requires "The above
+copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software." This means each app's
+copyright notice must be preserved (in-file, as already present in each
+app's own source) and each author's name + the MIT notice text recorded in
+this project's `docs/CREDITS.md`/`docs/THIRD_PARTY_NOTICES.md` at actual
+import time — a normal, routine attribution step, not a blocker.
+
+**Bundled third-party code**: None found in any of the 3 — each is a
+single self-contained source file (or `app.c` alone, for
+`quadratic_solver`) with no vendored sub-libraries, unlike `chess` (which
+bundles `smallchesslib`/`stm32_sam`) or `upython` (which bundles a
+MicroPython fork).
+
+**Missing license evidence**: None remaining. All 3 `LICENSE` files were
+located, fetched, and read in full in this phase.
+
+### Updated summary (Phase 2B.1 supersedes the planning-phase row for these 3 apps)
+
+| App | License status (Phase 2B.1) | Recommendation |
+|---|---|---|
+| `flipfetch` | **CONFIRMED — MIT, real LICENSE file read** | Cleared for import |
+| `quadratic_solver` | **CONFIRMED — MIT, real LICENSE file read** | Cleared for import |
+| `sudoku` | **CONFIRMED — MIT, real LICENSE file read** | Cleared for import |
+| `c_book` | Unchanged — still NEEDS REVIEW (elevated), not in scope for Phase 2B.1 | Still DEFER, excluded |
+
+`c_book` was explicitly out of scope for Phase 2B.1 (per the hard
+exclusions in that phase's instructions: "do not revisit or import
+`c_book`") — its elevated licensing concern from the planning phase stands
+exactly as recorded above, unresolved, until a future dedicated pass
+addresses it specifically.
+
+See `docs/PHASE2B_1_SOURCE_LICENSE_VERIFICATION.md` for the complete,
+per-app evidence (file listings, safety/API scan results, storage
+findings) behind this update.
