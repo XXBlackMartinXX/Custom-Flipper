@@ -9,6 +9,15 @@ Record every result in a copy of `PHASE2A_HARDWARE_TEST_RESULTS_TEMPLATE.md` as 
 go. If a global fail condition occurs at any point, stop immediately and follow
 `PHASE2A_FLASHING_PRECHECK.md` §5 (rollback) instead of continuing down this list.
 
+**Phase 2A.12 cross-reference**: `tools/phase2a_hardware_gate.ps1 -Mode
+HardwareAssisted` automates the non-GUI preconditions (branch/commit check,
+artifact hash verification, device detection, qFlipper detection, and the
+flash-confirmation gate) and lists every one of the 5 apps below as
+`REQUIRES_HUMAN_OBSERVATION`, pointing back to this checklist — it does not
+and cannot perform any of the steps in this document itself. See
+`docs/PHASE2A_HARDWARE_ASSISTED_VALIDATION.md` for what that gate does and
+does not validate.
+
 Menu path prefix for all 5 apps: **Main Menu → Apps → \<category\>** (category
 noted per app below), then the app's own name.
 

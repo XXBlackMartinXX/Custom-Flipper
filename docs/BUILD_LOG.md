@@ -258,6 +258,81 @@ TEST-READY ONLY / NOT RELEASE-READY.** No firmware/app source was touched.
 
 ---
 
+## Phase 2A.11 update: artifact hash finalization and baseline tags completed for real (GitHub Actions)
+
+Phase 2A.10 documented two genuine, confirmed environment blockers: this
+cloud sandbox cannot download GitHub Actions artifacts (Azure Blob Storage
+host `403`) or push git tags through its own relay (`403`). Rather than
+work around either restriction from inside this session, Phase 2A.11 added
+`.github/workflows/phase2a-finalize-baseline.yml`, a workflow that runs
+entirely on GitHub's own `windows-latest` infrastructure, downloads CI run
+`28814008347`'s own artifacts directly (no redirect-following through this
+session's proxy), computes real SHA-256 hashes with `Get-FileHash`, and
+pushes both baseline tags using the workflow's own `GITHUB_TOKEN`.
+
+The workflow was run for real: [`28859929957`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28859929957).
+Real, generated results — **firmware.dfu**: 862,825 bytes, SHA-256
+`7c74895107eb5c98c7241ea0d55565ed5e3931ce6f8e7137adba9dc77c0fdfe2`;
+**flipper-z-f7-update-local.tgz**: 2,733,074 bytes, SHA-256
+`8f1afbd81c603104f94aaa72d89b1bf6185c7cb9103b352748b7b3a4305e3d52`. Both
+`phase2a-ci-baseline-20260707` and `phase2a-acceptance-record-20260707` are
+now real, pushed tags on GitHub, pointing at commit
+`718eec5fe115c9e0467a8d07d974947a85b27cf6` and the acceptance-record commit
+respectively. `docs/PHASE2A_ARTIFACT_HASHES.md`,
+`docs/PHASE2A_ACCEPTANCE_RECORD.md`, `docs/PHASE2A_ARTIFACT_MANIFEST.md`,
+and `docs/PHASE2A_AUTOMATED_VALIDATION_RESULTS.md` were all updated to
+record this, and are mirrored to this branch as part of this same update
+(having been missed in the immediately-preceding commit, which mirrored
+only the workflow file itself, before it had actually been run).
+
+**Hardware flashing/testing remains NOT PERFORMED. Release status remains
+TEST-READY ONLY / NOT RELEASE-READY.** No firmware/app source was touched.
+
+---
+
+## Phase 2A.12 update: hardware-assisted validation gate built and exercised (sandbox result: BLOCKED — no device)
+
+Added `tools/phase2a_hardware_gate.ps1` and its config: a defensive,
+non-destructive-by-default gate that automates the non-GUI preconditions
+for hardware-assisted validation of the accepted Phase 2A baseline —
+branch/commit verification, real artifact hash verification against the
+Phase 2A.11 finalized hashes, safe read-only Flipper Zero PnP detection
+(`VID_0483&PID_5740`, no serial/RPC contact), best-effort qFlipper
+detection, and a flash-confirmation gate that requires a detected device,
+both artifact hashes PASS, detected tooling, and an exact typed
+confirmation phrase before ever acknowledging that a manual flash may
+proceed — the script itself contains no code path that performs a flash,
+under any mode or flag. Every GUI-level app check (all 5 apps, plus the
+chess private-save-path check, plus the two "no crash"/"no unexpected
+hardware activation" global checks) is explicitly logged as
+`REQUIRES_HUMAN_OBSERVATION`, pointing to the existing
+`docs/PHASE2A_HARDWARE_SMOKE_TEST_CHECKLIST.md` — never simulated.
+
+All 5 modes (`Preflight`, `DetectDevice`, `HashVerify`, `HardwareAssisted`,
+`ReportOnly`) were actually executed via `pwsh` in this session's own
+sandbox, including a deliberate synthetic-artifact mismatch test that
+confirmed the hash-comparison logic correctly rejects a wrong file (same
+size, wrong SHA-256) rather than passing on size alone. This sandbox has no
+Windows machine and no physical Flipper Zero — `Get-PnpDevice` itself does
+not exist here — so the honest, real result for this environment is
+**`HARDWARE VALIDATION BLOCKED - DEVICE NOT AVAILABLE`**. Full per-mode
+results are in `docs/PHASE2A_HARDWARE_ASSISTED_RESULTS.md`.
+
+Also added `docs/PHASE2A_HARDWARE_ASSISTED_VALIDATION.md` (what this gate
+does and does not validate, and why hardware validation is different in
+kind from CI validation), a minimal cross-reference in the existing smoke
+test checklist, and updated `docs/PHASE2A_NEXT_GATE.md` to mark Path A
+active with the Phase 2B-planning gating rules tied to Phase 2A.12's
+classification (planning may proceed only as clearly-labeled
+non-hardware-dependent planning while this stays BLOCKED, and only on the
+project owner's explicit further request).
+
+**Phase 2B was not started. No firmware/app source was touched. Hardware
+flashing/testing remains NOT PERFORMED. Release status remains TEST-READY
+ONLY / NOT RELEASE-READY.**
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is

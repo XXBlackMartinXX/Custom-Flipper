@@ -1,5 +1,21 @@
 # Phase 2A — Automated Validation Results
 
+## Phase 2A.11 — artifact hash finalization completed via GitHub Actions
+
+Phase 2A.10 (cloud sandbox) could not download the CI artifacts to hash them
+(network policy blocked the Azure Blob Storage host). Phase 2A.11 resolved this
+by running the finalization entirely inside GitHub's own Windows Actions
+environment instead: workflow `phase2a-finalize-baseline.yml`, run
+[`28859929957`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28859929957), downloaded the artifacts from source run
+[`28814008347`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28814008347) directly via `gh run download`
+and computed real SHA-256 hashes with `Get-FileHash`. See
+`docs/PHASE2A_ARTIFACT_HASHES.md` for the full result.
+
+**Hardware-assisted validation remains NOT RUN. Hardware testing remains NOT
+PERFORMED. Release status remains TEST-READY ONLY / NOT RELEASE-READY.**
+
+---
+
 **v5 (Phase 2A.10) — artifact hash finalization attempted; genuine
 environment blocker hit and documented, not worked around.** See the "Phase
 2A.10" section immediately below. v4 (Phase 2A.9, preserved further down)

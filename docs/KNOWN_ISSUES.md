@@ -23,29 +23,33 @@
    `-Wno-error=` flags in a throwaway `/tmp` clone) is superseded by item 1 above and
    was never part of this repository's history — see `BUILD_LOG.md` for the full
    record, kept for its diagnostic value only.
-3. **No physical Flipper Zero exists in the cloud AI session's environment.** Boot,
-   flashing, app loader, and hardware-interaction testing described in the project's
-   QA phases have not been performed by any AI session and cannot be performed by one.
-   The project owner has a local Windows machine and could perform real hardware
-   testing there; none has been done yet — the local build pass so far was build-only,
-   by explicit instruction (no flashing).
-5. **OPEN — cloud sandbox cannot download GitHub Actions artifacts or push git tags.**
-   Two separate, confirmed network/policy restrictions hit during Phase 2A.10:
-   (a) GitHub Actions artifact downloads always redirect to Azure Blob Storage
-   (`*.blob.core.windows.net`), and this session's egress policy returns a `403` for
-   that host (and for direct `api.github.com` calls made from this session's own
-   network path, as opposed to the separate MCP connector used for read-only API
-   calls) — so real SHA-256 hashes of `firmware.dfu`/the updater `.tgz` from CI run
-   `28814008347` could not be generated here; see `docs/PHASE2A_ARTIFACT_HASHES.md`
-   for the honest NOT-YET-GENERATED record and how to generate them elsewhere.
-   (b) Pushing git tags through this session's own git relay returns a `403` (ordinary
-   branch pushes through the same relay work fine), so two locally-created annotated
-   tags (`phase2a-ci-baseline-20260707`, `phase2a-acceptance-record-20260707`) exist
-   only in this session's local clone, not on GitHub. Neither restriction blocks
-   anything already accepted — the Phase 2A CI baseline and its acceptance record are
-   fully recorded via pushed branch commits regardless — but both remain genuinely
-   open until resolved from an environment with the relevant access (a machine with
-   real network access to GitHub for (a); a session/token with tag-push scope for (b)).
+3. **OPEN — no physical Flipper Zero and no Windows machine exist in the cloud AI
+   session's environment.** Boot, flashing, app loader, and hardware-interaction
+   testing described in the project's QA phases have not been performed by any AI
+   session and cannot be performed by one. The project owner has a local Windows
+   machine and could perform real hardware testing there; none has been done yet —
+   the local build pass so far was build-only, by explicit instruction (no
+   flashing). **Phase 2A.12 update**: `tools/phase2a_hardware_gate.ps1` now exists
+   and automates the non-GUI preconditions for hardware-assisted validation
+   (artifact hash verification, device detection, tooling detection, a
+   flash-confirmation gate), but it was only exercised in this same cloud sandbox,
+   where `Get-PnpDevice` itself is unavailable (Linux, not Windows) and no device
+   is attached — see `docs/PHASE2A_HARDWARE_ASSISTED_RESULTS.md`. The underlying
+   limitation is unchanged: this item stays open until run for real on a Windows
+   machine with a physical device attached.
+5. **RESOLVED — cloud sandbox cannot download GitHub Actions artifacts or push git
+   tags.** Two separate, confirmed network/policy restrictions were hit during
+   Phase 2A.10: (a) GitHub Actions artifact downloads always redirect to Azure Blob
+   Storage (`*.blob.core.windows.net`), blocked by this session's egress policy;
+   (b) pushing git tags through this session's own git relay returned a `403`.
+   **Resolved in Phase 2A.11** by moving both operations into a GitHub Actions
+   workflow (`.github/workflows/phase2a-finalize-baseline.yml`) that runs entirely
+   on GitHub's own Windows infrastructure using its own `GITHUB_TOKEN` — it
+   downloaded the real CI artifacts, computed real SHA-256 hashes, and pushed both
+   baseline tags successfully (run
+   [`28859929957`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28859929957)).
+   See `docs/PHASE2A_ARTIFACT_HASHES.md` for the real, generated hash values. Kept
+   here for the historical record; no longer blocks anything.
 
 ## Firmware / content (resolved item)
 
