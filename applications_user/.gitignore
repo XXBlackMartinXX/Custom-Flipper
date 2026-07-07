@@ -17,3 +17,5 @@
 # added one at a time as each app is reviewed/imported)
 !/flipfetch/
 !/flipfetch/**
+!/quadratic_solver/
+!/quadratic_solver/**
