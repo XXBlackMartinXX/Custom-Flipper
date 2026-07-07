@@ -131,3 +131,67 @@ Hardware flashing/testing remains **NOT PERFORMED**. Release status
 remains **TEST-READY ONLY / NOT RELEASE-READY**, unchanged from the
 Phase 2C baseline this plan builds on. `fcc_id_lookup` remains deferred,
 unresolved, and untouched by this phase.
+
+---
+
+## Phase 2D.1 update: pre-import verification result
+
+**Phase 2D.1 classification: `PHASE 2D.1 PRE-IMPORT VERIFICATION PASS`.**
+See `docs/PHASE2D_1_GO_NO_GO.md`, `docs/PHASE2D_1_SOURCE_LICENSE_VERIFICATION.md`,
+and `docs/PHASE2D_1_IMPORT_READINESS_MATRIX.md` for full detail.
+
+Real, direct network access to the actual upstream RogueMaster source
+(commit `472f6925e8aca9bd031cb37e3cb80b551772c957`, the same commit every
+prior audit in this project has cited, confirmed with no discrepancy)
+resolved the license-evidence gap this document originally flagged for
+all 3 recommended apps — this time with a fully clean result:
+
+- **`resistors`**: **CONFIRMED — MIT**, real `LICENSE` file read directly
+  from the vendored source. The bundled-asset-provenance question this
+  document flagged is resolved by scope: the actual build inputs
+  (`resistors.png`, `images/`) are small, original icon assets with no
+  provenance concern; the ~2.3MB of non-build-input upstream directories
+  that do carry an unclear-provenance question (two photographic
+  reference images under `design/`) are excluded from the import scope
+  entirely, the same strategy already used for `fcc_id_lookup`'s database
+  in Phase 2C.1. Cleared for import with this narrowed scope.
+- **`crypto_dictionary`**: **CONFIRMED — GPLv3**, real `LICENSE` file read
+  directly from the vendored source. The glossary-provenance question is
+  resolved favorably: the bundled reference text is original,
+  non-copyrightable technical content in a distinctive personal style, and
+  a full keyword scan (including this phase's new
+  `seed`/`wallet`/`private key`/`secret` terms) found zero matches
+  anywhere, including inside the glossary text. Directly confirmed
+  read-only, no cryptographic operations on user data, no
+  credential/secret handling of any kind. Cleared for import, no
+  conditions beyond standard GPLv3 attribution.
+- **`2048`**: **CONFIRMED — MIT**, real `LICENSE` file read directly from
+  the vendored source. Storage behavior confirmed app-scoped
+  (`/ext/apps_data/game_2048/`), with a real, directly-observed nuance
+  (hardcoded literal path rather than the idiomatic appid-based macro,
+  plus a one-time legacy-path migration check) that does not change its
+  clearance but must be documented precisely. Cleared for import.
+
+**The original 3-app batch remains fully valid — no reduction, no
+substitution.** This is a materially different, cleaner outcome than
+Phase 2C.1 (where `fcc_id_lookup` was elevated to DEFER on a genuine
+license-evidence gap): all 3 apps in this batch had a real, readable
+`LICENSE` file present directly in the exact artifact this project would
+import, and none exhibited a hardware-capability, safety, or
+secret-handling concern.
+
+This document's original "GO WITH CONDITIONS" recommendation and its
+numbered conditions list above are **now satisfied for condition #3**
+(the license-read condition — confirmed for all 3 apps) and condition #4
+(`2048`'s and `resistors`'s exact storage/behavior confirmed directly from
+real source, per above) — condition #1 (the project owner's own explicit
+request is still required to start implementation) remains exactly as
+written; this verification pass satisfies condition #2 for all 3 apps
+(fresh source was read for all 3) and condition #3/#4 in full, but does
+not itself constitute condition #1.
+
+**No app code was imported in Phase 2D.1.** Hardware flashing/testing
+remains **NOT PERFORMED**. Release status remains **TEST-READY ONLY / NOT
+RELEASE-READY**. `fcc_id_lookup` remains deferred, unresolved, and
+untouched by this phase — not re-reviewed, not reconsidered, exactly as
+instructed.
