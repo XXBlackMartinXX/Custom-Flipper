@@ -1,0 +1,109 @@
+{
+  "_comment": "Phase 2C.4 hardware-assisted validation gate configuration. Consumed by tools/phase2c_hardware_gate.ps1. Docs/tooling artifact - not firmware source. Superset of tools/phase2b_hardware_gate_config.json (which remains frozen/untouched for the accepted Phase 2B-only baseline) - covers all 10 apps (8 Phase 2A/2B + 2 Phase 2C: sd_info, docviewlite) now in the accepted Phase 2C baseline. fcc_id_lookup is not part of this baseline - it remains deferred pending a license-evidence resolution and is intentionally absent from allowedApps below.",
+
+  "acceptedBaseline": {
+    "branch": "integration/phase2c-first-batch",
+    "ciBaselineSha": "969054ee9f802f72be1064a62052c4be82a91783",
+    "finalIntegrationCommit": "9e0f6bb",
+    "ciValidationRunId": "28897702247",
+    "finalizationWorkflowRunId": "28899393035",
+    "note": "This is the exact commit and CI evidence the Phase 2C acceptance record (docs/PHASE2C_3_ACCEPTANCE_RECORD.md) covers. Hardware-assisted validation against a different commit is not itself wrong, but should be flagged for review rather than silently treated as validating this same accepted baseline."
+  },
+
+  "expectedArtifacts": {
+    "firmwareDfu": {
+      "fileName": "firmware.dfu",
+      "expectedSizeBytes": 862825,
+      "expectedSha256": "236ea92dfa826fe2459df3413e18952e0807775ed1f5c65737581e5c5c1934e8"
+    },
+    "updaterPackage": {
+      "fileName": "flipper-z-f7-update-local.tgz",
+      "expectedSizeBytes": 2757340,
+      "expectedSha256": "d2fd4847830c311b487457e29f3ca285b009b2ca6735257739a4198711157632"
+    },
+    "note": "These are the real, GitHub-Actions-generated values recorded in docs/PHASE2C_3_ARTIFACT_HASHES.md (Phase 2C.3, finalization run 28899393035) - not fabricated, not archive-level digests. HashVerify/HardwareAssisted modes compare a locally-downloaded artifact directory's actual files against these exact values."
+  },
+
+  "allowedArtifactFileNames": [
+    "firmware.dfu",
+    "flipper-z-f7-update-local.tgz"
+  ],
+
+  "allowedApps": [
+    { "id": "network_subnet", "appid": "network_subnet", "displayName": "Network Subnet Helper", "category": "Tools" },
+    { "id": "programmer_calc", "appid": "programmercalc", "displayName": "Programmer Calculator", "category": "Tools" },
+    { "id": "vin_decoder", "appid": "vin_decoder", "displayName": "VIN Decoder", "category": "Tools" },
+    { "id": "flipper95", "appid": "flipper95", "displayName": "Flipper95", "category": "Tools" },
+    { "id": "chess", "appid": "chess", "displayName": "Chess", "category": "Games" },
+    { "id": "flipfetch", "appid": "flipfetch", "displayName": "Flipfetch", "category": "Tools" },
+    { "id": "quadratic_solver", "appid": "quadratic_solver", "displayName": "Quadratic Solver", "category": "Tools" },
+    { "id": "sudoku", "appid": "sudoku", "displayName": "Sudoku", "category": "Games" },
+    { "id": "sd_info", "appid": "sd_info", "displayName": "SD Info", "category": "Tools" },
+    { "id": "docviewlite", "appid": "docviewlite", "displayName": "Doc Viewer Lite", "category": "Tools" }
+  ],
+
+  "expectedAppPrivateStoragePaths": {
+    "chess": "/ext/apps_data/flipchess/",
+    "network_subnet": null,
+    "programmercalc": null,
+    "vin_decoder": null,
+    "flipper95": null,
+    "flipfetch": null,
+    "quadratic_solver": null,
+    "sudoku": "/ext/apps_data/sudoku/",
+    "sd_info": "NOT app-private - see sdInfoStorageNote below",
+    "docviewlite": null
+  },
+
+  "expectedAppPrivateStoragePathsNote": "null means the app is not expected to persist any file under normal use; any storage write by these apps outside their own entry (or any write at all, for the null-path apps) is a fail condition per the hardware smoke-test checklist. chess's and sudoku's paths are derived from source-code analysis in Phase 2A/2B (storage.h's APP_DATA_PATH macro + storage_processing.c's /data -> /ext/apps_data/<appid> mapping), not yet confirmed by an actual device/SD-card observation. sd_info and docviewlite are new to Phase 2C and are described in their own dedicated notes below rather than this generic null/path scheme, since neither fits the app-private-save-file pattern.",
+
+  "sdInfoStorageNote": "sd_info is NOT zero-storage and NOT app-private, per the real source read in Phase 2C.1 (docs/PHASE2C_1_SOURCE_LICENSE_VERIFICATION.md) and Phase 2C.2 (docs/PHASE2C_2_SAFETY_REVIEW.md): its SD-card speed test writes, reads back, and deletes benchmark blocks at /ext/sdtest.tmp* (SD-card root, TEST_FILE_PATH = \"/ext/sdtest.tmp\"), 48 write/read/verify/delete cycles of 32KB blocks, ONLY when the user explicitly presses OK to start the test on the app's own test page. This is controlled, self-cleaning, and transient - not persistent, not automatic, not a safety-exclusion-list capability - but it is a real write to the SD-card root, materially different from an app-private save file or a read-only app. The hardware smoke-test checklist must confirm no /ext/sdtest.tmp* files remain after a normal test completion or after aborting mid-test.",
+
+  "docviewliteStorageNote": "docviewlite is confirmed read-only by source (docs/PHASE2C_1_SOURCE_LICENSE_VERIFICATION.md, docs/PHASE2C_2_SAFETY_REVIEW.md): it opens and reads a user-selected .txt file via the standard Flipper file-browser dialog and storage_file_read only - no storage_file_write call exists anywhere in its source. The hardware smoke-test checklist should confirm no new file or modification appears anywhere on the SD card after using this app.",
+
+  "forbiddenTestCategories": [
+    "Sub-GHz / RF transmit or receive",
+    "NFC read/write/emulate/clone",
+    "RFID/LFRFID read/write/emulate/clone",
+    "iButton read/write/emulate/clone",
+    "BadUSB / HID keystroke injection",
+    "BLE spam/beacon/profile interaction",
+    "Direct GPIO control",
+    "Infrared transmit",
+    "Credential, token, or password handling/extraction",
+    "Any cloning, brute force, jamming, deauth, or bypass behavior",
+    "Any unauthorized-access or security-abuse demonstration"
+  ],
+
+  "forbiddenTestCategoriesNote": "This script contains no code path for any of the above, for any app, under any flag or mode - this is not a configuration toggle to disable, it is simply not implemented anywhere in tools/phase2c_hardware_gate.ps1.",
+
+  "expectedHardwareStatusWording": {
+    "notRun": "Hardware-assisted validation: NOT RUN",
+    "notPerformed": "Hardware flashing/testing: NOT PERFORMED"
+  },
+
+  "expectedReleaseStatusWording": "TEST-READY ONLY / NOT RELEASE-READY",
+
+  "flashConfirmationPhrase": "I UNDERSTAND THIS WILL FLASH THE CONNECTED DEVICE",
+
+  "flashConfirmationNote": "The script never performs a flash itself under any circumstance - even after -AllowFlashPrompt and a correctly-typed confirmation phrase, flashing remains a manual, deliberate action performed by the operator using qFlipper or fbt flash_usb outside this script. The confirmation gate exists to make sure the operator has seen the artifact hashes and rollback warning before proceeding, not to automate the flash itself.",
+
+  "deviceDetection": {
+    "expectedFriendlyNameSubstring": "Flipper",
+    "expectedVidPid": "VID_0483&PID_5740",
+    "note": "Flipper Zero enumerates as a USB CDC-ACM serial device (ST Microelectronics VID 0483, PID 5740) when running normal firmware. Detection uses Windows PnP device enumeration (Get-PnpDevice) only - no serial communication, no RPC, no data exchange with the device."
+  },
+
+  "officialToolingDetection": {
+    "qFlipperExecutableNames": ["qFlipper.exe"],
+    "qFlipperCommonInstallDirs": [
+      "$env:ProgramFiles\\qFlipper",
+      "${env:ProgramFiles(x86)}\\qFlipper",
+      "$env:LOCALAPPDATA\\Programs\\qFlipper",
+      "$env:LOCALAPPDATA\\qFlipper"
+    ],
+    "note": "Best-effort detection only (PATH lookup, common install directories, and the Windows uninstall registry key). Absence of a detected install does not necessarily mean qFlipper isn't present under a nonstandard path - it means this script could not confirm it automatically, and flashing tooling should be classified BLOCKED / TOOLING NOT AVAILABLE rather than assumed present."
+  },
+
+  "reportFilenameCollisionFix": "Phase 2A's and Phase 2B's hardware gate scripts used second-granularity report filenames (yyyyMMdd_HHmmss), so two invocations within the same wall-clock second could silently overwrite each other's report - a real, documented, minor tooling limitation (see docs/PHASE2A_HARDWARE_ASSISTED_RESULTS.md and docs/PHASE2B_HARDWARE_ASSISTED_RESULTS.md). tools/phase2c_hardware_gate.ps1 fixes this for its own reports by using a millisecond-precision timestamp plus a short random hex suffix (yyyyMMdd_HHmmss_fff_XXXX) - collision-resistant even for rapid repeated invocations. Phase 2A's and Phase 2B's own scripts are deliberately left unmodified, per this phase's explicit instruction not to touch them."
+}
