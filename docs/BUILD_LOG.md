@@ -333,6 +333,48 @@ ONLY / NOT RELEASE-READY.**
 
 ---
 
+## Phase 2B planning update: candidate review package (planning only, no import)
+
+Built the full Phase 2B planning package — `PHASE2B_CANDIDATE_REVIEW.md`,
+`PHASE2B_RECOMMENDED_BATCH.md`, `PHASE2B_RISK_REGISTER.md`,
+`PHASE2B_LICENSE_REVIEW.md`, `PHASE2B_INTEGRATION_PLAN.md`, and
+`PHASE2B_GO_NO_GO.md` — grounded entirely in the existing Phase 1.5/1.6
+candidate-audit work (no fresh source read; this environment has no local
+RogueMaster clone), re-screened against the 5 apps Phase 2A already
+imported.
+
+Two apps from the Top 25 pool were excluded for real hardware capability
+the Phase 1.6 source audit had already found: `upython` (real
+`furi_hal_gpio_write`/`furi_hal_gpio_read` and
+`furi_hal_infrared_async_tx_start` — IR transmit — exposed to user
+scripts) and `iconedit` (real `furi_hal_hid_kb_press`/`release` USB HID
+keystroke injection in its "send to PC" feature). Both are on this
+project's own safety-exclusion list.
+
+A third finding was new to this phase specifically: `c_book` bundles
+verbatim `.txt` chapters of a commercially copyrighted book ("The C
+Programming Language," K&R, Prentice Hall) with no confirmed distribution
+right — the Phase 1.6 audit had only screened it for hardware/storage
+capability (clean) and never evaluated the bundled content's copyright
+status. Marked `NEEDS REVIEW` / excluded from the recommended batch, the
+same discipline that previously caught `chess`'s unlicensed SAM component
+in Phase 2A.
+
+**Recommended tiny batch (3 apps, LOW risk each)**: `flipfetch`,
+`quadratic_solver`, `sudoku` — all confirmed by the existing audit to have
+zero hardware-capability hits; `sudoku` is the only one with any storage
+behavior at all (a private save file, no shared-directory writes).
+Recommendation: **GO WITH CONDITIONS** — implementation still requires the
+project owner's own separate, explicit request.
+
+**No app source was imported or read fresh. No `applications/` or
+`applications_user/` changes. No firmware built. No hardware touched.
+Phase 2B implementation was not started. Hardware flashing/testing remains
+NOT PERFORMED. Release status remains TEST-READY ONLY / NOT
+RELEASE-READY.**
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is

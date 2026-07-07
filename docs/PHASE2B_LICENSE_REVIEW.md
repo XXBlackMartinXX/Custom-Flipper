@@ -1,0 +1,101 @@
+# Phase 2B — License Review
+
+Docs only. Planning only. Covers the 3 apps recommended in
+`PHASE2B_RECOMMENDED_BATCH.md`, plus a note on the one candidate
+(`c_book`) excluded from the pool specifically for a licensing reason.
+
+## Honest scope statement
+
+**No per-app `LICENSE` file, SPDX header, or license text has actually
+been read in this phase.** This environment has no local clone of the
+RogueMaster source tree to read one from, and this is a planning-only
+phase by explicit instruction. Everything below is either (a) a citation
+of what the existing Phase 1.5/1.6 audits already recorded (author/README/
+`fap_weburl`/version presence — attribution evidence, not a license-text
+confirmation), or (b) an honest `NEEDS REVIEW` for anything those audits
+did not check. This mirrors, rather than repeats, the gap that let
+`chess`'s unlicensed SAM speech-synth component through the Phase 1.6
+audit undetected until `PHASE2A_CHESS_SAM_LICENSE_REVIEW.md` was run
+against it as a dedicated pass — the same dedicated pass is what these 3
+apps (and `c_book`) would need at actual import time, not a re-run of this
+planning document.
+
+## `flipfetch`
+
+| Field | Value |
+|---|---|
+| Declared license | **NEEDS REVIEW** — not captured by the Phase 1.5/1.6 audits (they confirmed a real author/README/`fap_weburl`/version exist, per the Top-25 baseline bar, but did not record an SPDX identifier or read a `LICENSE` file). |
+| Source of license evidence | Phase 1.5 baseline screening only (attribution present, not license text). |
+| Bundled third-party code | None identified — single file, no vendored sub-libraries per Phase 1.6 audit. |
+| Missing/unclear license issue | The license itself has not been confirmed, but there is no indication of a third-party-code provenance problem (single self-contained file). |
+| Acceptable for import planning | Yes — nothing found that would block planning; the actual `LICENSE`/header must be read and recorded before an actual import commit. |
+| Legal review needed | Standard read-the-actual-license-file step at import time, same as any other app — not an elevated concern. |
+| Should be deferred | No. |
+
+## `quadratic_solver`
+
+| Field | Value |
+|---|---|
+| Declared license | **NEEDS REVIEW** — same gap as `flipfetch`. |
+| Source of license evidence | Phase 1.5 baseline screening only. |
+| Bundled third-party code | None identified — single file, pure computation, per Phase 1.6 audit. |
+| Missing/unclear license issue | Not confirmed, no third-party-provenance concern identified. |
+| Acceptable for import planning | Yes. |
+| Legal review needed | Standard read-at-import-time step, not elevated. |
+| Should be deferred | No. |
+
+## `sudoku`
+
+| Field | Value |
+|---|---|
+| Declared license | **NEEDS REVIEW** — same gap as the other two. |
+| Source of license evidence | Phase 1.5 baseline screening only. |
+| Bundled third-party code | None identified — single file, per Phase 1.6 audit. Sudoku as a puzzle concept is not copyrightable; only this specific implementation's code license matters, and that has not been read yet. |
+| Missing/unclear license issue | Not confirmed, no third-party-provenance concern identified. |
+| Acceptable for import planning | Yes. |
+| Legal review needed | Standard read-at-import-time step, not elevated. |
+| Should be deferred | No. |
+
+## Excluded-from-pool note: `c_book`
+
+Not part of the recommended batch, but recorded here because it is
+specifically a **licensing** exclusion, not a safety/capability one — the
+opposite of `upython`/`iconedit`, which were excluded for hardware
+capability reasons in `PHASE2B_CANDIDATE_REVIEW.md`.
+
+| Field | Value |
+|---|---|
+| Declared license | **NEEDS REVIEW / likely problematic** — not confirmed either way in this phase, but the *nature* of the bundled content raises a real concern independent of whatever the wrapper app code's own license is. |
+| Source of license evidence | Phase 1.5/1.6 description only: "an on-device copy of 'The C Programming Language' (K&R), Flipper Edition," bundling `.txt` chapters of that book as data resources. |
+| Bundled third-party code | **The bundled content is not code, it is the verbatim (or near-verbatim) text of a commercially published, copyrighted book** ("The C Programming Language" by Kernighan & Ritchie, published by Prentice Hall). This is categorically different from bundling an MIT/BSD-licensed code library — book text of this kind is not open-source-licensed at all, and Phase 1.6's audit did not evaluate this because its scope was hardware/storage capability, not copyright. |
+| Missing/unclear license issue | **Yes — this is exactly the missing/unclear-license case the task's own canary describes**: "If any app has unclear license or bundled third-party code without provenance, stop and mark DEFER." No provenance for a legitimate distribution right over the bundled book text has been found or asserted anywhere in the Phase 1 material. |
+| Acceptable for import planning | **No — excluded from the recommended batch on this basis.** Kept in the broader candidate pool list in `PHASE2B_CANDIDATE_REVIEW.md` only for completeness/traceability, not as a live recommendation. |
+| Legal review needed | **Yes, a real one** — not the standard read-the-header step. Someone would need to confirm whether the bundled text is (a) actually verbatim book excerpts (would need an explicit rights grant from the publisher/authors' estate, which is very unlikely to exist for a hobbyist Flipper app), (b) a public-domain/differently-licensed derivative work in fact, or (c) something this project's own reading of "Flipper Edition" is mischaracterizing (e.g. it might just be original tutorial content *inspired by* K&R's structure, not the actual text — that would change the answer entirely, but has not been confirmed either way in any document available in this phase). |
+| Should be deferred | **Yes — DEFER**, pending that dedicated review, following the exact same discipline `chess`'s SAM component went through in Phase 2A. |
+
+## What would resolve `c_book`'s open question
+
+The same kind of dedicated review `PHASE2A_CHESS_SAM_LICENSE_REVIEW.md`
+performed for the SAM speech-synth library: read the actual bundled `.txt`
+files' content and any accompanying license/attribution note in the real
+RogueMaster source, and determine plainly whether they are verbatim
+copyrighted book text (blocking), a differently-licensed derivative
+(potentially fine), or original content mischaracterized by this project's
+own shorthand description (potentially fine). Until that read happens,
+this review does not recommend treating `c_book` as available for import,
+consistent with never claiming a license is clear without having actually
+read it.
+
+## Summary
+
+| App | License status | Recommendation |
+|---|---|---|
+| `flipfetch` | NEEDS REVIEW (routine — read at import time) | Acceptable for import planning |
+| `quadratic_solver` | NEEDS REVIEW (routine — read at import time) | Acceptable for import planning |
+| `sudoku` | NEEDS REVIEW (routine — read at import time) | Acceptable for import planning |
+| `c_book` | NEEDS REVIEW (elevated — real unresolved copyright question) | **DEFER**, excluded from this batch |
+
+No license has been declared clean by this document for any app — "routine"
+above means the gap is the same ordinary read-the-license-file step every
+prior Phase 2A app also required, not a finding of an actual problem;
+"elevated" means an actual, specific, unresolved concern exists.
