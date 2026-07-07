@@ -78,3 +78,21 @@
    present (`firmware.dfu` 862,825 bytes; updater `.tgz` 2,732,909 bytes). Full
    detail in `PHASE2A_BUILD_REPORT.md`. Hardware flashing/testing: **NOT
    PERFORMED** — release status remains **TEST-READY ONLY / NOT RELEASE-READY**.
+6. **OPEN — `fcc_id_lookup` (Phase 2C candidate, not imported) has no `LICENSE`
+   file in the exact RogueMaster-vendored source this project cites.** Phase
+   2C.1's real source read of `applications/external/fcc_id_lookup/` at commit
+   `472f6925e8aca9bd031cb37e3cb80b551772c957` found no `LICENSE` file, no SPDX
+   identifier, and no copyright header anywhere in its source. Strong
+   corroborating evidence (a real, confirmed MIT license, Copyright (c) 2026
+   lsr, found directly at the exact upstream repository this app's own
+   `fap_weburl` field names, `github.com/lrehmann/fcc-id-lookup-flipper`,
+   same author, near-identical code) exists, but is not commit-pinned to the
+   specific historical revision RogueMaster vendored. Full detail in
+   `PHASE2C_1_SOURCE_LICENSE_VERIFICATION.md`. **This is a materially
+   lower-severity issue than item 4 above** (`chess`'s SAM component) — no
+   unresolved copyright dispute, no commercial content, no capability
+   concern — with a clear, low-effort resolution path: include the confirmed
+   upstream `LICENSE` file at actual import time. **This app has not been
+   imported** (per `docs/PHASE2C_1_GO_NO_GO.md`, it is deferred, not part of
+   the current 2-app cleared batch) and stays open until that specific
+   license confirmation happens.

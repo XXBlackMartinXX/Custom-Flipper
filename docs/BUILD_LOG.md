@@ -597,6 +597,60 @@ remains TEST-READY ONLY / NOT RELEASE-READY.**
 
 ---
 
+## Phase 2C.1 update: pre-import source and license verification (real source read, no import)
+
+Resolved the license-evidence gap the Phase 2C planning package flagged,
+using real network access to fetch the actual upstream RogueMaster source
+at the same pinned commit (`472f6925e8aca9bd031cb37e3cb80b551772c957`)
+every prior audit in this project has cited.
+
+**`sd_info`**: **CLEARED FOR IMPORT.** Real `LICENSE` file read directly
+from the vendored source — full, unmodified **GPLv3** text, the same
+license as the firmware base itself (the most direct possible
+compatibility case). A real, material correction was found and recorded
+honestly: this app is not zero-storage as the planning phase assumed — it
+performs a transient, self-cleaning, explicitly user-initiated SD-card
+read/write/delete benchmark at `/ext/sdtest.tmp*` (SD-card root, not
+app-private, not persistent, not automatic, not a
+safety-exclusion-list capability).
+
+**`docviewlite`**: **CLEARED FOR IMPORT.** Real `LICENSE` file read
+directly from the vendored source — full, unmodified **MIT** text.
+Storage behavior confirmed exactly as planned (read-only, user-selected
+`.txt` file only). One build-risk note recorded: the manifest declares
+`fap_icon_assets="images"` but no such directory exists in the vendored
+copy — flagged for observation at actual Static/Build validation time,
+not assumed either way.
+
+**`fcc_id_lookup`**: **DEFER.** The vendored copy has no `LICENSE` file,
+no SPDX header, and no copyright notice anywhere in its source — a real,
+specific gap, not a citation-only one. Strong corroborating evidence (a
+real, confirmed MIT license, same author, same project, found at the
+exact upstream repository this app's own manifest links to) exists, but
+is not commit-pinned to the specific historical revision RogueMaster
+vendored, so per this phase's own license canary it is not sufficient to
+declare the license proven. This is a materially lower-severity DEFER
+than `c_book`'s — no unresolved copyright dispute, no commercial content,
+a clear and low-effort resolution path (include the confirmed upstream
+`LICENSE` at actual import time). Also clarified: the 8.9MB reference
+database Phase 1.5/1.6 described as bundled is not actually present in
+the vendored source tree at all — it is a separate, optional,
+user-supplied asset, so this DEFER is about the wrapper code's own
+license only, not a database-provenance question.
+
+**Classification: `PHASE 2C.1 NEEDS REVIEW`** — 2 of 3 apps cleared
+(`sd_info`, `docviewlite`), 1 deferred (`fcc_id_lookup`). The original
+3-app batch shrinks to a 2-app cleared batch; per explicit instruction, no
+substitute app was proposed for the deferred one.
+
+**No app source was imported. No `applications/` or `applications_user/`
+changes. No firmware built. No hardware touched, no hardware-connected
+validation mode run. Phase 2C implementation was not started. Hardware
+flashing/testing remains NOT PERFORMED. Release status remains
+TEST-READY ONLY / NOT RELEASE-READY.**
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
