@@ -12,3 +12,8 @@
 !/flipper95/**
 !/chess/
 !/chess/**
+
+# Custom-Flipper Phase 2B tracked user apps (same explicit-exception pattern,
+# added one at a time as each app is reviewed/imported)
+!/flipfetch/
+!/flipfetch/**
