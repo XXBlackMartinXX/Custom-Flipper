@@ -33,3 +33,5 @@
 # added one at a time as each app is reviewed/imported)
 !/resistors/
 !/resistors/**
+!/crypto_dictionary/
+!/crypto_dictionary/**
