@@ -185,4 +185,11 @@
    the fix itself is real, narrow, safe, and twice-verified. Per the
    updated `docs/PHASE2D_2_GO_NO_GO.md`, Phase 2D.3 (CI baseline
    acceptance) is now an allowed next step, pending the project owner's
-   own explicit request.
+   own explicit request. **Phase 2D.3 update**: a 3rd real, independent
+   post-fix CI attempt (run `28941093859`, at the actual current branch
+   HEAD, on a 3rd different runner instance) also passed in full —
+   `updater_package` PASS, updater `.tgz` 2,783,170 bytes, all 13 `.fap`
+   outputs present. This run is the one Phase 2D.3's acceptance record
+   and finalize-baseline workflow are built against. Item remains
+   RESOLVED; the two pre-fix failures remain preserved, never erased, in
+   `docs/PHASE2D_2A_UPDATER_PACKAGE_BLOCKER_ANALYSIS.md`.

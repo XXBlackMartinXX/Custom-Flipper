@@ -1022,6 +1022,41 @@ request. `fcc_id_lookup` remains deferred, unresolved, and untouched.
 
 ---
 
+## Phase 2D.3 update: CI baseline acceptance record and finalize-baseline workflow
+
+A 3rd real CI attempt (run `28941093859`, an automatic run at the
+Phase 2D.2A documentation-mirroring commit `d081263` — the actual
+current branch HEAD, no script/workflow edit beyond what Phase 2D.2A
+already committed) also passed in full, including `updater_package`
+(exit code 0, updater `.tgz` 2,783,170 bytes), on a 3rd different runner
+instance — a 3rd consecutive independent post-fix confirmation.
+
+Built the Phase 2D.3 CI baseline acceptance package
+(`docs/PHASE2D_3_ACCEPTANCE_RECORD.md`, `docs/PHASE2D_3_ARTIFACT_MANIFEST.md`,
+`docs/PHASE2D_3_ARTIFACT_HASHES.md` — pending state, not fabricated —
+`docs/PHASE2D_3_GO_NO_GO.md`), locked against this run/commit rather than
+the earlier `28938933924` run so the tagged commit and its hashed
+artifacts are the exact same state. Added
+`.github/workflows/phase2d-finalize-baseline.yml`, modeled directly on
+`phase2c-finalize-baseline.yml`: downloads the accepted run's real
+artifacts on a GitHub-hosted Windows runner, computes real SHA-256
+hashes via `Get-FileHash` (never fabricated), patches the pending docs in
+place, and creates `phase2d-ci-baseline-20260708`/
+`phase2d-acceptance-record-20260708` tags, refusing to overwrite either
+if it already exists and points elsewhere. Updated
+`docs/PHASE2D_NEXT_GATE.md` with the current gate status and next
+allowed paths (a Phase 2D hardware gate or Phase 2E planning, both
+pending explicit request).
+
+**No app source changed. No `applications/` (core firmware) changed.**
+No hardware touched, no hardware-connected validation mode run. No
+binary committed — only hashes, once the finalize workflow actually
+runs. Hardware flashing/testing remains **NOT PERFORMED**. Release
+status remains **TEST-READY ONLY / NOT RELEASE-READY**. `fcc_id_lookup`
+remains deferred, unresolved, and untouched.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
