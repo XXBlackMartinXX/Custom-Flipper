@@ -1340,6 +1340,59 @@ RELEASE-READY**. Next allowed path: a Phase 2E hardware-assisted gate or
 Phase 2F planning only, both pending the project owner's own explicit
 further request.
 
+## Phase 2E.4 update: hardware-assisted validation gate created and executed
+
+Added `tools/phase2e_hardware_gate.ps1` and
+`tools/phase2e_hardware_gate_config.json`, extending the Phase 2D.4
+hardware-gate pattern to the full 16-app accepted Phase 2E baseline (the
+13 apps already covered plus `image_viewer`, `boilerplate`, and
+`minesweeper`), and preserving the Phase 2C.4/2D.4 collision-resistant
+report-filename fix unchanged. New storage checks were added for the 3
+new apps: `image_viewer` (confirmed read-only, plus a dedicated
+on-device absence check for `cat.bm`/`dolphin.bm`/`spongebob.bm`),
+`boilerplate` (confirmed app-private at `/ext/apps_data/boilerplate/`),
+and `minesweeper` (confirmed app-private at
+`/ext/apps_data/mine_sweeper_redux/`, atomic write-then-rename) — all
+sourced directly from `docs/PHASE2E_1_SOURCE_LICENSE_VERIFICATION.md`
+and `docs/PHASE2E_2_LICENSE_ATTRIBUTION.md`'s own findings, not assumed.
+A new automated Preflight-level check was also added confirming
+`applications_user/image_viewer/example_images/` remains absent from the
+repository, re-checked on every run.
+
+Real execution in this session (Linux sandbox, no Windows machine, no
+physical device): `-Mode Preflight`, `-Mode DetectDevice`,
+`-Mode ReportOnly`, `-Mode HashVerify` (synthetic mismatch), and
+`-Mode HardwareAssisted` (no `-ArtifactDir`, no `-AllowFlashPrompt`) all
+ran via `pwsh`, each correctly and honestly classifying `HARDWARE
+VALIDATION BLOCKED - DEVICE NOT AVAILABLE` (or, for the synthetic
+HashVerify run, `HARDWARE VALIDATION FAILED` — proving the comparison
+logic, not a real artifact result) — the same result every prior phase's
+own hardware gate produced in this same sandbox. The real, finalized
+Phase 2E CI artifacts (run `28968511276`, artifact `8179247001`) could
+not be downloaded in this sandbox — the same, already-documented Azure
+Blob Storage egress block (`403`) as every prior phase's artifact-download
+attempt — so real artifact hash verification was **not run**. A synthetic
+mismatch test (two `/dev/urandom` files at the exact expected sizes,
+clearly labeled as synthetic) confirmed the hash-comparison logic
+correctly rejects a same-size, wrong-content file as `FAIL` rather than
+passing on size alone. No flash was attempted or offered. No GUI smoke
+test was performed — `docs/PHASE2E_HARDWARE_SMOKE_TEST_CHECKLIST.md`
+(all 16 apps) remains for a human to complete on real hardware.
+Collision-resistant report filenames were re-confirmed via a 5-way
+simultaneous invocation stress test producing 10 distinct report files
+with zero overwrites.
+
+**Final classification: HARDWARE VALIDATION BLOCKED - DEVICE NOT
+AVAILABLE.** No app or firmware source changed. No hardware flashed.
+Release status remains **TEST-READY ONLY / NOT RELEASE-READY**. Per
+`docs/PHASE2E_NEXT_GATE.md`'s Phase 2E.4 update, non-hardware-dependent
+Phase 2F planning may now start on the project owner's own explicit
+request; hardware-assisted validation with a real device remains
+available in parallel whenever a device and Windows machine become
+available. `fcc_id_lookup` remains deferred, unresolved, and untouched.
+`image_viewer/example_images/` remains excluded, confirmed absent by
+this gate's own automated check in every run this phase.
+
 ---
 
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)

@@ -70,7 +70,25 @@
    below still applies to this session — a synthetic hash-mismatch test
    was run instead, clearly labeled as not real artifact verification.
    Still open for the same underlying device/Windows-machine reason;
-   nothing else new introduced by this update.
+   nothing else new introduced by this update. **Phase 2E.4 update**:
+   `tools/phase2e_hardware_gate.ps1` extends the same gate to the full
+   16-app Phase 2E baseline (adding `image_viewer`, `boilerplate`, and
+   `minesweeper`-specific storage checks, plus a new automated check
+   confirming `applications_user/image_viewer/example_images/` remains
+   absent); also only exercised in this same cloud sandbox, same result
+   (`HARDWARE VALIDATION BLOCKED - DEVICE NOT AVAILABLE`) for the same
+   reason — see `docs/PHASE2E_HARDWARE_ASSISTED_RESULTS.md`. The real
+   Phase 2E CI artifacts (run `28968511276`) again could not be
+   downloaded due to the same Azure Blob Storage egress block tracked in
+   item 5 below; a synthetic hash-mismatch test was run instead, clearly
+   labeled as not real artifact verification. The collision-resistant
+   report-filename fix (Phase 2C.4) was re-confirmed via a 5-way
+   simultaneous invocation stress test producing 10 distinct report files
+   with zero overwrites — no collision regression introduced. The
+   `image_viewer/example_images/` absence check passed in every run this
+   phase; the excluded directory was not reintroduced. Still open for the
+   same underlying device/Windows-machine reason; nothing else new
+   introduced by this update.
 5. **RESOLVED — cloud sandbox cannot download GitHub Actions artifacts or push git
    tags.** Two separate, confirmed network/policy restrictions were hit during
    Phase 2A.10: (a) GitHub Actions artifact downloads always redirect to Azure Blob
