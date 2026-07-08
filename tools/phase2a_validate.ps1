@@ -509,11 +509,73 @@ if ($Mode -eq 'Build' -or $Mode -eq 'HardwareAssisted') {
         }
 
         if ($buildExit -eq 0) {
+            # Phase 2D.2A diagnostics: the updater_package sub-invocation of
+            # fbt.cmd proved reproducibly unable to launch as a process in
+            # real CI (2 of 3 attempts, 2 different runner instances) even
+            # though the firmware build immediately above it succeeded every
+            # time with the identical invocation style. Print narrow,
+            # non-secret diagnostics here - immediately before the
+            # updater_package attempt - so a future failure carries the
+            # evidence needed to root-cause it, instead of just the generic
+            # "could not be launched" catch-all message.
+            Write-Host ''
+            Write-Host '--- Pre-updater_package diagnostics (Phase 2D.2A) ---' -ForegroundColor Cyan
+            Write-Host "Current directory: $(Get-Location)"
+            Write-Host "Repo root: $RepoRoot"
+            $fbtExists = Test-Path $fbtPath
+            Write-Host "fbt.cmd exists: $fbtExists"
+            if ($fbtExists) {
+                $fbtItem = Get-Item $fbtPath
+                Write-Host "fbt.cmd metadata: Length=$($fbtItem.Length) LastWriteTime=$($fbtItem.LastWriteTime) Attributes=$($fbtItem.Attributes)"
+                $fbtCmdCommand = Get-Command $fbtPath -ErrorAction SilentlyContinue
+                Write-Host "Get-Command .\fbt.cmd: $($fbtCmdCommand | Out-String)"
+            }
+            cmd /c "dir `"$fbtPath`"" 2>&1 | ForEach-Object { Write-Host "  $_" }
+            Write-Host "PowerShell version: $($PSVersionTable.PSVersion)"
+            Write-Host "OS version: $([System.Environment]::OSVersion.VersionString)"
+            $diagGitStatus = (Invoke-GitCapture -GitArgs @('status', '--porcelain')).Output
+            Write-Host "git status --short (diagnostic, immediately pre-updater_package):"
+            Write-Host $(if ([string]::IsNullOrWhiteSpace($diagGitStatus)) { '(clean)' } else { $diagGitStatus })
+            $firmwareDfuPath = Join-Path $RepoRoot 'build\f7-firmware-C\firmware.dfu'
+            $extappsPath = Join-Path $RepoRoot 'build\f7-firmware-C\.extapps'
+            Write-Host "build\f7-firmware-C\firmware.dfu exists: $(Test-Path $firmwareDfuPath)"
+            Write-Host "build\f7-firmware-C\.extapps exists: $(Test-Path $extappsPath)"
+            try {
+                $repoDriveLetter = (Get-Item $RepoRoot).PSDrive.Name
+                $repoDrive = Get-PSDrive -Name $repoDriveLetter -ErrorAction Stop
+                Write-Host "Disk space on ${repoDriveLetter}: free=$([math]::Round($repoDrive.Free/1GB,2))GB used=$([math]::Round($repoDrive.Used/1GB,2))GB"
+            }
+            catch {
+                Write-Host "Disk space check unavailable: $($_.Exception.Message)"
+            }
+            try {
+                $mpStatus = Get-MpComputerStatus -ErrorAction Stop
+                Write-Host "Windows Defender real-time protection enabled: $($mpStatus.RealTimeProtectionEnabled)"
+            }
+            catch {
+                Write-Host "Windows Defender status check unavailable (not present or inaccessible on this runner): $($_.Exception.Message)"
+            }
+            Write-Host "PATH (first 500 chars): $($env:PATH.Substring(0, [Math]::Min(500, $env:PATH.Length)))"
+            Write-Host '--- End pre-updater_package diagnostics ---'
+            Write-Host ''
+
             $updaterLogPath = Join-Path $ReportDir "build_updater_$RunTimestampForFilename.log"
             $updaterLaunchFailed = $false
             Push-Location $RepoRoot
             try {
-                & .\fbt.cmd COMPACT=1 DEBUG=0 updater_package *> $updaterLogPath
+                # Phase 2D.2A fix: launch via an explicit `cmd /c` wrapper
+                # rather than PowerShell's own `&` call operator. This is
+                # the narrowest change that alters only *how* the same
+                # command (identical fbt.cmd, identical arguments) is
+                # launched, not the build target, not the pass/fail
+                # criteria, and not any other call site (the firmware build
+                # invocation above is deliberately left untouched, since it
+                # has a 3-for-3 real-CI success record). `cmd /c` hands the
+                # actual process creation to cmd.exe itself, sidestepping
+                # whatever PowerShell-level process-creation condition was
+                # producing a native launch exception specifically for the
+                # second fbt.cmd invocation in the same job.
+                cmd /c ".\fbt.cmd COMPACT=1 DEBUG=0 updater_package" *> $updaterLogPath
                 $updaterExit = $LASTEXITCODE
             }
             catch {

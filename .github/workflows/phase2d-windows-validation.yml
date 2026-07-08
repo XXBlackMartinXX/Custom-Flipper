@@ -33,6 +33,19 @@
 #
 # Reports and build artifacts are uploaded as workflow artifacts only - this
 # workflow never commits anything back to the repository.
+#
+# Phase 2D.2A remediation note: this workflow's Build mode calls into
+# tools/phase2a_validate.ps1, which (as of Phase 2D.2A) contains a narrow,
+# updater_package-only fix: diagnostic Write-Host output immediately before
+# the updater_package attempt (disk space, fbt.cmd presence/metadata,
+# PowerShell/OS version, Windows Defender status, PATH), and the
+# updater_package fbt.cmd invocation itself switched from PowerShell's `&`
+# call operator to an explicit `cmd /c` wrapper - the same build target,
+# same arguments, same pass/fail criteria, only a different process-launch
+# mechanism for that one call site. The firmware build call site is
+# deliberately left untouched. See docs/PHASE2D_2A_UPDATER_PACKAGE_BLOCKER_ANALYSIS.md
+# and docs/PHASE2D_2A_CI_REMEDIATION_LOG.md for the full investigation and
+# rationale.
 
 name: Phase 2D Windows Validation
 
