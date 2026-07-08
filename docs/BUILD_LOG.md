@@ -1166,6 +1166,60 @@ remains deferred, unresolved, and untouched. Next gate is Phase 2E.1
 (pre-import source/license verification), on the project owner's own
 explicit further request only.
 
+## Phase 2E.1 update: pre-import source/license verification — all 3 apps cleared
+
+Obtained real network access to `RogueMaster/flipperzero-firmware-wPlugins`
+at the pinned commit (`472f6925e8aca9bd031cb37e3cb80b551772c957`, a
+shallow clone into a scratch directory outside this repository, verified
+via `git rev-parse FETCH_HEAD`) and read each of the 3 recommended apps'
+(`image_viewer`, `boilerplate`, `minesweeper`) actual `LICENSE`/`README`/
+source directly. Added `docs/PHASE2E_1_SOURCE_LICENSE_VERIFICATION.md`,
+`docs/PHASE2E_1_IMPORT_READINESS_MATRIX.md`, and
+`docs/PHASE2E_1_GO_NO_GO.md`; appended verification sections to
+`docs/PHASE2E_LICENSE_REVIEW.md` and `docs/PHASE2E_GO_NO_GO.md` without
+erasing their planning-stage findings.
+
+**Real finding**: `image_viewer` bundles 3 example `.bm` images via
+`fap_file_assets = "example_images"`. Each was decoded in this session (a
+small Python script unpacked the packed 1-bit pixel data and rendered it
+as ASCII art, since no image viewer exists in this sandbox) and visually
+inspected — `spongebob.bm` clearly depicts a recognizable
+trademarked/copyrighted cartoon character (SpongeBob SquarePants) with no
+license or attribution anywhere in the app for that image.
+`dolphin.bm`/`cat.bm` are also unattributed, though neither is
+affirmatively identified as a specific known character. None of the 3 are
+required for the app to build or run — its actual code opens whatever
+file the user selects via the standard file browser, with no hardcoded
+reference to any bundled filename. Resolution: exclude the entire
+`example_images/` directory (and the corresponding
+`fap_file_assets` line) from the import scope entirely — this is an
+import-scope condition on bundled content, not a defect in the app's own
+MIT-licensed wrapper code (Ivan Polushin/polioan, confirmed via a real,
+unmodified `LICENSE` file).
+
+`boilerplate` has no `LICENSE` file, but its `README.md` contains a real,
+explicit permissive statement ("open-source and may be used for whatever
+you want to do with it") — recorded as a distinct, honest evidence tier,
+not silently upgraded to "MIT-equivalent." `minesweeper` is MIT-licensed
+(Alexander Rodriguez/squee72564), confirmed directly, no conditions
+beyond routine attribution. Both `boilerplate` and `minesweeper`'s real
+manifest-declared appids (`fap_boilerplate`, `minesweeper_redux`) differ
+from the directory-name assumption used since Phase 1.5 — recorded
+precisely for a future Phase 2E.2. All 3 apps confirmed zero matches
+across the full 22-keyword safety scan; storage confirmed directly and
+exactly for all 3 (read-only for `image_viewer`; app-private config paths
+for `boilerplate`/`minesweeper`).
+
+**Final classification: PHASE 2E.1 PRE-IMPORT VERIFICATION PASS. ALL 3
+APPS CLEARED (ONE WITH A SUBSTANTIVE IMPORT-SCOPE CONDITION, ONE WITH A
+LICENSE-EVIDENCE NOTE).** No code imported. No firmware/app source
+changed. No hardware touched, no `HardwareAssisted` mode run. Hardware
+flashing/testing remains **NOT PERFORMED**. Release status remains
+**TEST-READY ONLY / NOT RELEASE-READY**. `fcc_id_lookup` remains
+deferred, unresolved, and untouched — not reopened or re-reviewed. Next
+gate: Phase 2E.2 implementation/import of this exact cleared 3-app batch,
+on the project owner's own explicit further request only.
+
 ---
 
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)

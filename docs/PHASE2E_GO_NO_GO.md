@@ -128,3 +128,39 @@ Hardware flashing/testing remains **NOT PERFORMED**. Release status
 remains **TEST-READY ONLY / NOT RELEASE-READY**, unchanged from the
 Phase 2D baseline this plan builds on. `fcc_id_lookup` remains deferred,
 unresolved, and untouched by this phase.
+
+---
+
+## Phase 2E.1 update: pre-import verification result
+
+**Phase 2E.1 classification: `PHASE 2E.1 PRE-IMPORT VERIFICATION PASS`.**
+See `docs/PHASE2E_1_GO_NO_GO.md`, `docs/PHASE2E_1_SOURCE_LICENSE_VERIFICATION.md`,
+and `docs/PHASE2E_1_IMPORT_READINESS_MATRIX.md` for the full, real
+verification pass performed against the pinned RogueMaster commit
+(`472f6925e8aca9bd031cb37e3cb80b551772c957`).
+
+**All 3 recommended apps are cleared for import**, resolving this
+document's own "with conditions" caveat above:
+
+- **`image_viewer`**: MIT license confirmed directly. **Real finding**:
+  its bundled `example_images/spongebob.bm` was decoded and visually
+  confirmed to depict a recognizable trademarked cartoon character with
+  no attribution — resolved by excluding the entire `example_images/`
+  directory from the import scope (not required for the app to function).
+- **`boilerplate`**: no formal `LICENSE` file exists, but `README.md`
+  contains a real, explicit permissive statement, treated as sufficient
+  evidence — recorded as a distinct, honest evidence tier, not upgraded
+  to "MIT-equivalent." Real appid discrepancy found (`fap_boilerplate`,
+  not `boilerplate`).
+- **`minesweeper`**: MIT license confirmed directly. Real appid
+  discrepancy found (`minesweeper_redux`, not `minesweeper`). No
+  conditions beyond routine attribution.
+
+No app was deferred or blocked. The original 3-app batch and its import
+order (`image_viewer` → `boilerplate` → `minesweeper`) remain valid,
+unchanged. **No code was imported in Phase 2E.1** — it is verification
+only. Hardware testing remains **NOT PERFORMED**. Release status remains
+**TEST-READY ONLY / NOT RELEASE-READY**. `fcc_id_lookup` remains
+deferred, unresolved, and untouched. Next gate: **Phase 2E.2 —
+implementation/import of this exact cleared 3-app batch**, on the project
+owner's own separate, explicit request only.

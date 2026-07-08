@@ -65,3 +65,49 @@ for all 3, with an additional named provenance question for
 `image_viewer`'s bundled bitmaps) so that Phase 2E.1 knows exactly what
 to confirm, the same sequencing every prior phase in this project has
 used.
+
+---
+
+## Phase 2E.1 update: real license verification performed — all 3 resolved
+
+**This section supersedes the planning-stage `NEEDS REVIEW` status above
+for the current decision point. The original planning-stage findings
+above are left unmodified as the historical record; do not read this as
+retroactively editing them.** Phase 2E.1 obtained real network access to
+the pinned RogueMaster commit (`472f6925e8aca9bd031cb37e3cb80b551772c957`)
+and read each app's actual `LICENSE`/`README`/source directly. Full
+evidence is in `docs/PHASE2E_1_SOURCE_LICENSE_VERIFICATION.md` and
+`docs/PHASE2E_1_IMPORT_READINESS_MATRIX.md`; this is a summary.
+
+- **`image_viewer`**: **RESOLVED — MIT**, full unmodified license text
+  confirmed directly (Ivan Polushin/polioan, 2024). The planning-stage
+  bundled-bitmap provenance question was not merely resolved but
+  **confirmed to be a real problem**: `spongebob.bm` (one of the 3
+  bundled example images) was decoded and visually confirmed to depict a
+  recognizable trademarked/copyrighted cartoon character with no
+  attribution anywhere in the app. Resolution: exclude the entire
+  `example_images/` directory from the import scope (none of the 3 files
+  are required for the app to build or function) — not a license
+  blocker for the app's own MIT-licensed wrapper code, but a hard
+  import-scope condition.
+- **`boilerplate`**: **RESOLVED — informal permissive grant, not a formal
+  license.** No `LICENSE` file exists (confirmed by an exhaustive file
+  listing), but `README.md`'s own "## Licensing" section states plainly
+  "This code is open-source and may be used for whatever you want to do
+  with it." Treated as sufficient, real evidence to clear the app for
+  import — recorded honestly as a weaker evidence tier than a formal
+  license text, not silently upgraded to "MIT-equivalent." Condition:
+  preserve this exact statement in the project's own attribution record
+  at import time.
+- **`minesweeper`**: **RESOLVED — MIT**, full unmodified license text
+  confirmed directly (Alexander Rodriguez/squee72564, 2024). No bundled
+  third-party code/data/assets/text found beyond original game sprites;
+  its one third-party header dependency (M\*LIB's `m-deque.h`) is already
+  satisfied by this project's existing `lib/mlib` base-firmware
+  submodule. No import-scope condition beyond routine MIT attribution.
+
+**All 3 apps: CLEARED FOR IMPORT** (two with a condition/note, detailed
+above and in `docs/PHASE2E_1_IMPORT_READINESS_MATRIX.md`). See
+`docs/PHASE2E_1_GO_NO_GO.md` for the final Phase 2E.1 classification.
+Direct source/license verification is complete for this batch — the next
+gate is Phase 2E.2 implementation, on explicit request only.
