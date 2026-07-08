@@ -69,5 +69,49 @@ and the resulting next-gate determination.
 
 ## Finalization workflow result
 
-*(To be filled in once `.github/workflows/phase2e-finalize-baseline.yml`
-has actually run in this session. Not fabricated in advance.)*
+**Executed successfully.** `.github/workflows/phase2e-finalize-baseline.yml`
+was created, pushed, mirrored to `claude/flipper-custom-firmware-cxrcer`
+(required for GitHub Actions to index and dispatch it — the same
+requirement discovered in Phase 2B.3 and reused in Phase 2C.3/2D.3),
+dispatched via the GitHub API (`workflow_dispatch`), and completed in
+~47 seconds with conclusion **success**. Every step succeeded, verified
+via `get_workflow_run`/`list_workflow_jobs` — the real, unedited run and
+job status, not inferred or claimed on trust.
+
+| Field | Value |
+|---|---|
+| Finalization workflow run | [`28972160432`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28972160432) |
+| Source CI run used | `28968511276`, commit `dcdfbb4c262c585d7d4126dc21b40dc3b948fc93` |
+| `firmware.dfu` | 862,825 bytes, SHA-256 `e7068bf952a12051e668bdc40db6823c41ff55659f5410977361d2aea9f1ffce` |
+| `flipper-z-f7-update-local.tgz` | 2,831,378 bytes, SHA-256 `16b35fcc844abac5f6bfeded6b8f79d5066a0411ac7c1f128aa6406251aee5c3` |
+| Validation reports / build logs | 6 files hashed (2× `phase2a_validation_*.json`/`.md` pairs, `build_firmware_*.log` 91,044 bytes, `build_updater_*.log` 223,572 bytes) — see `docs/PHASE2E_3_ARTIFACT_HASHES.md` for the full table |
+| `.fap` artifact bundle | 38 files hashed (16 expected imported/pre-existing Phase 2A-2E apps plus 22 Unleashed-bundled example/plugin FAPs, confirmed benign — see `docs/PHASE2E_3_ARTIFACT_HASHES.md`) |
+| Docs patched | `docs/PHASE2E_3_ARTIFACT_HASHES.md` (generated), `docs/PHASE2E_3_ACCEPTANCE_RECORD.md`, `docs/PHASE2E_3_ARTIFACT_MANIFEST.md`, `docs/PHASE2E_2_BUILD_REPORT.md` |
+| Docs commit | [`2910536`](https://github.com/XXBlackMartinXX/Custom-Flipper/commit/2910536cc131d2d23feba635ab5d3e806cfdc47d) — "docs: finalize Phase 2E artifact hashes from CI artifacts" |
+| `phase2e-ci-baseline-20260708` tag | **Created** (did not previously exist) → `dcdfbb4c262c585d7d4126dc21b40dc3b948fc93` |
+| `phase2e-acceptance-record-20260708` tag | **Created** (did not previously exist) → `2910536cc131d2d23feba635ab5d3e806cfdc47d` (the finalization workflow's own docs commit) |
+
+Both tags were created fresh — neither existed before this run — so the
+"do not overwrite silently" safeguard was not exercised against a real
+conflict in this run, but remains in place for any future re-run. All 8
+prior tags from Phase 2A/2B/2C/2D
+(`phase2a-ci-baseline-20260707` → `718eec5fe115c9e0467a8d07d974947a85b27cf6`,
+`phase2a-acceptance-record-20260707` → `80f429bc7385975e9c1f30bf0e116dc5653b236a`,
+`phase2b-ci-baseline-20260707` → `50dfe2fadb2e587f4e8ed67edbf7f60e42b90159`,
+`phase2b-acceptance-record-20260707` → `ff44e82d5139717315960273917db064c9deeff1`,
+`phase2c-ci-baseline-20260707` → `969054ee9f802f72be1064a62052c4be82a91783`,
+`phase2c-acceptance-record-20260707` → `dbd7c56a596dd63dd2b790fe3dd1bb52de384762`,
+`phase2d-ci-baseline-20260708` → `d0812638a02c50389b9e713ad98f2c8215b75dd5`,
+`phase2d-acceptance-record-20260708` → `f8edb1c9c0cac5cf947df7aa96de2450aaedc14b`)
+were verified unchanged after this run by directly dereferencing each to
+its target commit.
+
+Since Phase 2E.3 finalization actually PASSed, per
+`docs/PHASE2E_NEXT_GATE.md`: the next allowed path is either a Phase 2E
+hardware-assisted gate (if/when a device and Windows machine become
+available) or Phase 2F planning only — both only on the project owner's
+own further explicit request. `fcc_id_lookup`'s license gap remains a
+separate, narrow follow-up, not resolved by this document. Neither Phase
+2F nor a hardware gate is started by this document. No app or firmware
+source changed during Phase 2E.3, and no hardware testing was performed.
+Release status remains **TEST-READY ONLY / NOT RELEASE-READY.**
