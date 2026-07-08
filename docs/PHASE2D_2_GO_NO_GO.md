@@ -135,7 +135,7 @@ requires the project owner's own separate, explicit request:
 4. **`fcc_id_lookup`'s license gap** remains its own, separate, narrow
    follow-up, entirely unaffected by this phase.
 
-## Statement
+## Statement (as of this document's original writing)
 
 **PHASE 2D.2 BUILD BLOCKED / UPDATER_PACKAGE CI TOOLING.** Exactly 3 apps
 imported (`resistors`, `crypto_dictionary`, `2048`); `fcc_id_lookup`
@@ -147,3 +147,80 @@ packaging step is reproducibly blocked in CI as of this report (2 of 3
 attempts) and remains an open, unresolved item. Hardware flashing/testing
 remains **NOT PERFORMED**. Release status remains **TEST-READY ONLY / NOT
 RELEASE-READY**. Phase 2D.3 is **not started**.
+
+---
+
+## Phase 2D.2A update: `updater_package` blocker diagnosed and reclassified
+
+**This section updates the final classification with new evidence and a
+real remediation. The original content above is left unmodified as the
+historical record of what was known at the time; do not read this section
+as retroactively editing it.**
+
+A 4th real CI attempt (`28925181640`, an automatic run at Phase 2D.2's own
+documentation commit `12a7505` — docs-only, no script/workflow change)
+**passed in full**, including `updater_package`, using the exact same
+unmodified pre-fix script that had just failed twice in a row. This
+proves the original "reproducibly BLOCKED" framing above, while an
+honest read of the 2 data points then available, was incomplete — the
+real pre-fix behavior was **intermittent** (2 of 4 real attempts passed,
+~50%), not a deterministic break.
+
+Phase 2D.2A then applied a narrow, verified remediation scoped to the
+`updater_package` call site only in `tools/phase2a_validate.ps1`: added
+non-secret diagnostics (disk space, `fbt.cmd` metadata, PowerShell/OS
+version, Windows Defender status, PATH) immediately before the attempt,
+and switched the launch mechanism from PowerShell's `&` call operator to
+an explicit `cmd /c` wrapper — same build target, same arguments, same
+pass/fail classification logic. The firmware build call site (6-for-6
+real-CI success record across the full investigation) was left
+untouched. Full detail in `docs/PHASE2D_2A_CI_REMEDIATION_LOG.md` and
+`docs/PHASE2D_2A_UPDATER_PACKAGE_BLOCKER_ANALYSIS.md`.
+
+**Post-fix result: 2 of 2 real, independent CI attempts passed in full**
+(run `28938933924`, attempts 1 and 2, on 2 different runner instances,
+the second triggered via `rerun_workflow_run` specifically to obtain an
+independent confirmation rather than accept a single green run):
+
+| Run | Firmware build | `updater_package` | `firmware.dfu` | `.tgz` | All 13 `.fap` | `.fap` upload |
+|---|---|---|---|---|---|---|
+| `28938933924` attempt 1 | PASS | **PASS** | 862,825 bytes | 2,784,400 bytes | PASS | PASS |
+| `28938933924` attempt 2 | PASS | **PASS** | 862,825 bytes | 2,783,411 bytes | PASS | PASS |
+
+### Updated final classification: **PHASE 2D.2 IMPORT PASS WITH CI TOOLING REMEDIATION NOTE**
+
+All 3 apps (`resistors`, `crypto_dictionary`, `2048`) are confirmed
+imported, license-clear, statically clean, and — as of this update —
+confirmed building in full (firmware + `updater_package` + all 13 `.fap`
+outputs) on 2 consecutive, independent real CI runs following a narrow,
+documented tooling remediation. This reclassification is made honestly,
+not triumphantly: the pre-fix history (2 of 4 passed) means 2 post-fix
+passes cannot statistically *prove* the `cmd /c` change is what caused
+the improvement, only that it is a real, safe, narrow change, applied and
+verified twice, with no app or firmware source touched at any point. The
+"CI TOOLING REMEDIATION NOTE" in this classification exists specifically
+to carry that nuance forward — this is not the same as an unconditional
+clean pass with no history behind it.
+
+### Whether Phase 2D.3 is now allowed
+
+**Yes — Phase 2D.3 (CI baseline acceptance / artifact-hash finalization)
+may now be considered**, on the project owner's own separate, explicit
+request, exactly as every prior phase transition in this project has
+required. This document does not itself start Phase 2D.3.
+
+### Updated statement
+
+**PHASE 2D.2 IMPORT PASS WITH CI TOOLING REMEDIATION NOTE.** Exactly 3
+apps imported (`resistors`, `crypto_dictionary`, `2048`); `fcc_id_lookup`
+correctly not imported; no other app touched; no core firmware
+modification at any point in this investigation; no hardware touched; no
+hardware-connected validation mode run; no release published. Firmware,
+`updater_package`, and all 13 `.fap` outputs confirmed building
+successfully on 2 consecutive, independent post-fix real CI runs, on top
+of an intermittent (not deterministic) pre-fix history that is recorded
+honestly rather than hidden. Hardware flashing/testing remains **NOT
+PERFORMED**. Release status remains **TEST-READY ONLY / NOT
+RELEASE-READY**. Phase 2D.3 is **not started by this document** — it is
+now an allowed next step, pending the project owner's own explicit
+request.
