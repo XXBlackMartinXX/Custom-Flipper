@@ -121,6 +121,10 @@ already-documented local sandbox limitation (toolchain download blocked
 by egress policy) — not a code defect, not a CI failure, and not a
 regression introduced by this batch.
 
+## Phase 2E.3 artifact hash finalization
+
+Real SHA-256 hashes of the `firmware.dfu`/updater `.tgz` from run 28968511276 were finalized by the `Phase 2E Finalize Baseline` workflow (run [`28972160432`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28972160432)) - see `docs/PHASE2E_3_ARTIFACT_HASHES.md` for the values. Phase 2E.3 finalized this build's artifacts; nothing about the build result itself changed.
+
 ## Conclusion
 
 **Real CI Build PASS**, first attempt, no compile fixes required, no

@@ -1271,6 +1271,75 @@ deferred, unresolved, and untouched. Next gate: Phase 2E.3 (CI baseline
 acceptance and artifact hash finalization), on the project owner's own
 explicit further request only.
 
+## Phase 2E.3 update: CI baseline acceptance record and finalize-baseline workflow
+
+Checked for a later automatic CI run beyond the originally-cited
+`28966234832`/`59b5132` pair, per this phase's own explicit requirement,
+before finalizing anything. Found one: run `28968511276`, an automatic
+`push`-triggered run at the Phase 2E.2 documentation-mirroring commit
+`dcdfbb4` — the actual current branch HEAD — also passed in full,
+including `updater_package` (exit code 0, updater `.tgz` 2,831,378
+bytes, all 16 `.fap` outputs present). Used this later run/commit as the
+accepted CI baseline instead of the earlier pair, so the tagged commit
+and its hashed artifacts are the exact same state.
+
+Built the Phase 2E.3 CI baseline acceptance package
+(`docs/PHASE2E_3_ACCEPTANCE_RECORD.md`, `docs/PHASE2E_3_ARTIFACT_MANIFEST.md`,
+`docs/PHASE2E_3_ARTIFACT_HASHES.md` — pending state, not fabricated —
+`docs/PHASE2E_3_GO_NO_GO.md`), locked against run `28968511276` / commit
+`dcdfbb4c262c585d7d4126dc21b40dc3b948fc93`. Added
+`.github/workflows/phase2e-finalize-baseline.yml`, modeled directly on
+`phase2d-finalize-baseline.yml`: downloads the accepted run's real
+artifacts on a GitHub-hosted Windows runner, computes real SHA-256
+hashes via `Get-FileHash` (never fabricated), patches the pending docs in
+place, and creates `phase2e-ci-baseline-20260708`/
+`phase2e-acceptance-record-20260708` tags, refusing to overwrite either
+if it already exists and points elsewhere. Updated
+`docs/PHASE2E_NEXT_GATE.md` with the current gate status and next
+allowed paths (a Phase 2E hardware gate or Phase 2F planning, both
+pending explicit request).
+
+**No app source changed. No `applications/` (core firmware) changed.**
+No hardware touched, no hardware-connected validation mode run. No
+binary committed — only hashes, once the finalize workflow actually
+runs. Hardware flashing/testing remains **NOT PERFORMED**. Release
+status remains **TEST-READY ONLY / NOT RELEASE-READY**. `fcc_id_lookup`
+remains deferred, unresolved, and untouched.
+
+## Phase 2E.3 completion: finalize-baseline workflow actually ran — real result
+
+`.github/workflows/phase2e-finalize-baseline.yml` was mirrored to this
+docs branch, dispatched via `workflow_dispatch` against
+`integration/phase2e-first-batch`, and completed in ~47 seconds with
+conclusion **success** (run
+[`28972160432`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28972160432)),
+verified via the real job/step status for all 15 steps, not inferred
+from the run's status alone.
+
+Real, computed (never fabricated) results: `firmware.dfu` 862,825 bytes,
+SHA-256 `e7068bf952a12051e668bdc40db6823c41ff55659f5410977361d2aea9f1ffce`;
+`flipper-z-f7-update-local.tgz` 2,831,378 bytes, SHA-256
+`16b35fcc844abac5f6bfeded6b8f79d5066a0411ac7c1f128aa6406251aee5c3`; 6
+validation report/build log files and all 38 `.fap` artifacts (16
+expected apps plus 22 benign Unleashed-bundled example/plugin FAPs) also
+hashed — full table in `docs/PHASE2E_3_ARTIFACT_HASHES.md`. The workflow
+committed these results to `integration/phase2e-first-batch` (commit
+`2910536`) and created two new tags, neither of which existed before:
+`phase2e-ci-baseline-20260708` → `dcdfbb4c262c585d7d4126dc21b40dc3b948fc93`,
+`phase2e-acceptance-record-20260708` → `2910536cc131d2d23feba635ab5d3e806cfdc47d`.
+All 8 prior Phase 2A/2B/2C/2D tags were verified unchanged afterward.
+
+`docs/PHASE2E_3_GO_NO_GO.md`'s "Finalization workflow result" section was
+then updated in place with this real outcome (previously an honest
+placeholder), and all Phase 2E.3 docs were mirrored from
+`integration/phase2e-first-batch` to this docs branch to keep both
+branches consistent. **Final classification: PHASE 2E.3 BASELINE
+ACCEPTANCE PASS.** No app or firmware source changed. No hardware testing
+performed. Release status remains **TEST-READY ONLY / NOT
+RELEASE-READY**. Next allowed path: a Phase 2E hardware-assisted gate or
+Phase 2F planning only, both pending the project owner's own explicit
+further request.
+
 ---
 
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
