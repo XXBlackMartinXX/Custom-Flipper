@@ -228,6 +228,10 @@ respective runs — not committed to the repository.
   commit). Firmware build and all 13 `.fap` outputs are **not** blocked
   and have passed on every attempt.
 
+## Phase 2D.3 artifact hash finalization
+
+Real SHA-256 hashes of the `firmware.dfu`/updater `.tgz` from run 28941093859 were finalized by the `Phase 2D Finalize Baseline` workflow (run [`28943002724`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28943002724)) - see `docs/PHASE2D_3_ARTIFACT_HASHES.md` for the values. Phase 2D.3 finalized this build's artifacts; nothing about the build result itself changed.
+
 ## Conclusion (as of this report's original writing)
 
 **Firmware build and per-app `.fap` output: CONFIRMED PASS, 3 for 3.**
