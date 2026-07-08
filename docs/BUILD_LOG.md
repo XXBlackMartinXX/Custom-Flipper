@@ -1220,6 +1220,57 @@ deferred, unresolved, and untouched — not reopened or re-reviewed. Next
 gate: Phase 2E.2 implementation/import of this exact cleared 3-app batch,
 on the project owner's own explicit further request only.
 
+## Phase 2E.2 update: implementation/import of the cleared 3-app batch — IMPORT PASS
+
+Created `integration/phase2e-first-batch` from `integration/phase2d-first-batch`
+(commit `209066b`) and imported `image_viewer` (`3b20db6`), `boilerplate`
+(`74d0927`), and `minesweeper` (`d82c0ff`) one at a time from
+`RogueMaster/flipperzero-firmware-wPlugins` at the pinned commit
+`472f6925e8aca9bd031cb37e3cb80b551772c957`, re-fetched fresh into a
+scratch clone and re-verified against the exact SHA before any file was
+copied.
+
+`image_viewer`'s `example_images/` directory (3 bundled `.bm` demo
+images, including the `spongebob.bm` file Phase 2E.1 confirmed depicts a
+recognizable trademarked cartoon character) was **not imported** — the
+corresponding `fap_file_assets` manifest line was removed, the only
+textual edit made to any upstream file in this batch. No SpongeBob or
+SpongeBob-like image, and no other example image from that directory,
+was imported at any point. `boilerplate`'s README-only permissive
+license statement was preserved verbatim, no `LICENSE` file invented.
+`minesweeper`'s MIT `LICENSE` was preserved verbatim.
+
+Built `tools/phase2e_validate_config.json` (16-app superset, 373 total
+reviewed-false-positive entries — 184 new, all benign `ble`-substring
+hits inside words like `variable`/`enabled`/`solvable`, zero real
+capability matches) and
+`.github/workflows/phase2e-windows-validation.yml` (modeled on Phase
+2D's, inheriting the Phase 2D.2A `updater_package` remediation and the
+Phase 2D.2 `.fap` hidden-path upload fix unchanged). Local build:
+`BUILD BLOCKED / ENVIRONMENT` (toolchain download blocked, `403`, the
+same root cause every prior phase has hit) — not faked as a pass. Local
+Static validation: `PASS_WITH_REVIEWED_FALSE_POSITIVES`.
+
+**Real CI run `28966234832`** (GitHub Actions, `windows-latest`,
+`workflow_dispatch`, commit `59b5132`) **passed on the first attempt**:
+Static `PASS_WITH_REVIEWED_FALSE_POSITIVES`, Build `PASS` (firmware +
+`updater_package` + all 16 `.fap` outputs, confirmed by name via the
+validator's per-appid check — `image_viewer.fap`, `fap_boilerplate.fap`,
+`minesweeper_redux.fap` all present), Hardware `NOT_RUN`. `firmware.dfu`
+862,825 bytes; updater `.tgz` 2,831,632 bytes. An earlier automatic
+`push`-triggered run was cleanly cancelled by the workflow's own
+concurrency group in favor of this manual dispatch — expected, not a
+failure.
+
+**Final classification: PHASE 2E.2 IMPORT PASS.** No compile fixes were
+required. No core firmware (`applications/`, `lib/`, etc.) was touched.
+No hardware touched, no `HardwareAssisted` mode run. Hardware
+flashing/testing remains **NOT PERFORMED**. Release status remains
+**TEST-READY ONLY / NOT RELEASE-READY**. `fcc_id_lookup` remains
+deferred, unresolved, and untouched. Next gate: Phase 2E.3 (CI baseline
+acceptance and artifact hash finalization), on the project owner's own
+explicit further request only.
+
 ---
 
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
