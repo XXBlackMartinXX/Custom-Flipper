@@ -37,3 +37,8 @@
 !/crypto_dictionary/**
 !/2048/
 !/2048/**
+
+# Custom-Flipper Phase 2E tracked user apps (same explicit-exception pattern,
+# added one at a time as each app is reviewed/imported)
+!/image_viewer/
+!/image_viewer/**
