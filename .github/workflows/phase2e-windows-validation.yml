@@ -1,0 +1,186 @@
+# Phase 2E Windows Validation
+#
+# Runs the same validation tooling as phase2d-windows-validation.yml
+# (tools/phase2a_validate.ps1) on a real GitHub-hosted Windows runner, in
+# Static then Build mode - but pointed at tools/phase2e_validate_config.json
+# via the validator's -ConfigPath parameter, so it covers all 16 apps now
+# present on this branch (the 13 already-accepted Phase 2A/2B/2C/2D apps
+# plus the 3 newly-imported Phase 2E.2 apps: image_viewer, boilerplate,
+# minesweeper) instead of only the original 13.
+# tools/phase2a_validate_config.json, tools/phase2b_validate_config.json,
+# tools/phase2c_validate_config.json, tools/phase2d_validate_config.json,
+# phase2a-windows-validation.yml, phase2b-windows-validation.yml,
+# phase2c-windows-validation.yml, and phase2d-windows-validation.yml are all
+# left completely untouched - the frozen Phase 2A/2B/2C/2D baselines and
+# their own CI paths remain exactly as accepted. fcc_id_lookup is
+# deliberately not part of this batch or this workflow - deferred pending a
+# license resolution, per docs/PHASE2C_1_GO_NO_GO.md, unchanged by Phase 2E.
+#
+# Scope, deliberately: Static + Build validation only, for the 16 apps listed
+# in tools/phase2e_validate_config.json. This workflow NEVER runs
+# `-Mode HardwareAssisted` - there is no physical Flipper Zero attached to a
+# GitHub-hosted runner, hardware-assisted validation is out of scope for CI
+# by construction, and nothing in this workflow flashes, claims to flash, or
+# otherwise interacts with real hardware. See docs/PHASE2E_2_BUILD_REPORT.md
+# for what this workflow's first real run actually found.
+#
+# Per-app .fap output verification (via tools/phase2a_validate.ps1's own
+# generic "Per-app FAP output verification" check, driven by the
+# expectedApps list in the config) checks for the real, appid-based
+# filenames the Flipper build system actually produces
+# (build\f7-firmware-C\.extapps\<appid>.fap) - for the 3 new apps in this
+# batch that is image_viewer.fap, fap_boilerplate.fap, and
+# minesweeper_redux.fap, not the app directory names ("boilerplate"/
+# "minesweeper").
+#
+# Reports and build artifacts are uploaded as workflow artifacts only - this
+# workflow never commits anything back to the repository.
+#
+# Phase 2D.2A updater_package remediation is inherited unchanged: this
+# workflow's Build mode calls into tools/phase2a_validate.ps1, which already
+# contains the narrow, updater_package-only `cmd /c` launch-mechanism fix
+# and its accompanying diagnostics - nothing about that fix is touched here.
+
+name: Phase 2E Windows Validation
+
+on:
+  workflow_dispatch: # manual "Run workflow" button, any branch
+  push:
+    branches: [integration/phase2e-first-batch]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  # Same reasoning as phase2a/phase2b/phase2c/phase2d-windows-validation.yml:
+  # pin submodule fetch to shallow to keep the checkout fast; the validator's
+  # own submodule check only needs each submodule pinned at the correct
+  # commit, not its full history.
+  FBT_GIT_SUBMODULE_SHALLOW: 1
+
+jobs:
+  validate:
+    name: Static + Build validation (windows-latest)
+    runs-on: windows-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout (recursive submodules, full history)
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          clean: "true"
+
+      - name: Show branch and commit under test
+        shell: pwsh
+        run: |
+          Write-Host "Ref: $env:GITHUB_REF"
+          Write-Host "SHA: $env:GITHUB_SHA"
+          git rev-parse --abbrev-ref HEAD
+          git rev-parse HEAD
+          git status --short
+          if (-not (Test-Path '.\tools\phase2a_validate.ps1')) {
+            Write-Error "tools\phase2a_validate.ps1 not found - is this the wrong branch/checkout?"
+            exit 1
+          }
+          if (-not (Test-Path '.\tools\phase2e_validate_config.json')) {
+            Write-Error "tools\phase2e_validate_config.json not found - is this the wrong branch/checkout?"
+            exit 1
+          }
+
+      # Defensive: GitHub's windows-latest images ship Python already, but
+      # fbt.cmd's own toolchain bootstrap depends on a working `python` on
+      # PATH, and image contents change over time - pin one explicitly rather
+      # than relying on whatever happens to be first on PATH.
+      - name: Ensure Python is available
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Run Static validation
+        id: static
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\tools\phase2a_validate.ps1 `
+            -Mode Static `
+            -ConfigPath .\tools\phase2e_validate_config.json `
+            -ExpectedCommit $env:GITHUB_SHA `
+            -ReportDir .\reports\phase2e
+          exit $LASTEXITCODE
+
+      - name: Run Build validation
+        id: build
+        if: always() && steps.static.outcome != 'cancelled'
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\tools\phase2a_validate.ps1 `
+            -Mode Build `
+            -ConfigPath .\tools\phase2e_validate_config.json `
+            -ExpectedCommit $env:GITHUB_SHA `
+            -ReportDir .\reports\phase2e
+          exit $LASTEXITCODE
+
+      - name: Show git status after validation runs
+        if: always()
+        shell: pwsh
+        run: git status --short
+
+      # Uploaded regardless of PASS/FAIL/BLOCKED so a failing run is still
+      # diagnosable from the Actions UI - never faked, never suppressed.
+      - name: Upload validation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2e-validation-reports
+          path: reports/phase2e/**
+          if-no-files-found: warn
+          retention-days: 90
+
+      # Build artifacts only - never the toolchain directory, never anything
+      # under build/ or dist/ other than the two named files. Not committed
+      # to the repository at any point; workflow-artifact only.
+      - name: Upload firmware + updater artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2e-firmware-artifacts
+          path: |
+            build/f7-firmware-C/firmware.dfu
+            dist/f7-C/flipper-z-f7-update-local.tgz
+          if-no-files-found: warn
+          retention-days: 90
+
+      # Per-app .fap outputs (image_viewer.fap, fap_boilerplate.fap,
+      # minesweeper_redux.fap, plus the 13 already-accepted apps' .fap
+      # files) - uploaded so the real build output can be inspected
+      # directly, in addition to tools/phase2a_validate.ps1's own pass/fail
+      # verification of the same files against
+      # tools/phase2e_validate_config.json's expectedApps list.
+      # include-hidden-files is required here because fbt's own output
+      # directory is `.extapps` (dot-prefixed) -
+      # actions/upload-artifact@v4 excludes dot-prefixed directories by
+      # default (the Phase 2D.2 tooling fix this workflow inherits
+      # unchanged).
+      - name: Upload per-app .fap artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2e-fap-artifacts
+          path: build/f7-firmware-C/.extapps/*.fap
+          if-no-files-found: warn
+          include-hidden-files: true
+          retention-days: 90
+
+      - name: Hardware-assisted validation status
+        if: always()
+        shell: pwsh
+        run: |
+          Write-Host "Hardware-assisted validation: NOT RUN. This workflow never invokes -Mode HardwareAssisted - there is no physical Flipper Zero attached to a GitHub-hosted runner, and hardware testing is out of scope for CI by design."
+          Write-Host "Hardware flashing/testing: NOT PERFORMED."
+          Write-Host "Release status: TEST-READY ONLY / NOT RELEASE-READY."
