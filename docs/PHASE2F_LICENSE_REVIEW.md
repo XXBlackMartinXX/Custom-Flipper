@@ -65,3 +65,46 @@ for all 3, with an additional named provenance question for
 `barcode_gen`'s bundled encoding tables) so that Phase 2F.1 knows exactly
 what to confirm, the same sequencing every prior phase in this project
 has used.
+
+---
+
+## Phase 2F.1 update: real license verification performed — all 3 resolved
+
+**This section supersedes the planning-stage `NEEDS REVIEW` status above
+for the current decision point. The original planning-stage findings
+above are left unmodified as the historical record; do not read this as
+retroactively editing them.** Phase 2F.1 obtained real network access to
+the pinned RogueMaster commit (`472f6925e8aca9bd031cb37e3cb80b551772c957`)
+and read each app's actual `LICENSE`/`README`/source directly. Full
+evidence is in `docs/PHASE2F_1_SOURCE_LICENSE_VERIFICATION.md` and
+`docs/PHASE2F_1_IMPORT_READINESS_MATRIX.md`; this is a summary.
+
+- **`qrcode`**: **RESOLVED — MIT**, full unmodified license text
+  confirmed directly (Bob Matcuk, 2022). The bundled `qrcode.c`/`qrcode.h`
+  QR-encoding library was directly confirmed to be third-party code
+  (Richard Moore/ricmoo, derived from Project Nayuki's library), also
+  MIT-licensed and attributed inline in the file's own header — fully
+  compatible, no separate concern. No import-scope condition beyond
+  routine MIT attribution for both the wrapper and the bundled library.
+- **`hex_viewer`**: **RESOLVED — MIT**, full unmodified license text
+  confirmed directly (Roman Shchekin, 2022). No bundled third-party
+  code/data/assets/text found. No import-scope condition beyond routine
+  MIT attribution.
+- **`barcode_gen`**: **RESOLVED — MIT**, full unmodified license text
+  confirmed directly (Alan Tsui, 2023). The planning-stage bundled-table
+  provenance question was directly resolved: all 4 encoding-table `.txt`
+  files were read in full and confirmed to contain only standard,
+  publicly documented barcode-symbology character-to-bar-pattern data
+  (Code 39/128/128C/Codabar) — technical specification data, not a
+  creative work, already correctly declared via `fap_file_assets`. Real
+  appid discrepancy also confirmed: the manifest declares `barcode_app`,
+  not `barcode_gen`. No import-scope condition beyond routine MIT
+  attribution and crediting the README's own listed contributors (Z0wl,
+  @teeebor, thevan4).
+
+**All 3 apps: CLEARED FOR IMPORT**, no conditions beyond routine
+attribution for any of the 3 — see
+`docs/PHASE2F_1_IMPORT_READINESS_MATRIX.md` for the full detail. See
+`docs/PHASE2F_1_GO_NO_GO.md` for the final Phase 2F.1 classification.
+Direct source/license verification is complete for this batch — the next
+gate is Phase 2F.2 implementation, on explicit request only.

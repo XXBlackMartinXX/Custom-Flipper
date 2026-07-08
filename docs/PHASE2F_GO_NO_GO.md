@@ -100,3 +100,44 @@ package, is documentation and planning only. `applications/`,
 `integration/phase2f-first-batch` does not exist as of this document.
 Hardware remains **NOT PERFORMED**. Release status remains **TEST-READY
 ONLY / NOT RELEASE-READY**.
+
+---
+
+## Phase 2F.1 update: pre-import verification result
+
+**Phase 2F.1 classification: `PHASE 2F.1 PRE-IMPORT VERIFICATION PASS`.**
+See `docs/PHASE2F_1_GO_NO_GO.md`, `docs/PHASE2F_1_SOURCE_LICENSE_VERIFICATION.md`,
+and `docs/PHASE2F_1_IMPORT_READINESS_MATRIX.md` for the full, real
+verification pass performed against the pinned RogueMaster commit
+(`472f6925e8aca9bd031cb37e3cb80b551772c957`).
+
+**All 3 recommended apps are cleared for import**, resolving this
+document's own "with conditions" caveat above:
+
+- **`qrcode`**: MIT license confirmed directly. Bundles a third-party
+  MIT-licensed QR-encoding library (Richard Moore/ricmoo, derived from
+  Project Nayuki's library), attributed inline — fully compatible, no
+  separate concern. Storage confirmed app-private, read-only for QR
+  content, with one benign one-time legacy-folder migration at launch
+  (the same pattern already accepted for `2048`).
+- **`hex_viewer`**: MIT license confirmed directly. **Real finding**:
+  the planning-stage storage ambiguity is fully resolved — a direct
+  source read confirms the app is genuinely read-only for viewed files
+  (`FSAM_READ` only, no write/edit/patch path), with its only write
+  behavior confined to its own app-private settings file. The
+  special-caution DEFER condition for this app does not trigger.
+- **`barcode_gen`**: MIT license confirmed directly. Real appid
+  discrepancy found (`barcode_app`, not `barcode_gen`). **Real
+  finding**: the 4 bundled encoding-table files were read in full and
+  confirmed to be standard, publicly documented technical-specification
+  data (not a creative work), correctly declared via `fap_file_assets`.
+  Storage confirmed app-private only.
+
+No app was deferred or blocked. The original 3-app batch and its import
+order (`qrcode` → `hex_viewer` → `barcode_gen`) remain valid, unchanged.
+**No code was imported in Phase 2F.1** — it is verification only.
+Hardware testing remains **NOT PERFORMED**. Release status remains
+**TEST-READY ONLY / NOT RELEASE-READY**. `fcc_id_lookup` remains
+deferred, unresolved, and untouched. Next gate: **Phase 2F.2 —
+implementation/import of this exact cleared 3-app batch**, on the project
+owner's own separate, explicit request only.
