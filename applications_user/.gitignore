@@ -53,3 +53,5 @@
 !/qrcode/**
 !/hex_viewer/
 !/hex_viewer/**
+!/barcode_gen/
+!/barcode_gen/**
