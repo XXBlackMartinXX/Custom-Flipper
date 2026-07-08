@@ -1127,6 +1127,45 @@ Phase 2E planning may now start on the project owner's own explicit
 request; Phase 2E import and release-ready both remain blocked until real
 hardware validation actually completes and is explicitly accepted.
 
+## Phase 2E planning update: candidate review package (planning only, no import)
+
+Reviewed the 6-app remaining candidate pool left over from Phase 2D's own
+planning (`image_viewer`, `boilerplate`, `minesweeper`, `hex_viewer`,
+`qrcode`, `barcode_gen`), citing the existing Phase 1.5/1.6 source-audit
+evidence rather than re-reading source — the same citation-only
+discipline every prior planning phase (2B, 2C, 2D) has followed, with
+real source/license verification explicitly deferred to a future Phase
+2E.1. Added `docs/PHASE2E_CANDIDATE_REVIEW.md`,
+`docs/PHASE2E_RECOMMENDED_BATCH.md`, `docs/PHASE2E_RISK_REGISTER.md`,
+`docs/PHASE2E_LICENSE_REVIEW.md`, `docs/PHASE2E_INTEGRATION_PLAN.md`,
+`docs/PHASE2E_GO_NO_GO.md`, and `docs/PHASE2E_NEXT_GATE.md`.
+
+Recommended a tiny 3-app batch — `image_viewer` (Media, 1 file, described
+as read-only), `boilerplate` (Tools/Educational, 21 files, app-private
+save-file demonstration, real standing dev-tool value), and `minesweeper`
+(Games, 20 files, app-private save/config via a dedicated storage
+helper) — all confirmed by the existing Phase 1.6 audit to have zero
+hits across all 8 HAL capability classes. Deferred `hex_viewer`,
+`qrcode`, and `barcode_gen` to a later batch: each has a storage
+description that does not explicitly rule out a write ("touch storage
+APIs," or, for `qrcode`, simply "Local" with no further detail), and this
+project's own Phase 2C.1 experience finding a real, previously-unassumed
+write in `sd_info` is treated as the specific reason to resolve that
+ambiguity via a fresh Phase-X.1 source read in a future batch rather than
+assume read-only behavior now. `fcc_id_lookup`, `upython`, `iconedit`,
+`c_book`, `animation_switcher`, and `theme_manager` remain excluded,
+unchanged, per the project owner's explicit instruction — none
+re-reviewed in this phase.
+
+**Final classification: PHASE 2E PLANNING ONLY / NO CODE IMPORT
+PERFORMED, GO WITH CONDITIONS.** No app imported. No firmware/app source
+read, modified, or built. No hardware touched, no `HardwareAssisted` mode
+run. Hardware flashing/testing remains **NOT PERFORMED**. Release status
+remains **TEST-READY ONLY / NOT RELEASE-READY**, unchanged. `fcc_id_lookup`
+remains deferred, unresolved, and untouched. Next gate is Phase 2E.1
+(pre-import source/license verification), on the project owner's own
+explicit further request only.
+
 ---
 
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
