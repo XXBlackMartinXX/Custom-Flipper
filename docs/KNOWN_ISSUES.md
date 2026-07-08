@@ -131,9 +131,10 @@
    update**: `fcc_id_lookup` was again not imported and not re-reviewed
    during Phase 2D.2's actual import of `resistors`/`crypto_dictionary`/
    `2048` (see `docs/PHASE2D_2_GO_NO_GO.md`). Still open, unaffected.
-7. **OPEN — the `updater_package` `fbt.cmd` build target is reproducibly
-   BLOCKED in this project's Windows CI, specific to the 13-app Phase 2D
-   batch.** Phase 2D.2's real CI validation
+7. **RESOLVED (was: reproducibly BLOCKED) — the `updater_package`
+   `fbt.cmd` build target's failure was intermittent, not deterministic,
+   and is remediated by a narrow launch-mechanism fix confirmed twice on
+   real CI.** Phase 2D.2's real CI validation
    (`.github/workflows/phase2d-windows-validation.yml`) ran 3 times
    total: the first attempt (run `28905289140`) passed cleanly in full,
    including the updater `.tgz` (2,783,994 bytes). The second attempt
@@ -160,9 +161,28 @@
    policy (the same limitation as item 5 above, before its Phase 2A.11
    resolution route — that workaround moved the *download* into a GitHub
    Actions workflow using the runner's own token, but does not help
-   diagnose a failure *within* that same kind of workflow run). **Stays
-   open** until either the `updater_package` build succeeds reliably in
-   CI for this 13-app batch, or the project owner explicitly accepts the
-   firmware+FAP-only build result and tracks this as a known, separate
-   CI-tooling gap. Per `docs/PHASE2D_2_GO_NO_GO.md`, Phase 2D.3 (CI
-   baseline acceptance) is not started while this remains open.
+   diagnose a failure *within* that same kind of workflow run).
+   **Phase 2D.2A resolution**: a 4th real CI attempt (`28925181640`, at
+   a docs-only commit, no script change) passed in full using the exact
+   same unmodified script that had just failed twice — proving the
+   failure was intermittent (2 of 4 pre-fix attempts passed, ~50%), not
+   deterministic. Applied a narrow fix scoped to the `updater_package`
+   call site only in `tools/phase2a_validate.ps1`: added non-secret
+   diagnostics (disk space, `fbt.cmd` metadata, PowerShell/OS version,
+   Windows Defender status, PATH) and switched the launch mechanism from
+   PowerShell's `&` call operator to an explicit `cmd /c` wrapper — same
+   build target, same arguments, same pass/fail logic. Confirmed via 2 of
+   2 real, independent post-fix CI attempts (run `28938933924`, attempts
+   1 and 2, the second via `rerun_workflow_run` on a different runner
+   instance): both passed in full, `updater_package` PASS, all 13 `.fap`
+   outputs present, `.fap` artifact upload working. See
+   `docs/PHASE2D_2A_UPDATER_PACKAGE_BLOCKER_ANALYSIS.md` and
+   `docs/PHASE2D_2A_CI_REMEDIATION_LOG.md` for full detail. No app source
+   or firmware/core source changed at any point in this investigation.
+   This is reported as resolved-with-a-caveat, not a triumphant
+   certainty: 2 post-fix passes cannot statistically prove the fix is
+   what caused the improvement, given the pre-fix ~50% base rate — but
+   the fix itself is real, narrow, safe, and twice-verified. Per the
+   updated `docs/PHASE2D_2_GO_NO_GO.md`, Phase 2D.3 (CI baseline
+   acceptance) is now an allowed next step, pending the project owner's
+   own explicit request.

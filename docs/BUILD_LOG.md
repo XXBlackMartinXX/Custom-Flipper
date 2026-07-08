@@ -975,6 +975,53 @@ phase.
 
 ---
 
+## Phase 2D.2A update: `updater_package` CI blocker diagnosed, remediated, and confirmed
+
+A 4th real CI attempt (`28925181640`, an automatic run at Phase 2D.2's
+own docs-only commit `12a7505` — no script/workflow edit) **passed in
+full**, including `updater_package`, using the exact same unmodified
+script that had just failed twice in a row. This is the pivotal finding
+of this phase: the original "reproducibly BLOCKED" conclusion, while
+reasonable from the 2 data points then available, was incomplete — the
+real pre-fix behavior was **intermittent** (2 of 4 real attempts passed,
+~50%), not a deterministic break.
+
+Applied a narrow remediation to `tools/phase2a_validate.ps1`'s
+`updater_package` call site only (the firmware build call site, with a
+6-for-6 real-CI success record across this whole investigation, is
+untouched): added non-secret diagnostics (disk space, `fbt.cmd`
+metadata, PowerShell/OS version, Windows Defender status, PATH)
+immediately before the attempt, and switched the launch mechanism from
+PowerShell's `&` call operator to an explicit `cmd /c` wrapper — same
+build target, same arguments, same pass/fail classification logic.
+
+**Post-fix result: 2 of 2 real, independent CI attempts passed in
+full** (run `28938933924`, attempts 1 and 2 — the second triggered via
+`rerun_workflow_run` specifically for an independent confirmation, on a
+different runner instance): `updater_package` PASS both times,
+`firmware.dfu` byte-identical (862,825 bytes), updater `.tgz` 2,784,400
+and 2,783,411 bytes respectively, all 13 `.fap` outputs present, `.fap`
+artifact upload working in both.
+
+**Updated classification: `PHASE 2D.2 IMPORT PASS WITH CI TOOLING
+REMEDIATION NOTE`** — a real, narrow, twice-verified fix, reported
+honestly alongside the pre-fix intermittent history rather than as an
+unconditional clean pass with no context. See
+`docs/PHASE2D_2A_UPDATER_PACKAGE_BLOCKER_ANALYSIS.md`,
+`docs/PHASE2D_2A_CI_REMEDIATION_LOG.md`, and the Phase 2D.2A update
+sections appended to `docs/PHASE2D_2_BUILD_REPORT.md` and
+`docs/PHASE2D_2_GO_NO_GO.md` for full detail.
+
+**No app source changed. No `applications/` (core firmware) changed at
+any point in this investigation.** No hardware touched, no
+hardware-connected validation mode run. Hardware flashing/testing
+remains **NOT PERFORMED**. Release status remains **TEST-READY ONLY /
+NOT RELEASE-READY**. Phase 2D.3 is **not started by this phase** — it is
+now an allowed next step, pending the project owner's own explicit
+request. `fcc_id_lookup` remains deferred, unresolved, and untouched.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is

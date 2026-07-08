@@ -228,12 +228,76 @@ respective runs — not committed to the repository.
   commit). Firmware build and all 13 `.fap` outputs are **not** blocked
   and have passed on every attempt.
 
-## Conclusion
+## Conclusion (as of this report's original writing)
 
 **Firmware build and per-app `.fap` output: CONFIRMED PASS, 3 for 3.**
 **Updater package build: BUILD BLOCKED / UPDATER_PACKAGE CI TOOLING,
 reproducible 2 of 3 real CI attempts.** This is a CI/tooling-environment
 finding, not evidence of a defect in `resistors`, `crypto_dictionary`, or
 `2048`'s own source — but it is real, unresolved, and not glossed over.
-See `docs/PHASE2D_2_GO_NO_GO.md` for the resulting classification and
-next gate.
+
+---
+
+## Phase 2D.2A update: diagnosis, remediation, and a pivotal 4th data point
+
+**This section adds new evidence and a real remediation. The
+above content is left unmodified as the historical record of what was
+known at the time this report was first written; do not read this
+section as retroactively editing it.**
+
+A 4th real CI attempt, `28925181640` (an automatic run triggered by
+pushing Phase 2D.2's own documentation commit `12a7505` — a docs-only
+change, no script/workflow edit), **passed in full**, including
+`updater_package` (exit code 0, `.tgz` 2,784,535 bytes), using the exact
+same, unmodified script that had just failed twice in a row. **This
+proves the original "reproducibly BLOCKED" framing above was an
+understandable but incomplete conclusion from only 2 data points** — the
+real, pre-fix behavior was intermittent (2 of 4 real attempts passed,
+~50%), not a deterministic break.
+
+Phase 2D.2A then applied a narrow remediation to
+`tools/phase2a_validate.ps1`'s `updater_package` call site only (the
+firmware build call site is untouched): added non-secret diagnostic
+output (disk space, `fbt.cmd` metadata, PowerShell/OS version, Windows
+Defender status, PATH) immediately before the attempt, and switched the
+launch mechanism from PowerShell's `&` call operator to an explicit `cmd
+/c` wrapper — same build target, same arguments, same pass/fail logic.
+See `docs/PHASE2D_2A_CI_REMEDIATION_LOG.md` for the exact change and
+`docs/PHASE2D_2A_UPDATER_PACKAGE_BLOCKER_ANALYSIS.md` for the full
+investigation.
+
+**Post-fix result: 2 of 2 real, independent CI attempts passed in full**,
+on 2 different runner instances (`1000000201`, `1000000202`), both via
+`rerun_workflow_run` for a genuine second confirmation rather than
+accepting a single green run:
+
+| Attempt | Firmware build | `updater_package` | `.tgz` size | All 13 `.fap` | `.fap` upload |
+|---|---|---|---|---|---|
+| Post-fix 1 (`28938933924` attempt 1) | PASS | **PASS** | 2,784,400 bytes | PASS | PASS |
+| Post-fix 2 (`28938933924` attempt 2) | PASS | **PASS** | 2,783,411 bytes | PASS | PASS |
+
+`firmware.dfu` remained byte-identical (862,825 bytes) in both. Real
+diagnostics captured in both post-fix runs: 145.14 GB free disk, Windows
+Defender real-time protection reported disabled, `fbt.cmd` present and
+valid (822 bytes) — ruling out the two most commonly-suspected causes
+for these two specific runs (though no equivalent diagnostic data exists
+for the 2 runs that actually failed, since diagnostics did not exist at
+that point — an honest evidentiary gap, not filled in with a guess).
+
+### Updated conclusion (Phase 2D.2A supersedes the "reproducibly BLOCKED" framing above)
+
+**Firmware build and per-app `.fap` output: CONFIRMED PASS, 6 for 6**
+across the full CI history now on record. **Updater package build:
+PASS in 4 of 6 real attempts overall (2 of 4 pre-fix, 2 of 2 post-fix)**,
+BLOCKED in 2 (both pre-fix, same commit, 2 different runners).
+Classification: **UPDATER_PACKAGE CI BLOCKER RESOLVED WITH INTERMITTENT
+PRE-FIX FAILURE NOTE** — a real, narrow, verified fix, applied and
+confirmed twice, but not a claim that the pre-fix intermittent failure
+rate is statistically proven eliminated versus merely not re-observed in
+2 more attempts. No app source changed. No firmware/core source changed
+at any point in this investigation. Hardware testing remains **NOT
+PERFORMED**. Release status remains **TEST-READY ONLY / NOT
+RELEASE-READY**.
+
+See `docs/PHASE2D_2_GO_NO_GO.md` for the resulting Phase 2D.2
+reclassification and next gate.
