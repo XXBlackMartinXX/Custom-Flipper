@@ -1,0 +1,397 @@
+# Phase 2D Finalize Baseline
+#
+# Runs entirely inside GitHub's own Windows Actions environment specifically
+# to work around two limitations of this project's AI cloud sandbox
+# (documented in docs/PHASE2D_3_ARTIFACT_HASHES.md and, historically,
+# docs/KNOWN_ISSUES.md item 5 for the identical Phase 2A/2B/2C case):
+#   1. The sandbox cannot download GitHub Actions artifacts - they always
+#      redirect to Azure Blob Storage, which the sandbox's network policy
+#      blocks (confirmed 403, re-verified in Phase 2B.3/2C.3/2D.3).
+#   2. The sandbox's own git relay has historically returned 403 on tag
+#      pushes specifically, even though ordinary branch pushes through the
+#      same relay work fine.
+#
+# A GitHub-hosted runner has neither problem: it can download its own prior
+# run's artifacts directly via `gh run download`, and it pushes using the
+# workflow's own GITHUB_TOKEN, which has real push (including tag) access
+# to this repository. This workflow downloads the artifacts from an
+# already-successful "Phase 2D Windows Validation" run, computes real
+# SHA-256 hashes of the actual files (never fabricated), commits the
+# resulting hash manifest to docs/, and creates the two immutable Phase 2D
+# baseline tags - all from an environment that can actually do each of
+# those things for real. This is the exact same mechanism
+# phase2a/phase2b/phase2c-finalize-baseline.yml already used successfully -
+# adapted for the Phase 2D batch, not a new design.
+#
+# Scope, deliberately narrow: this workflow touches docs/ only (plus the two
+# tags). It never imports apps, never modifies firmware/app source, never
+# flashes hardware, never invokes -Mode HardwareAssisted (there is no such
+# invocation anywhere in this file), never publishes a GitHub Release, and
+# never commits firmware.dfu/the updater .tgz/any other binary - only their
+# hashes, as text, in docs/PHASE2D_3_ARTIFACT_HASHES.md.
+#
+# Manually triggered only (workflow_dispatch) - this is a one-time
+# finalization action for a specific already-accepted baseline, not a
+# routine CI job that should run on every push.
+#
+# The accepted source run (28941093859) validates commit
+# d0812638a02c50389b9e713ad98f2c8215b75dd5 - the actual current branch HEAD
+# at Phase 2D.3 acceptance time, chosen specifically so the tagged commit
+# and its hashed artifacts are the exact same state (an earlier run,
+# 28938933924, is also a real, valid, twice-confirmed pass and remains
+# documented in docs/PHASE2D_2A_CI_REMEDIATION_LOG.md, but does not
+# correspond to the current HEAD).
+#
+# All GitHub Actions expression values (${{ ... }}) are passed into steps via
+# `env:` and read back as $env:NAME inside PowerShell, rather than spliced
+# directly into script bodies - this avoids quoting/escaping hazards where a
+# context value could land inside a string literal unexpectedly. Multi-line
+# Markdown content is built as PowerShell arrays of single-line strings
+# joined with "`n" (not here-strings): a here-string's closing delimiter
+# must sit at true column 0 in PowerShell 7, which is incompatible with a
+# script that is itself indented as a YAML block-literal `run:` value.
+
+name: Phase 2D Finalize Baseline
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "Run ID of the already-successful 'Phase 2D Windows Validation' run to pull artifacts from"
+        required: true
+        default: "28941093859"
+      ci_baseline_sha:
+        description: "Commit SHA the CI baseline tag should point at"
+        required: true
+        default: "d0812638a02c50389b9e713ad98f2c8215b75dd5"
+      acceptance_tag_name:
+        description: "Name for the acceptance-record tag"
+        required: true
+        default: "phase2d-acceptance-record-20260708"
+      ci_tag_name:
+        description: "Name for the CI-baseline tag"
+        required: true
+        default: "phase2d-ci-baseline-20260708"
+      target_branch:
+        description: "Branch to check out, commit docs to, and push"
+        required: true
+        default: "integration/phase2d-first-batch"
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+  CI_BASELINE_SHA: ${{ inputs.ci_baseline_sha }}
+  ACCEPTANCE_TAG_NAME: ${{ inputs.acceptance_tag_name }}
+  CI_TAG_NAME: ${{ inputs.ci_tag_name }}
+  TARGET_BRANCH: ${{ inputs.target_branch }}
+  REPO: ${{ github.repository }}
+  THIS_RUN_ID: ${{ github.run_id }}
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  finalize:
+    name: Finalize artifact hashes and baseline tags (windows-latest)
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout target branch (full history)
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_branch }}
+          fetch-depth: 0
+          clean: "true"
+          persist-credentials: true
+
+      - name: Verify branch, commit, and required files
+        shell: pwsh
+        run: |
+          $branch = git rev-parse --abbrev-ref HEAD
+          $commit = git rev-parse HEAD
+          Write-Host "Branch: $branch"
+          Write-Host "Commit: $commit"
+          if ($branch -ne $env:TARGET_BRANCH) {
+            Write-Error "Checked out branch '$branch' does not match requested target_branch '$env:TARGET_BRANCH'."
+            exit 1
+          }
+          foreach ($f in @(
+            'docs\PHASE2D_3_ARTIFACT_MANIFEST.md',
+            'docs\PHASE2D_3_ACCEPTANCE_RECORD.md',
+            'docs\PHASE2D_3_ARTIFACT_HASHES.md',
+            'docs\PHASE2D_NEXT_GATE.md'
+          )) {
+            if (-not (Test-Path $f)) {
+              Write-Error "Required file '$f' not found - is this the wrong branch/checkout?"
+              exit 1
+            }
+          }
+          git status --short
+
+      - name: Download source run artifacts
+        shell: pwsh
+        run: |
+          $dir = ".\reports\phase2d_finalize_artifacts"
+          New-Item -ItemType Directory -Path $dir -Force | Out-Null
+          gh run download $env:SOURCE_RUN_ID --repo $env:REPO --dir $dir
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "gh run download failed for run $env:SOURCE_RUN_ID - it may have expired (workflow artifacts are retained 90 days) or the run ID may be wrong."
+            exit 1
+          }
+          Get-ChildItem -Path $dir -Recurse -File | ForEach-Object { Write-Host $_.FullName }
+
+      - name: Compute real SHA-256 hashes and generate hash manifest
+        id: hashes
+        shell: pwsh
+        run: |
+          $dir = ".\reports\phase2d_finalize_artifacts"
+          $allFiles = Get-ChildItem -Path $dir -Recurse -File
+
+          $firmware = $allFiles | Where-Object { $_.Name -eq 'firmware.dfu' } | Select-Object -First 1
+          $updater = $allFiles | Where-Object { $_.Name -eq 'flipper-z-f7-update-local.tgz' } | Select-Object -First 1
+          $reports = $allFiles | Where-Object { $_.Extension -in @('.json', '.md') -and $_.Name -like 'phase2a_validation_*' }
+          $logs = $allFiles | Where-Object { $_.Extension -eq '.log' }
+          $faps = $allFiles | Where-Object { $_.Extension -eq '.fap' }
+
+          if (-not $firmware) { Write-Error "firmware.dfu not found among downloaded artifacts."; exit 1 }
+          if (-not $updater) { Write-Error "flipper-z-f7-update-local.tgz not found among downloaded artifacts."; exit 1 }
+
+          $firmwareHash = (Get-FileHash -Path $firmware.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $updaterHash = (Get-FileHash -Path $updater.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+
+          Write-Host "firmware.dfu: $($firmware.Length) bytes, sha256=$firmwareHash"
+          Write-Host "updater .tgz: $($updater.Length) bytes, sha256=$updaterHash"
+
+          $reportRows = New-Object System.Collections.Generic.List[string]
+          foreach ($r in ($reports | Sort-Object Name)) {
+            $h = (Get-FileHash -Path $r.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            $reportRows.Add("| ``$($r.Name)`` | $($r.Length.ToString('N0')) | ``$h`` |")
+          }
+          foreach ($l in ($logs | Sort-Object Name)) {
+            $h = (Get-FileHash -Path $l.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            $reportRows.Add("| ``$($l.Name)`` (build log) | $($l.Length.ToString('N0')) | ``$h`` |")
+          }
+          $reportTable = $reportRows -join "`n"
+          if (-not $reportTable) { $reportTable = "| _(no validation report/log files found in the downloaded artifact)_ | | |" }
+
+          $fapRows = New-Object System.Collections.Generic.List[string]
+          foreach ($fap in ($faps | Sort-Object Name)) {
+            $h = (Get-FileHash -Path $fap.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            $fapRows.Add("| ``$($fap.Name)`` | $($fap.Length.ToString('N0')) | ``$h`` |")
+          }
+          $fapTable = $fapRows -join "`n"
+          if (-not $fapTable) { $fapTable = "| _(no .fap files found in the downloaded artifact)_ | | |" }
+          Write-Host "Found $($faps.Count) .fap files"
+
+          $runUrl = "https://github.com/$env:REPO/actions/runs/$env:SOURCE_RUN_ID"
+          $finalizedByUrl = "https://github.com/$env:REPO/actions/runs/$env:THIS_RUN_ID"
+
+          # Built as an array of lines joined by newline, not a here-string:
+          # a here-string's closing delimiter must sit at true column 0 in
+          # PowerShell 7, which is incompatible with this script being
+          # embedded (and therefore indented) inside a YAML block-literal
+          # `run:` value. Modeled directly on
+          # phase2a/phase2b/phase2c-finalize-baseline.yml's already-proven
+          # equivalent step.
+          $contentLines = @(
+            "# Phase 2D - Local Artifact Hash Manifest"
+            ""
+            "**Status: GENERATED.** Real, independently-computed SHA-256 hashes of the"
+            "actual Phase 2D CI artifacts, generated by the GitHub Actions ""Phase 2D"
+            "Finalize Baseline"" workflow running on a real GitHub-hosted ``windows-latest``"
+            "runner - not fabricated, not copied from any archive-level digest."
+            ""
+            "## Source"
+            ""
+            "| Field | Value |"
+            "|---|---|"
+            "| Source CI run ID | ``$env:SOURCE_RUN_ID`` |"
+            "| Source CI run URL | $runUrl |"
+            "| CI baseline commit (SHA) | ``$env:CI_BASELINE_SHA`` |"
+            "| Hashes generated by | ""Phase 2D Finalize Baseline"" workflow run [``$env:THIS_RUN_ID``]($finalizedByUrl) |"
+            ""
+            "## Firmware and updater artifacts"
+            ""
+            "| File | Size (bytes) | SHA-256 |"
+            "|---|---|---|"
+            "| ``firmware.dfu`` | $($firmware.Length.ToString('N0')) | ``$firmwareHash`` |"
+            "| ``flipper-z-f7-update-local.tgz`` | $($updater.Length.ToString('N0')) | ``$updaterHash`` |"
+            ""
+            "## Validation reports and build logs"
+            ""
+            "| File | Size (bytes) | SHA-256 |"
+            "|---|---|---|"
+            "$reportTable"
+            ""
+            "## .fap artifact bundle ($($faps.Count) files)"
+            ""
+            "| File | Size (bytes) | SHA-256 |"
+            "|---|---|---|"
+            "$fapTable"
+            ""
+            "## What this does and does not mean"
+            ""
+            "- **These are real hashes of the actual downloaded files**, computed with"
+            "  PowerShell's ``Get-FileHash -Algorithm SHA256`` on a GitHub-hosted Windows"
+            "  runner that downloaded them directly from the source CI run via"
+            "  ``gh run download``."
+            "- **No binary is committed to this repository.** ``firmware.dfu`` and the"
+            "  updater ``.tgz`` exist only as GitHub Actions workflow artifacts on the"
+            "  source run; only their hashes (text) are committed here."
+            "- **Hardware-assisted validation: NOT RUN. Hardware flashing/testing: NOT"
+            "  PERFORMED.**"
+            "- **Release status: TEST-READY ONLY / NOT RELEASE-READY.** Generating these"
+            "  hashes does not change either of those."
+          )
+
+          ($contentLines -join "`n") | Set-Content -Path docs\PHASE2D_3_ARTIFACT_HASHES.md -Encoding utf8
+          Write-Host "Wrote docs\PHASE2D_3_ARTIFACT_HASHES.md"
+
+          "firmware_hash=$firmwareHash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "updater_hash=$updaterHash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "firmware_size=$($firmware.Length)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "updater_size=$($updater.Length)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Patch the dependent docs to mark hashes finalized
+        shell: pwsh
+        run: |
+          $runUrl = "https://github.com/$env:REPO/actions/runs/$env:THIS_RUN_ID"
+
+          function Set-ExactReplacement {
+            param([string]$Path, [string]$Old, [string]$New)
+            $text = Get-Content -Path $Path -Raw
+            if ($text.Contains($Old)) {
+              $text = $text.Replace($Old, $New)
+              $text | Set-Content -Path $Path -Encoding utf8 -NoNewline
+              Write-Host "Patched $Path"
+              return $true
+            }
+            Write-Warning "Expected sentinel text not found in $Path - leaving it unmodified. docs/PHASE2D_3_ARTIFACT_HASHES.md still reflects the finalized state regardless."
+            return $false
+          }
+
+          # Every -Old/-New value below is a single physical line (verified
+          # against the actual doc files) written as a single-line string -
+          # no here-strings, for the same reason noted above.
+          $oldAcceptance = '| Artifact hashes generated | **PENDING** — the `Phase 2D Finalize Baseline` GitHub Actions workflow has been created in this phase and will be run to generate real, independently-computed SHA-256 hashes of the actual `firmware.dfu` and updater `.tgz` files from run `28941093859`. This section will be patched (not silently rewritten) with the real result once that workflow completes. |'
+          $newAcceptance = "| Artifact hashes generated | **YES** — generated by the ``Phase 2D Finalize Baseline`` GitHub Actions workflow, run [``$env:THIS_RUN_ID``]($runUrl). See ``docs/PHASE2D_3_ARTIFACT_HASHES.md``. |"
+          Set-ExactReplacement -Path 'docs\PHASE2D_3_ACCEPTANCE_RECORD.md' -Old $oldAcceptance -New $newAcceptance | Out-Null
+
+          $oldManifest = '**PENDING.** Real, independently-computed SHA-256 hashes of the actual'
+          $newManifest = "**Finalized.** Real, independently-computed SHA-256 hashes of the actual"
+          Set-ExactReplacement -Path 'docs\PHASE2D_3_ARTIFACT_MANIFEST.md' -Old $oldManifest -New $newManifest | Out-Null
+
+          git status --short
+
+      - name: Add a final-hash reference note to the Phase 2D.2 build report
+        shell: pwsh
+        run: |
+          $path = 'docs\PHASE2D_2_BUILD_REPORT.md'
+          $runUrl = "https://github.com/$env:REPO/actions/runs/$env:THIS_RUN_ID"
+          $marker = '## Conclusion (as of this report'
+          $text = Get-Content -Path $path -Raw
+          if ($text.Contains($marker) -and -not $text.Contains('Phase 2D.3 finalized')) {
+            $note = "## Phase 2D.3 artifact hash finalization`n`nReal SHA-256 hashes of the ``firmware.dfu``/updater ``.tgz`` from run $env:SOURCE_RUN_ID were finalized by the ``Phase 2D Finalize Baseline`` workflow (run [``$env:THIS_RUN_ID``]($runUrl)) - see ``docs/PHASE2D_3_ARTIFACT_HASHES.md`` for the values. Phase 2D.3 finalized this build's artifacts; nothing about the build result itself changed.`n`n$marker"
+            $text = $text.Replace($marker, $note)
+            $text | Set-Content -Path $path -Encoding utf8 -NoNewline
+            Write-Host "Patched $path with a Phase 2D.3 finalization note"
+          }
+          else {
+            Write-Warning "Marker not found or already patched in $path - leaving it unmodified."
+          }
+
+      - name: Commit docs changes only
+        id: commit
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -- docs/PHASE2D_3_ARTIFACT_HASHES.md docs/PHASE2D_3_ARTIFACT_MANIFEST.md docs/PHASE2D_3_ACCEPTANCE_RECORD.md docs/PHASE2D_2_BUILD_REPORT.md
+
+          git status --short
+
+          $staged = git diff --cached --name-only
+          if (-not $staged) {
+            Write-Host "Nothing staged - docs already reflect the finalized state. Skipping commit."
+            "made_commit=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          }
+          else {
+            $outsideDocs = $staged | Where-Object { -not $_.StartsWith('docs/') }
+            if ($outsideDocs) {
+              Write-Error "Refusing to commit: staged changes include files outside docs/: $($outsideDocs -join ', ')"
+              exit 1
+            }
+            git commit -m "docs: finalize Phase 2D artifact hashes from CI artifacts"
+            "made_commit=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          }
+
+      - name: Push docs commit
+        if: steps.commit.outputs.made_commit == 'true'
+        shell: pwsh
+        run: git push origin "HEAD:$env:TARGET_BRANCH"
+
+      - name: Create or verify CI baseline tag
+        shell: pwsh
+        run: |
+          git fetch origin "refs/tags/${env:CI_TAG_NAME}:refs/tags/${env:CI_TAG_NAME}" 2>$null
+          $existing = git rev-list -n 1 $env:CI_TAG_NAME 2>$null
+          if ($LASTEXITCODE -eq 0 -and $existing) {
+            if ($existing -eq $env:CI_BASELINE_SHA) {
+              Write-Host "Tag $env:CI_TAG_NAME already exists and points at the correct commit ($existing). Leaving unchanged."
+            }
+            else {
+              Write-Error "Tag $env:CI_TAG_NAME already exists but points at $existing, not the expected $env:CI_BASELINE_SHA. Refusing to overwrite - resolve manually."
+              exit 1
+            }
+          }
+          else {
+            git tag -a $env:CI_TAG_NAME $env:CI_BASELINE_SHA -m "Phase 2D CI baseline: Windows validation pass with reviewed false positives, run $env:SOURCE_RUN_ID. 13 apps (10 Phase 2A/2B/2C + 3 Phase 2D: resistors, crypto_dictionary, 2048). updater_package remediated via a narrow cmd /c launch fix after an intermittent pre-fix failure (see docs/PHASE2D_2A_UPDATER_PACKAGE_BLOCKER_ANALYSIS.md). fcc_id_lookup deferred, not included. Hardware not tested. Not release-ready."
+            git push origin "refs/tags/$env:CI_TAG_NAME"
+            Write-Host "Created and pushed tag $env:CI_TAG_NAME -> $env:CI_BASELINE_SHA"
+          }
+
+      - name: Create or verify acceptance-record tag
+        shell: pwsh
+        run: |
+          $headSha = git rev-parse HEAD
+          git fetch origin "refs/tags/${env:ACCEPTANCE_TAG_NAME}:refs/tags/${env:ACCEPTANCE_TAG_NAME}" 2>$null
+          $existing = git rev-list -n 1 $env:ACCEPTANCE_TAG_NAME 2>$null
+          if ($LASTEXITCODE -eq 0 -and $existing) {
+            if ($existing -eq $headSha) {
+              Write-Host "Tag $env:ACCEPTANCE_TAG_NAME already exists and points at the correct commit ($existing). Leaving unchanged."
+            }
+            else {
+              Write-Error "Tag $env:ACCEPTANCE_TAG_NAME already exists but points at $existing, not this run's finalization commit ($headSha). Refusing to overwrite - resolve manually (delete and recreate deliberately if a re-point is truly intended)."
+              exit 1
+            }
+          }
+          else {
+            git tag -a $env:ACCEPTANCE_TAG_NAME $headSha -m "Phase 2D acceptance record: non-hardware CI baseline accepted (13 apps: 10 Phase 2A/2B/2C + 3 Phase 2D: resistors, crypto_dictionary, 2048), artifact hashes finalized by GitHub Actions. fcc_id_lookup deferred, not included. Hardware not tested. Not release-ready."
+            git push origin "refs/tags/$env:ACCEPTANCE_TAG_NAME"
+            Write-Host "Created and pushed tag $env:ACCEPTANCE_TAG_NAME -> $headSha"
+          }
+
+      - name: Upload finalization docs as workflow artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2d-finalization-docs
+          path: |
+            docs/PHASE2D_3_ARTIFACT_HASHES.md
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Status summary
+        if: always()
+        shell: pwsh
+        run: |
+          Write-Host "Hardware-assisted validation: NOT RUN."
+          Write-Host "Hardware flashing/testing: NOT PERFORMED."
+          Write-Host "Release status: TEST-READY ONLY / NOT RELEASE-READY."

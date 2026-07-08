@@ -120,3 +120,63 @@ explicitly out of scope for Phase 2D entirely.
 - **Does not constitute release-readiness.** That also requires the
   project's full release-gate checklist, which spans more than Phase 2D
   alone.
+
+---
+
+## Phase 2D.3 update: CI baseline acceptance and artifact hash finalization
+
+**This section supersedes the planning-stage gate above for the current
+decision point. The original content is left unmodified as the
+historical record; do not read this as retroactively editing it.**
+
+Phase 2D.1 (pre-import verification), Phase 2D.2 (implementation/import,
+3 apps: `resistors`, `crypto_dictionary`, `2048`), and Phase 2D.2A
+(`updater_package` CI blocker diagnosis and remediation) have all
+completed. Phase 2D.3 (this update) creates the formal CI baseline
+acceptance record and finalizes real artifact hashes — see
+`docs/PHASE2D_3_ACCEPTANCE_RECORD.md`, `docs/PHASE2D_3_ARTIFACT_MANIFEST.md`,
+`docs/PHASE2D_3_ARTIFACT_HASHES.md`, and `docs/PHASE2D_3_GO_NO_GO.md`.
+
+### Current status against this gate (as of Phase 2D.3)
+
+| Step | Status |
+|---|---|
+| Phase 2D planning | Complete — **GO WITH CONDITIONS** |
+| Phase 2D.1 (pre-import verification) | Complete — all 3 apps cleared |
+| Phase 2D.2 (implementation/import) | Complete — **PHASE 2D.2 IMPORT PASS WITH CI TOOLING REMEDIATION NOTE** |
+| Phase 2D.2A (`updater_package` CI blocker) | Complete — **RESOLVED** (with an honest intermittent-pre-fix-failure caveat, never erased) |
+| Phase 2D.3 (CI baseline acceptance / hash finalization) | See `docs/PHASE2D_3_GO_NO_GO.md` for the real, current result |
+| Hardware-assisted validation | Unchanged — no device, no Windows machine available in this AI session's environment |
+| `fcc_id_lookup` license gap | Unchanged — still open, untouched by any Phase 2D sub-phase |
+| Release status | **TEST-READY ONLY / NOT RELEASE-READY** — unchanged |
+
+### Next allowed paths (from Phase 2D.3 onward)
+
+- **If Phase 2D.3 finalization PASSES** (real artifact hashes generated,
+  both baseline tags created/verified): the next allowed path is either
+  **a Phase 2D hardware-assisted validation gate** (modeled on
+  `tools/phase2c_hardware_gate.ps1`, only if/when a device and Windows
+  machine become available, and only on explicit request) or
+  **Phase 2E planning only** (not import) — both require the project
+  owner's own separate, explicit request, exactly as every prior phase
+  transition in this project has required.
+- **If artifact hashing or tag creation is blocked**: that must be
+  resolved before any further Phase 2D or Phase 2E gate — see
+  `docs/PHASE2D_3_GO_NO_GO.md`'s "Finalization workflow result" section
+  for the real, current blocker if one exists, and
+  `docs/KNOWN_ISSUES.md` for its tracked status.
+- **Hardware remains unavailable in this AI session's own environment.**
+  This is labeled clearly and does not block non-hardware planning (e.g.
+  Phase 2E candidate review), but it does block any release-ready claim
+  — nothing in Phase 2D.3 changes that.
+- **`fcc_id_lookup` remains deferred** until its license-evidence gap is
+  resolved in a separate, narrow phase dedicated to exactly that
+  question — nothing in Phase 2D.3 resolves it as a side effect.
+- **Release-ready remains blocked** regardless of which path is taken,
+  until real hardware validation is actually complete (both the
+  automated checks and a human-observed GUI checklist) and explicitly
+  accepted — nothing in this document, or in Phase 2D.3, on its own,
+  ever constitutes that acceptance.
+
+Neither a hardware gate nor Phase 2E planning is started by this
+document.
