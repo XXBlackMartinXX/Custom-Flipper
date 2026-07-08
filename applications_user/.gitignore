@@ -42,3 +42,5 @@
 # added one at a time as each app is reviewed/imported)
 !/image_viewer/
 !/image_viewer/**
+!/boilerplate/
+!/boilerplate/**
