@@ -60,7 +60,7 @@ inherited unchanged.
 
 ## Firmware/updater SHA-256
 
-**PENDING.** Real, independently-computed SHA-256 hashes of the actual
+**Finalized.** Real, independently-computed SHA-256 hashes of the actual
 `firmware.dfu` and updater `.tgz` files (not the zip-archive digests
 above) require downloading and extracting the artifact — this session's
 own network path cannot do that directly (GitHub Actions artifact
