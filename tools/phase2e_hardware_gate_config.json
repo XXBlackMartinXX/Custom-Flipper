@@ -1,0 +1,143 @@
+{
+  "_comment": "Phase 2E.4 hardware-assisted validation gate configuration. Consumed by tools/phase2e_hardware_gate.ps1. Docs/tooling artifact - not firmware source. Superset of tools/phase2d_hardware_gate_config.json (which remains frozen/untouched for the accepted Phase 2D-only baseline) - covers all 16 apps (13 Phase 2A/2B/2C/2D + 3 Phase 2E: image_viewer, boilerplate, minesweeper) now in the accepted Phase 2E baseline. fcc_id_lookup is not part of this baseline - it remains deferred pending a license-evidence resolution and is intentionally absent from allowedApps below. image_viewer's example_images/ (including spongebob.bm, dolphin.bm, cat.bm) remains excluded and is not referenced here as an expected asset.",
+
+  "acceptedBaseline": {
+    "branch": "integration/phase2e-first-batch",
+    "ciBaselineSha": "dcdfbb4c262c585d7d4126dc21b40dc3b948fc93",
+    "finalIntegrationCommit": "f2340ae",
+    "ciValidationRunId": "28968511276",
+    "finalizationWorkflowRunId": "28972160432",
+    "note": "This is the exact commit and CI evidence the Phase 2E acceptance record (docs/PHASE2E_3_ACCEPTANCE_RECORD.md) and artifact hash manifest (docs/PHASE2E_3_ARTIFACT_HASHES.md) cover. Hardware-assisted validation against a different commit is not itself wrong, but should be flagged for review rather than silently treated as validating this same accepted baseline."
+  },
+
+  "expectedArtifacts": {
+    "firmwareDfu": {
+      "fileName": "firmware.dfu",
+      "expectedSizeBytes": 862825,
+      "expectedSha256": "e7068bf952a12051e668bdc40db6823c41ff55659f5410977361d2aea9f1ffce"
+    },
+    "updaterPackage": {
+      "fileName": "flipper-z-f7-update-local.tgz",
+      "expectedSizeBytes": 2831378,
+      "expectedSha256": "16b35fcc844abac5f6bfeded6b8f79d5066a0411ac7c1f128aa6406251aee5c3"
+    },
+    "note": "These are the real, GitHub-Actions-generated values recorded in docs/PHASE2E_3_ARTIFACT_HASHES.md (Phase 2E.3, finalization run 28972160432) - not fabricated, not archive-level digests. HashVerify/HardwareAssisted modes compare a locally-downloaded artifact directory's actual files against these exact values."
+  },
+
+  "allowedArtifactFileNames": [
+    "firmware.dfu",
+    "flipper-z-f7-update-local.tgz"
+  ],
+
+  "allowedApps": [
+    { "id": "network_subnet", "appid": "network_subnet", "displayName": "Network Subnet Helper", "category": "Tools" },
+    { "id": "programmer_calc", "appid": "programmercalc", "displayName": "Programmer Calculator", "category": "Tools" },
+    { "id": "vin_decoder", "appid": "vin_decoder", "displayName": "VIN Decoder", "category": "Tools" },
+    { "id": "flipper95", "appid": "flipper95", "displayName": "Flipper95", "category": "Tools" },
+    { "id": "chess", "appid": "chess", "displayName": "Chess", "category": "Games" },
+    { "id": "flipfetch", "appid": "flipfetch", "displayName": "Flipfetch", "category": "Tools" },
+    { "id": "quadratic_solver", "appid": "quadratic_solver", "displayName": "Quadratic Solver", "category": "Tools" },
+    { "id": "sudoku", "appid": "sudoku", "displayName": "Sudoku", "category": "Games" },
+    { "id": "sd_info", "appid": "sd_info", "displayName": "SD Info", "category": "Tools" },
+    { "id": "docviewlite", "appid": "docviewlite", "displayName": "Doc Viewer Lite", "category": "Tools" },
+    { "id": "resistors", "appid": "resistance_calculator", "displayName": "Resistor Calculator", "category": "Tools" },
+    { "id": "crypto_dictionary", "appid": "crypto_dict", "displayName": "Crypto Dictionary", "category": "Tools" },
+    { "id": "2048", "appid": "2048_improved", "displayName": "2048", "category": "Games" },
+    { "id": "image_viewer", "appid": "image_viewer", "displayName": "Image Viewer", "category": "Tools" },
+    { "id": "boilerplate", "appid": "fap_boilerplate", "displayName": "FAP Boilerplate", "category": "Tools" },
+    { "id": "minesweeper", "appid": "minesweeper_redux", "displayName": "Minesweeper Redux", "category": "Games" }
+  ],
+
+  "expectedFapNames": [
+    "image_viewer.fap",
+    "fap_boilerplate.fap",
+    "minesweeper_redux.fap"
+  ],
+
+  "expectedFapNamesNote": "These 3 filenames are the manifest-declared appid-based .fap output names for the 3 apps newly imported in Phase 2E, confirmed present in the accepted CI run's job log (docs/PHASE2E_2_BUILD_REPORT.md, docs/PHASE2E_3_ARTIFACT_HASHES.md). They are informational only in this gate - this script does not itself build or inspect .fap files, since no Windows/fbt build is performed here.",
+
+  "expectedAppPrivateStoragePaths": {
+    "chess": "/ext/apps_data/flipchess/",
+    "network_subnet": null,
+    "programmercalc": null,
+    "vin_decoder": null,
+    "flipper95": null,
+    "flipfetch": null,
+    "quadratic_solver": null,
+    "sudoku": "/ext/apps_data/sudoku/",
+    "sd_info": "NOT app-private - see sdInfoStorageNote below",
+    "docviewlite": null,
+    "resistance_calculator": null,
+    "crypto_dict": null,
+    "2048_improved": "/ext/apps_data/game_2048/",
+    "image_viewer": null,
+    "fap_boilerplate": "/ext/apps_data/boilerplate/",
+    "minesweeper_redux": "/ext/apps_data/mine_sweeper_redux/"
+  },
+
+  "expectedAppPrivateStoragePathsNote": "null means the app is not expected to persist any file under normal use; any storage write by these apps outside their own entry (or any write at all, for the null-path apps) is a fail condition per the hardware smoke-test checklist. chess's, sudoku's, resistors's, crypto_dictionary's, and 2048's notes are unchanged, carried forward from tools/phase2d_hardware_gate_config.json. image_viewer, boilerplate, and minesweeper (new in Phase 2E) are covered by dedicated notes below, matching the direct source-level findings in docs/PHASE2E_2_LICENSE_ATTRIBUTION.md and docs/PHASE2E_2_GO_NO_GO.md.",
+
+  "sdInfoStorageNote": "sd_info is NOT zero-storage and NOT app-private, per the real source read in Phase 2C.1 (docs/PHASE2C_1_SOURCE_LICENSE_VERIFICATION.md) and Phase 2C.2 (docs/PHASE2C_2_SAFETY_REVIEW.md): its SD-card speed test writes, reads back, and deletes benchmark blocks at /ext/sdtest.tmp* (SD-card root, TEST_FILE_PATH = \"/ext/sdtest.tmp\"), 48 write/read/verify/delete cycles of 32KB blocks, ONLY when the user explicitly presses OK to start the test on the app's own test page. This is controlled, self-cleaning, and transient - not persistent, not automatic, not a safety-exclusion-list capability - but it is a real write to the SD-card root, materially different from an app-private save file or a read-only app. The hardware smoke-test checklist must confirm no /ext/sdtest.tmp* files remain after a normal test completion or after aborting mid-test.",
+
+  "docviewliteStorageNote": "docviewlite is confirmed read-only by source (docs/PHASE2C_1_SOURCE_LICENSE_VERIFICATION.md, docs/PHASE2C_2_SAFETY_REVIEW.md): it opens and reads a user-selected .txt file via the standard Flipper file-browser dialog and storage_file_read only - no storage_file_write call exists anywhere in its source. The hardware smoke-test checklist should confirm no new file or modification appears anywhere on the SD card after using this app.",
+
+  "resistorsStorageNote": "resistors is confirmed zero-storage by source (docs/PHASE2D_1_SOURCE_LICENSE_VERIFICATION.md, docs/PHASE2D_2_SAFETY_REVIEW.md): no `storage_`, `file_stream`, `RECORD_STORAGE`, `FSAM_`, or `FSOM_` reference anywhere in its source, and zero `furi_hal` usage of any kind. The hardware smoke-test checklist should confirm no file of any kind appears on the SD card after using this app.",
+
+  "cryptoDictionaryStorageNote": "crypto_dictionary is confirmed read-only by source (docs/PHASE2D_1_SOURCE_LICENSE_VERIFICATION.md, docs/PHASE2D_2_SAFETY_REVIEW.md): it opens its own bundled glossary .txt files via FSAM_READ/FSOM_OPEN_EXISTING only - no write call anywhere in its source, and zero furi_hal usage. The hardware smoke-test checklist should confirm no new file or modification appears anywhere on the SD card after using this app, including after searching/browsing the bundled glossary.",
+
+  "game2048StorageNote": "2048 is confirmed to write only to its own app-scoped save file, per direct source read (docs/PHASE2D_1_SOURCE_LICENSE_VERIFICATION.md, docs/PHASE2D_2_SAFETY_REVIEW.md): /ext/apps_data/game_2048/game_2048.save via a hardcoded EXT_PATH(\"apps_data/game_2048\") literal (not the appid-based APP_DATA_PATH macro chess/sudoku use, but functionally app-scoped and non-colliding either way). It also performs a one-time legacy-path migration check against /ext/apps/Games/game_2048.save on load, which is a silent no-op on this fresh import (no such file exists) and should not be observed to write anywhere outside /ext/apps_data/game_2048/. The hardware smoke-test checklist should confirm the only file written during play is game_2048.save under that directory.",
+
+  "imageViewerStorageNote": "image_viewer is confirmed read-only by source, per the real source read in Phase 2E.1 (docs/PHASE2E_1_SOURCE_LICENSE_VERIFICATION.md) and re-confirmed at import time (docs/PHASE2E_2_GO_NO_GO.md): it opens whatever file the user selects via the standard Flipper file-browser dialog with FSAM_READ only - no storage_file_write call anywhere in its source. The bundled example_images/ directory (cat.bm, dolphin.bm, and spongebob.bm - the latter confirmed in Phase 2E.1 to depict a recognizable trademarked/copyrighted cartoon character with no attribution or redistribution-rights evidence) was excluded at import and remains absent from applications_user/image_viewer/ - this app's own behavior does not depend on it, since it opens whatever the user selects, not a hardcoded bundled filename. The hardware smoke-test checklist must confirm no new file or modification appears anywhere on the SD card after using this app, and must confirm example_images/ is not present in the imported app directory before testing.",
+
+  "boilerplateStorageNote": "boilerplate is confirmed app-private by source (docs/PHASE2E_1_SOURCE_LICENSE_VERIFICATION.md, docs/PHASE2E_2_LICENSE_ATTRIBUTION.md): it writes its own configuration file to /ext/apps_data/boilerplate/boilerplate.conf. The hardware smoke-test checklist should confirm any write by this app is confined to /ext/apps_data/boilerplate/ and nowhere else on the SD card.",
+
+  "minesweeperStorageNote": "minesweeper is confirmed app-private by source (docs/PHASE2E_1_SOURCE_LICENSE_VERIFICATION.md, docs/PHASE2E_2_LICENSE_ATTRIBUTION.md): it writes save/config state to /ext/apps_data/mine_sweeper_redux/ via an atomic write-then-rename pattern. The hardware smoke-test checklist should confirm any write by this app is confined to /ext/apps_data/mine_sweeper_redux/ and nowhere else on the SD card, and that no partial/temp file from an interrupted write survives outside that directory.",
+
+  "excludedAssetsNote": "applications_user/image_viewer/example_images/ (3 bundled .bm demo images: cat.bm, dolphin.bm, spongebob.bm) remains excluded from the accepted Phase 2E baseline and must not be reintroduced by this gate, any script it invokes, or any hardware test performed against docs/PHASE2E_HARDWARE_SMOKE_TEST_CHECKLIST.md. spongebob.bm specifically was confirmed in Phase 2E.1 to depict a recognizable trademarked/copyrighted cartoon character with no attribution or redistribution-rights evidence anywhere in the app. This script performs a directory-absence check for applications_user/image_viewer/example_images/ as part of its Preflight/automated checks.",
+
+  "forbiddenTestCategories": [
+    "Sub-GHz / RF transmit or receive",
+    "NFC read/write/emulate/clone",
+    "RFID/LFRFID read/write/emulate/clone",
+    "iButton read/write/emulate/clone",
+    "BadUSB / HID keystroke injection",
+    "BLE spam/beacon/profile interaction",
+    "Direct GPIO control",
+    "Infrared transmit",
+    "Credential, token, or password handling/extraction",
+    "Any cloning, brute force, jamming, deauth, or bypass behavior",
+    "Any unauthorized-access or security-abuse demonstration"
+  ],
+
+  "forbiddenTestCategoriesNote": "This script contains no code path for any of the above, for any app, under any flag or mode - this is not a configuration toggle to disable, it is simply not implemented anywhere in tools/phase2e_hardware_gate.ps1.",
+
+  "expectedHardwareStatusWording": {
+    "notRun": "Hardware-assisted validation: NOT RUN",
+    "notPerformed": "Hardware flashing/testing: NOT PERFORMED"
+  },
+
+  "expectedReleaseStatusWording": "TEST-READY ONLY / NOT RELEASE-READY",
+
+  "flashConfirmationPhrase": "I UNDERSTAND THIS WILL FLASH THE CONNECTED DEVICE",
+
+  "flashConfirmationNote": "The script never performs a flash itself under any circumstance - even after -AllowFlashPrompt and a correctly-typed confirmation phrase, flashing remains a manual, deliberate action performed by the operator using qFlipper or fbt flash_usb outside this script. The confirmation gate exists to make sure the operator has seen the artifact hashes and rollback warning before proceeding, not to automate the flash itself.",
+
+  "deviceDetection": {
+    "expectedFriendlyNameSubstring": "Flipper",
+    "expectedVidPid": "VID_0483&PID_5740",
+    "note": "Flipper Zero enumerates as a USB CDC-ACM serial device (ST Microelectronics VID 0483, PID 5740) when running normal firmware. Detection uses Windows PnP device enumeration (Get-PnpDevice) only - no serial communication, no RPC, no data exchange with the device."
+  },
+
+  "officialToolingDetection": {
+    "qFlipperExecutableNames": ["qFlipper.exe"],
+    "qFlipperCommonInstallDirs": [
+      "$env:ProgramFiles\\qFlipper",
+      "${env:ProgramFiles(x86)}\\qFlipper",
+      "$env:LOCALAPPDATA\\Programs\\qFlipper",
+      "$env:LOCALAPPDATA\\qFlipper"
+    ],
+    "note": "Best-effort detection only (PATH lookup, common install directories, and the Windows uninstall registry key). Absence of a detected install does not necessarily mean qFlipper isn't present under a nonstandard path - it means this script could not confirm it automatically, and flashing tooling should be classified BLOCKED / TOOLING NOT AVAILABLE rather than assumed present."
+  },
+
+  "reportFilenameCollisionFix": "Phase 2A's and Phase 2B's hardware gate scripts used second-granularity report filenames (yyyyMMdd_HHmmss), so two invocations within the same wall-clock second could silently overwrite each other's report - a real, documented, minor tooling limitation (see docs/PHASE2A_HARDWARE_ASSISTED_RESULTS.md and docs/PHASE2B_HARDWARE_ASSISTED_RESULTS.md). tools/phase2c_hardware_gate.ps1 fixed this for its own reports using a millisecond-precision timestamp plus a short random hex suffix (yyyyMMdd_HHmmss_fff_XXXX) - collision-resistant even for rapid repeated invocations. tools/phase2d_hardware_gate.ps1 and tools/phase2e_hardware_gate.ps1 preserve this exact fix unchanged. Phase 2A's and Phase 2B's own scripts are deliberately left unmodified, per this phase's explicit instruction not to touch them."
+}

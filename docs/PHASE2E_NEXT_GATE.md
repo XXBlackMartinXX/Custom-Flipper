@@ -182,3 +182,76 @@ acceptance record and finalizes real artifact hashes — see
 
 Neither a hardware gate nor Phase 2F planning is started by this
 document.
+
+---
+
+## Phase 2E.4 update: hardware-assisted validation gate active
+
+**This section supersedes the Phase 2E.3 update above for the current
+decision point. The original content is left unmodified as the
+historical record; do not read this as retroactively editing it.**
+
+Phase 2E.4 built and executed, where possible, the hardware-assisted
+validation gate for the accepted Phase 2E baseline —
+`tools/phase2e_hardware_gate.ps1`,
+`tools/phase2e_hardware_gate_config.json`,
+`docs/PHASE2E_HARDWARE_ASSISTED_VALIDATION.md`,
+`docs/PHASE2E_HARDWARE_ASSISTED_RESULTS.md`, and
+`docs/PHASE2E_HARDWARE_SMOKE_TEST_CHECKLIST.md`. This AI session's own
+sandbox has no Windows machine and no physical Flipper Zero, so the real
+result is **`HARDWARE VALIDATION BLOCKED - DEVICE NOT AVAILABLE`** — see
+`docs/PHASE2E_HARDWARE_ASSISTED_RESULTS.md` for the full, real evidence
+(actual runs performed, actual classifications produced, a synthetic
+hash-mismatch test that proved the comparison logic works, and the
+already-documented Azure Blob Storage egress limitation that prevented
+real artifact hash verification).
+
+### Current status against this gate (as of Phase 2E.4)
+
+| Step | Status |
+|---|---|
+| Phase 2E planning | Complete — **GO WITH CONDITIONS** |
+| Phase 2E.1 (pre-import verification) | Complete — all 3 apps cleared |
+| Phase 2E.2 (implementation/import) | Complete — **PHASE 2E.2 IMPORT PASS** |
+| Phase 2E.3 (CI baseline acceptance / hash finalization) | Complete — **PHASE 2E.3 BASELINE ACCEPTANCE PASS** |
+| Phase 2E.4 (hardware-assisted validation gate) | **HARDWARE VALIDATION BLOCKED - DEVICE NOT AVAILABLE** — tooling and docs complete, no device/Windows machine in this session's environment |
+| `fcc_id_lookup` license gap | Unchanged — still open, untouched by any Phase 2E sub-phase |
+| `image_viewer/example_images/` | Unchanged — still excluded, actively re-checked by this gate's own Preflight step |
+| `hex_viewer`, `qrcode`, `barcode_gen` | Remain deferred in the clean candidate pool, unless selected in a future planning phase |
+| Release status | **TEST-READY ONLY / NOT RELEASE-READY** — unchanged |
+
+### Next allowed paths (from Phase 2E.4 onward)
+
+- **Phase 2E.4 classified `HARDWARE VALIDATION BLOCKED - DEVICE NOT
+  AVAILABLE`, not a failure.** Per this phase's own instruction: this
+  does not block non-hardware-dependent Phase 2F planning — **Phase 2F
+  planning may start on the project owner's own explicit request**, as
+  planning only (no import, no hardware dependency).
+- **If a device and Windows machine later become available**: a human
+  operator can run `tools/phase2e_hardware_gate.ps1 -Mode
+  HardwareAssisted` for a real result, and complete
+  `docs/PHASE2E_HARDWARE_SMOKE_TEST_CHECKLIST.md` on the real device —
+  this remains available at any time, independent of whether Phase 2F
+  planning has started.
+- **If Phase 2E.4 had instead FAILED** (a real check failure, e.g. an
+  artifact hash mismatch on real artifacts) rather than blocked on device
+  availability: Phase 2F planning/import would not start until that
+  failure is resolved. This did not occur — the only real result was
+  `BLOCKED - DEVICE NOT AVAILABLE`.
+- **Release-ready remains blocked** regardless of which path is taken,
+  until real hardware validation is actually complete (both the automated
+  checks and a human-observed GUI checklist) and explicitly accepted —
+  nothing in this document, or in Phase 2E.4, on its own, ever
+  constitutes that acceptance.
+- **`fcc_id_lookup` remains deferred** until its license-evidence gap is
+  resolved in a separate, narrow phase dedicated to exactly that
+  question — nothing in Phase 2E.4 resolves it as a side effect.
+- **`image_viewer/example_images/` remains excluded** — confirmed absent
+  by this gate's own automated check in every run performed in Phase
+  2E.4, and must remain so in any future phase.
+
+Phase 2F planning (not import) is the only path this document identifies
+as immediately available on explicit request; hardware-assisted
+validation with a real device remains available in parallel whenever a
+device and Windows machine become available, independent of Phase 2F.
+Neither is started by this document itself.
