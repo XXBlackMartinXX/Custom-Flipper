@@ -51,3 +51,5 @@
 # added one at a time as each app is reviewed/imported)
 !/qrcode/
 !/qrcode/**
+!/hex_viewer/
+!/hex_viewer/**
