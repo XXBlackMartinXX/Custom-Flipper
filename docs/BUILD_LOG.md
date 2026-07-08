@@ -1432,6 +1432,65 @@ Release status remains **TEST-READY ONLY / NOT RELEASE-READY**. Next
 gate: Phase 2F.1 (pre-import source/license verification), on the
 project owner's own explicit further request only.
 
+## Phase 2F.1 update: pre-import source/license verification — all 3 apps cleared
+
+Obtained real network access to the pinned RogueMaster commit
+(`472f6925e8aca9bd031cb37e3cb80b551772c957`) via a blobless clone plus
+cone sparse-checkout limited to `qrcode`, `hex_viewer`, and
+`barcode_gen`, then read each app's actual `LICENSE`, `README`, and full
+source directly — resolving both storage-behavior questions Phase 2F
+planning flagged as needing direct verification rather than citation.
+
+`qrcode`: MIT (Bob Matcuk, 2022). Bundled `qrcode.c`/`qrcode.h` confirmed
+to be a third-party MIT-licensed QR-encoding library (Richard Moore/
+ricmoo, derived from Project Nayuki's library), attributed inline in the
+file's own header and independently corroborated by the app's README —
+the same library historically vendored in base `flipperzero-firmware`'s
+own `lib/` directory. Storage confirmed app-private
+(`/ext/apps_data/qrcodes/`), read-only for QR content, with one benign
+one-time legacy-folder migration at every launch (the same pattern
+already accepted for `2048` in Phase 2D).
+
+`hex_viewer`: MIT (Roman Shchekin, 2022). **The planning-stage storage
+ambiguity is now fully resolved**: a direct read of
+`helpers/hex_viewer_storage.c` confirms the app opens user-selected
+files with `FSAM_READ`/`FSOM_OPEN_EXISTING` only — no write, edit,
+patch, overwrite, or delete call touches the viewed file anywhere in the
+20-file source. Its only storage write is its own app-private settings
+file (`/ext/apps_data/hex_viewer/`, 4 boolean toggles for haptic/LED/
+speaker feedback via the base firmware's own standard, safe
+`NotificationApp`/`furi_hal_speaker` APIs). Zero safety/API-capability
+hits of any kind, including false positives.
+
+`barcode_gen`: MIT (Alan Tsui, 2023). Real appid discrepancy found: the
+manifest declares `barcode_app`, not `barcode_gen` — the same class of
+directory-name-vs-appid mismatch already seen for `boilerplate`/
+`minesweeper` in Phase 2E. **The 4 bundled encoding-table files'
+provenance question is now resolved**: all 4 were read in full and
+contain nothing but standard, publicly documented barcode-symbology
+character-to-bar-pattern data (Code 39/128/128C/Codabar) — technical
+specification data, not a creative work, already correctly declared via
+`fap_file_assets`. Storage confirmed app-private only
+(`/ext/apps_data/barcodes/`).
+
+Wrote `docs/PHASE2F_1_SOURCE_LICENSE_VERIFICATION.md`,
+`docs/PHASE2F_1_IMPORT_READINESS_MATRIX.md`, and
+`docs/PHASE2F_1_GO_NO_GO.md` (**PHASE 2F.1 PRE-IMPORT VERIFICATION
+PASS**), and updated `docs/PHASE2F_LICENSE_REVIEW.md` and
+`docs/PHASE2F_GO_NO_GO.md` in place with the real verification result
+(original planning-stage findings preserved unmodified as historical
+record).
+
+**All 3 apps CLEARED FOR IMPORT — zero deferred, zero blocked.** The
+original 3-app batch and import order (`qrcode` → `hex_viewer` →
+`barcode_gen`) remain valid, unchanged. **No code imported. No
+`applications/` or `applications_user/` change. No firmware/app source
+touched. No hardware flashed.** `image_viewer/example_images/` was not
+touched and remains excluded. `fcc_id_lookup` was not reopened.
+Release status remains **TEST-READY ONLY / NOT RELEASE-READY**. Next
+gate: Phase 2F.2 (implementation/import of the exact cleared 3-app
+batch), on the project owner's own explicit further request only.
+
 ---
 
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
