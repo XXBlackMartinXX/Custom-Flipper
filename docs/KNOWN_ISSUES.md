@@ -127,4 +127,42 @@
    the project owner's own instruction not to import or re-review it in
    that phase (see `docs/PHASE2D_1_GO_NO_GO.md`). Not touched, not
    re-reviewed, not resolved by that pass. Still open until its own
-   dedicated license-confirmation follow-up happens.
+   dedicated license-confirmation follow-up happens. **Phase 2D.2
+   update**: `fcc_id_lookup` was again not imported and not re-reviewed
+   during Phase 2D.2's actual import of `resistors`/`crypto_dictionary`/
+   `2048` (see `docs/PHASE2D_2_GO_NO_GO.md`). Still open, unaffected.
+7. **OPEN — the `updater_package` `fbt.cmd` build target is reproducibly
+   BLOCKED in this project's Windows CI, specific to the 13-app Phase 2D
+   batch.** Phase 2D.2's real CI validation
+   (`.github/workflows/phase2d-windows-validation.yml`) ran 3 times
+   total: the first attempt (run `28905289140`) passed cleanly in full,
+   including the updater `.tgz` (2,783,994 bytes). The second attempt
+   (run `28906654889`, at a commit that only changed an unrelated
+   artifact-upload workflow step) failed with the firmware build and all
+   13 `.fap` outputs still succeeding, but the separate `updater_package`
+   invocation of `fbt.cmd` failing to launch as a process at all
+   ("fbt.cmd could not be launched as a process on this machine/OS"). A
+   `rerun_failed_jobs` re-run on a **different** GitHub-hosted runner
+   instance reproduced the identical failure at the identical step, for
+   the identical commit — ruling out a one-off single-runner flake.
+   Full per-attempt detail in `docs/PHASE2D_2_BUILD_REPORT.md`. **This is
+   not evidence of a defect in `resistors`, `crypto_dictionary`, or
+   `2048`'s own source** — none of the 3 apps' source changed between the
+   passing and failing attempts, and the firmware itself (plus all 13
+   `.fap` outputs, including the 3 new apps) continued to build correctly
+   on every attempt. The most likely explanation, based on available
+   evidence, is a Windows-runner-level resource constraint (e.g. disk
+   space or process contention from running two full `fbt.cmd`
+   invocations back-to-back against a now-13-app batch, larger than
+   Phase 2C's 10-app batch) — but this cannot be confirmed further from
+   this session, since GitHub Actions artifact-log downloads redirect to
+   Azure Blob Storage, which remains blocked by this session's egress
+   policy (the same limitation as item 5 above, before its Phase 2A.11
+   resolution route — that workaround moved the *download* into a GitHub
+   Actions workflow using the runner's own token, but does not help
+   diagnose a failure *within* that same kind of workflow run). **Stays
+   open** until either the `updater_package` build succeeds reliably in
+   CI for this 13-app batch, or the project owner explicitly accepts the
+   firmware+FAP-only build result and tracks this as a known, separate
+   CI-tooling gap. Per `docs/PHASE2D_2_GO_NO_GO.md`, Phase 2D.3 (CI
+   baseline acceptance) is not started while this remains open.

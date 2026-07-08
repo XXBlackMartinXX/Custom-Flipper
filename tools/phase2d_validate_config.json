@@ -1,0 +1,1738 @@
+{
+  "_comment": "Phase 2D automated validation configuration. Consumed by tools/phase2a_validate.ps1 via -ConfigPath. Superset of tools/phase2c_validate_config.json (which remains frozen/untouched for the accepted Phase 2C baseline) - adds the 3 Phase 2D.2 imported apps (resistors, crypto_dictionary, 2048) on top of the same 10 Phase 2A/2B/2C apps. fcc_id_lookup is deliberately NOT included - deferred per docs/PHASE2C_1_GO_NO_GO.md pending a license resolution, not part of this batch. Docs-only/tooling artifact - not firmware source.",
+  "expectedBranch": "integration/phase2d-first-batch",
+  "expectedLatestKnownCommit": "52b1361ce632ca0970f7919f6ed3693bc2f22906",
+  "priorVerifiedBuildCommit": {
+    "commit": "5e5e0ecf225be947a754e537670a6421838b939b",
+    "note": "Historical: the commit actually flashed/build-tested locally on Windows during Phase 2A, before Phase 2B/2C/2D work existed. No local or CI build has yet been run against a Phase 2D-inclusive commit as of this config's creation - see docs/PHASE2D_2_BUILD_REPORT.md for the real, current build status. The validation runner's -ExpectedCommit parameter should be set to whatever commit you are currently validating; this field is historical context, not a hard requirement."
+  },
+  "expectedApps": [
+    {
+      "id": "network_subnet",
+      "appid": "network_subnet",
+      "path": "applications_user/network_subnet",
+      "category": "Tools",
+      "displayName": "Network Subnet Helper"
+    },
+    {
+      "id": "programmer_calc",
+      "appid": "programmercalc",
+      "path": "applications_user/programmer_calc",
+      "category": "Tools",
+      "displayName": "Programmer Calculator"
+    },
+    {
+      "id": "vin_decoder",
+      "appid": "vin_decoder",
+      "path": "applications_user/vin_decoder",
+      "category": "Tools",
+      "displayName": "VIN Decoder"
+    },
+    {
+      "id": "flipper95",
+      "appid": "flipper95",
+      "path": "applications_user/flipper95",
+      "category": "Tools",
+      "displayName": "Flipper95"
+    },
+    {
+      "id": "chess",
+      "appid": "chess",
+      "path": "applications_user/chess",
+      "category": "Games",
+      "displayName": "Chess"
+    },
+    {
+      "id": "flipfetch",
+      "appid": "flipfetch",
+      "path": "applications_user/flipfetch",
+      "category": "Tools",
+      "displayName": "Flipfetch"
+    },
+    {
+      "id": "quadratic_solver",
+      "appid": "quadratic_solver",
+      "path": "applications_user/quadratic_solver",
+      "category": "Tools",
+      "displayName": "Quadratic Solver"
+    },
+    {
+      "id": "sudoku",
+      "appid": "sudoku",
+      "path": "applications_user/sudoku",
+      "category": "Games",
+      "displayName": "Sudoku"
+    },
+    {
+      "id": "sd_info",
+      "appid": "sd_info",
+      "path": "applications_user/sd_info",
+      "category": "Tools",
+      "displayName": "SD Info"
+    },
+    {
+      "id": "docviewlite",
+      "appid": "docviewlite",
+      "path": "applications_user/docviewlite",
+      "category": "Tools",
+      "displayName": "Doc Viewer Lite"
+    },
+    {
+      "id": "resistors",
+      "appid": "resistance_calculator",
+      "path": "applications_user/resistors",
+      "category": "Tools",
+      "displayName": "Resistance Calculator"
+    },
+    {
+      "id": "crypto_dictionary",
+      "appid": "crypto_dict",
+      "path": "applications_user/crypto_dictionary",
+      "category": "Tools/Educational",
+      "displayName": "Crypto Dictionary"
+    },
+    {
+      "id": "2048",
+      "appid": "2048_improved",
+      "path": "applications_user/2048",
+      "category": "Games",
+      "displayName": "2048 (Improved)"
+    }
+  ],
+  "expectedArtifacts": {
+    "firmwareDfu": {
+      "relativePath": "build\\f7-firmware-C\\firmware.dfu",
+      "knownGoodSizeBytes": 862825,
+      "knownGoodAtCommit": "5e5e0ecf225be947a754e537670a6421838b939b",
+      "sizeToleranceNote": "Size is recorded for reference/anomaly-spotting only. A different size at a different commit is expected and is NOT itself a failure - only flag as NEEDS_REVIEW if the size differs at the *same* commit this was recorded against, or if the size is drastically different (e.g. near-zero or absurdly large) at any commit.",
+      "note": "No Phase 2D-inclusive build has succeeded yet (see docs/PHASE2D_2_BUILD_REPORT.md); knownGoodSizeBytes/knownGoodAtCommit above are carried over from the Phase 2A-only baseline for reference only and do NOT reflect an actual Phase 2D build - do not treat a size difference against these values as a FAIL for a Phase 2D build, only as informational context, until this note is updated after a real Phase 2D build succeeds."
+    },
+    "updaterPackage": {
+      "relativePath": "dist\\f7-C\\flipper-z-f7-update-local.tgz",
+      "knownGoodSizeBytes": 2732909,
+      "knownGoodAtCommit": "5e5e0ecf225be947a754e537670a6421838b939b",
+      "sizeToleranceNote": "Same handling as firmwareDfu above.",
+      "note": "Same caveat as firmwareDfu above - not yet a real Phase 2D-build reference value."
+    }
+  },
+  "expectedFapOutputDir": "build\\f7-firmware-C\\.extapps",
+  "allowedSourcePaths": [
+    "applications_user/network_subnet",
+    "applications_user/programmer_calc",
+    "applications_user/vin_decoder",
+    "applications_user/flipper95",
+    "applications_user/chess",
+    "applications_user/flipfetch",
+    "applications_user/quadratic_solver",
+    "applications_user/sudoku",
+    "applications_user/sd_info",
+    "applications_user/docviewlite",
+    "applications_user/resistors",
+    "applications_user/crypto_dictionary",
+    "applications_user/2048"
+  ],
+  "samRemovalScanPath": "applications_user/chess",
+  "samRemovalForbiddenKeywords": [
+    "sam",
+    "stm32_sam",
+    "flipchess_voice",
+    "speech",
+    "voice"
+  ],
+  "samRemovalFileExtensions": [
+    ".c",
+    ".h",
+    ".cpp",
+    ".fam"
+  ],
+  "forbiddenRiskyKeywords": [
+    "furi_hal_subghz",
+    "furi_hal_nfc",
+    "furi_hal_rfid",
+    "furi_hal_ibutton",
+    "furi_hal_hid",
+    "furi_hal_usb_hid",
+    "furi_hal_gpio_write",
+    "furi_hal_infrared_async_tx_start",
+    "ble",
+    "badusb",
+    "password",
+    "credential",
+    "token",
+    "exfil",
+    "brute",
+    "jam",
+    "deauth"
+  ],
+  "highConfidenceUnsafeKeywords": [
+    "furi_hal_subghz",
+    "furi_hal_nfc",
+    "furi_hal_rfid",
+    "furi_hal_ibutton",
+    "furi_hal_hid",
+    "furi_hal_usb_hid",
+    "furi_hal_gpio_write",
+    "furi_hal_infrared_async_tx_start",
+    "badusb",
+    "deauth",
+    "jam",
+    "brute",
+    "credential",
+    "token",
+    "exfil"
+  ],
+  "highConfidenceUnsafeKeywordsNote": "Subset of forbiddenRiskyKeywords treated as high-confidence unsafe API/capability terms. An UNREVIEWED match against any of these is a hard FAIL for the whole validation run (not merely NEEDS_REVIEW) - these names are far more likely to indicate a real capability than the generic keywords below (ble, password). A match against one of these CAN still be marked reviewed-benign, but only via the exact same narrow, per-line mechanism as any other reviewed entry in reviewedFalsePositives (file + line number + keyword + exact line-content SHA-256 hash + a specific reason) - there is no separate, looser mechanism for these. Every entry in reviewedFalsePositives below whose keyword is in this list was reviewed under that same narrow bar; as of this config, that is exactly the 2 \"jam\" entries (both confirmed non-jamming false positives - a VIN manufacturer code and a surname), and zero entries for any of the other 14 keywords in this list, meaning any future match against those 14 will hard-FAIL until individually reviewed and added here with the same evidence bar.",
+  "riskyKeywordScanFileExtensions": [
+    ".c",
+    ".h",
+    ".cpp"
+  ],
+  "riskyKeywordScanNote": "This is a broad, case-insensitive SUBSTRING scan, not a word-boundary or semantic scan. It is expected to produce false positives (e.g. 'ble' matches inside 'possible', 'variable', 'double', 'available', 'enabled', 'table'; 'jam' matches inside unrelated identifiers or data like manufacturer codes). The validation runner must list every match, not silently filter any out - a human reviews the list to confirm each match is benign. Any match at all should be reported as NEEDS_REVIEW for that check, never auto-suppressed to PASS.",
+  "reviewedFalsePositives": [
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 34,
+      "keyword": "ble",
+      "lineSha256": "171d300d53c84bf8a0a0e86fcc8f5c660d5a330c649477339cd4da5a4a1b15d3",
+      "matchedWord": "applicable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"applicable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 35,
+      "keyword": "ble",
+      "lineSha256": "b9587ea738ec3f0ec1ca825ffe5a3e59d537c7949e2f894c7d63d7a05e604c47",
+      "matchedWord": "transferable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"transferable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 36,
+      "keyword": "ble",
+      "lineSha256": "b76db052ab8d10630bc0797a852cd68995ae1f40d5a96fc420f6ab6b7091acc2",
+      "matchedWord": "irrevocable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"irrevocable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 56,
+      "keyword": "ble",
+      "lineSha256": "18b63f7c1782ad5b2a2b695020d1dbf954eb583a12b3cd1e43116b4f1583c4c6",
+      "matchedWord": "enabled",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"enabled\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 65,
+      "keyword": "ble",
+      "lineSha256": "07a780318441e788340f1f6c1bb5512a33c85f23f5797ab906794561830e3e4f",
+      "matchedWord": "enabled",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"enabled\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 74,
+      "keyword": "ble",
+      "lineSha256": "7fc4785b36f66790af6c7c31cda3f2aa9d1b191c523604a405845f8b3f60ad42",
+      "matchedWord": "possible",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"possible\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 117,
+      "keyword": "ble",
+      "lineSha256": "ff10c5317be4c9ba5a47e1679c1774d0a14c3b6a9f996209347a3f0497978a77",
+      "matchedWord": "possible",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"possible\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 149,
+      "keyword": "ble",
+      "lineSha256": "2c72259f03eb6014557af3a4483361b2bddb57caa68d0e586c47aa6258a2df99",
+      "matchedWord": "variable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 201,
+      "keyword": "ble",
+      "lineSha256": "cd9f74b279fdf9532b53786ab602309b369632651589bdfdf1cf5abe8518d946",
+      "matchedWord": "readable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"readable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 206,
+      "keyword": "ble",
+      "lineSha256": "cec45fa22ba75b817dea6a0e568748ab1e7b66920f701a0a2e396c798ae133d7",
+      "matchedWord": "possible",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"possible\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 207,
+      "keyword": "ble",
+      "lineSha256": "c462bd3a06b0ee6fb1cb5abf3f3074c3d696ed8e450f0ef0abdeb07f2bd79a20",
+      "matchedWord": "takeable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"takeable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 290,
+      "keyword": "ble",
+      "lineSha256": "efb7e41ce54476e5f598ddb1b580cf77275d6ed3052d29312ab1b0994190cdda",
+      "matchedWord": "disabled",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"disabled\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 294,
+      "keyword": "ble",
+      "lineSha256": "5138c30ba6757c708b75afeddfa69b0c700de718211c6d8d01ef787377545509",
+      "matchedWord": "SCL_boardDisableCastling",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"SCL_boardDisableCastling\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 383,
+      "keyword": "ble",
+      "lineSha256": "2695fc27a9eafa9b595074c23212d8c738be8dabddf12c22ba3ec96bc06817be",
+      "matchedWord": "impossible",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"impossible\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 424,
+      "keyword": "ble",
+      "lineSha256": "281815e4973ff381e3319adf2fd42fa6b64b64f721b0fa0085a66f3fc80f45bd",
+      "matchedWord": "SCL_boardMovePossible",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"SCL_boardMovePossible\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 442,
+      "keyword": "ble",
+      "lineSha256": "b8a64e0f8baf48c783f3e2c259d9528543d34ba0eb08449f89c0c9ff34df1c02",
+      "matchedWord": "possible",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"possible\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 515,
+      "keyword": "ble",
+      "lineSha256": "4b7f25ad5c4f1ddfb1becd73fcb6c1e436ca17d1a0990c019067808b842340f7",
+      "matchedWord": "possible",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"possible\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 557,
+      "keyword": "ble",
+      "lineSha256": "62f5f8431933a62e05fc933ddf06f78bec0963fac969be56cb2b1071c96b2905",
+      "matchedWord": "able",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"able\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 559,
+      "keyword": "ble",
+      "lineSha256": "64b61af0ac12582ac8137b179abd2ba506e3fc434d29b104dcabb6c0f9432868",
+      "matchedWord": "possible",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"possible\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 615,
+      "keyword": "ble",
+      "lineSha256": "c84d28de24150595b6eb95dfa04bb79929e79e25bbe86263746e36aa2466dd7a",
+      "matchedWord": "possible",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"possible\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 840,
+      "keyword": "ble",
+      "lineSha256": "be7d56f651bbf8cee0673f8230ede39efde05bd05bd8bd051ea722026754f6a0",
+      "matchedWord": "able",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"able\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 924,
+      "keyword": "ble",
+      "lineSha256": "a61123e20b16fb21df607f3e77dbff6c6f0d07a0eafd1400881b725ead23b0c2",
+      "matchedWord": "_SCL_boardPlaceOnNthAvailable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"_SCL_boardPlaceOnNthAvailable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 957,
+      "keyword": "ble",
+      "lineSha256": "e2ebce206e869184d05943a32040640864a9b2551f698a63897306c152037748",
+      "matchedWord": "_SCL_boardPlaceOnNthAvailable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"_SCL_boardPlaceOnNthAvailable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 958,
+      "keyword": "ble",
+      "lineSha256": "5145f75cc807b216bfa8ea162b9e5fd4de7abbbfc96c28f1c5ca4a9d93a0b5f3",
+      "matchedWord": "_SCL_boardPlaceOnNthAvailable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"_SCL_boardPlaceOnNthAvailable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 960,
+      "keyword": "ble",
+      "lineSha256": "b55872056a172e5af48a9a3a33d6637d86e5fca5fa7c607a5758a5abc5e62d0d",
+      "matchedWord": "_SCL_boardPlaceOnNthAvailable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"_SCL_boardPlaceOnNthAvailable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 963,
+      "keyword": "ble",
+      "lineSha256": "b55872056a172e5af48a9a3a33d6637d86e5fca5fa7c607a5758a5abc5e62d0d",
+      "matchedWord": "_SCL_boardPlaceOnNthAvailable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"_SCL_boardPlaceOnNthAvailable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 970,
+      "keyword": "ble",
+      "lineSha256": "b55872056a172e5af48a9a3a33d6637d86e5fca5fa7c607a5758a5abc5e62d0d",
+      "matchedWord": "_SCL_boardPlaceOnNthAvailable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"_SCL_boardPlaceOnNthAvailable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 985,
+      "keyword": "ble",
+      "lineSha256": "89b274194b2626130e64e69288c624227fadab9d08293135a92469156c4dcf6d",
+      "matchedWord": "_SCL_boardPlaceOnNthAvailable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"_SCL_boardPlaceOnNthAvailable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 993,
+      "keyword": "ble",
+      "lineSha256": "a6561006fc917107caa32064c177f73fc57cb5af54326b368224c91de88f8b31",
+      "matchedWord": "SCL_boardDisableCastling",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"SCL_boardDisableCastling\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 1369,
+      "keyword": "ble",
+      "lineSha256": "6ce0b711d72076cd09e96c27723f2ba357d83a52a50cf1fb9003e3e03f74d493",
+      "matchedWord": "disables",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"disables\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 1466,
+      "keyword": "ble",
+      "lineSha256": "97ad89cb678a0122d7e45d2bebeb4552ddd66e01714624e3398b6d7d836a5083",
+      "matchedWord": "disable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"disable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 1499,
+      "keyword": "ble",
+      "lineSha256": "56b774e34180a635bf678bcf4255e937ec46c77c0a6e90bbe0866a1918d5433c",
+      "matchedWord": "disable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"disable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 1635,
+      "keyword": "ble",
+      "lineSha256": "2c7fae08279e2234e2bd00c08c86e95374c098ca3c6a1534e1e9cc08f872aa61",
+      "matchedWord": "SCL_boardMovePossible",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"SCL_boardMovePossible\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 2056,
+      "keyword": "ble",
+      "lineSha256": "24f0f9a0e12469b7296ef74939140439f4283497309e3921330eac7ff2346221",
+      "matchedWord": "possible",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"possible\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 2071,
+      "keyword": "ble",
+      "lineSha256": "876df20ad69a52b1ad4cf321b47d452f5f9ea8f245b7e0a88db0ba5c80eca746",
+      "matchedWord": "SCL_boardMovePossible",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"SCL_boardMovePossible\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 2338,
+      "keyword": "ble",
+      "lineSha256": "ce20d0bd25716ca4f20abed06f55c6a28bb9bb6097a34b29104724fff7f2045b",
+      "matchedWord": "PAWN_NON_DOUBLE_BONUS",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"PAWN_NON_DOUBLE_BONUS\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 2381,
+      "keyword": "ble",
+      "lineSha256": "602b698876fca1556868ba98adaca04c73695655a281266ac6f743b5aa515809",
+      "matchedWord": "possible",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"possible\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 2392,
+      "keyword": "ble",
+      "lineSha256": "83defdddae27b4d41435d67bfd89aa096bc8efd86c096e563956715006600463",
+      "matchedWord": "doubled",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"doubled\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 2470,
+      "keyword": "ble",
+      "lineSha256": "f04548d13e91fe04b414b9855612dd0a7a4d9c55976bbdf76789b4463be8c0f5",
+      "matchedWord": "PAWN_NON_DOUBLE_BONUS",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"PAWN_NON_DOUBLE_BONUS\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 2484,
+      "keyword": "ble",
+      "lineSha256": "2087ecccd6d9ee59859e8d7a0749c5218a4bb556319157a55d45251e5226d0c1",
+      "matchedWord": "PAWN_NON_DOUBLE_BONUS",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"PAWN_NON_DOUBLE_BONUS\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 2551,
+      "keyword": "ble",
+      "lineSha256": "acde8067792fc4fda4e3c3ac1252564f98bfb665d8f3feb009ea319fefedfde6",
+      "matchedWord": "PAWN_NON_DOUBLE_BONUS",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"PAWN_NON_DOUBLE_BONUS\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/chess/smallchesslib.h",
+      "line": 3257,
+      "keyword": "ble",
+      "lineSha256": "f6c280a920e51c53d9609565ad992d64f97acb7cc6281052561044eab0089ec3",
+      "matchedWord": "SCL_boardDisableCastling",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"SCL_boardDisableCastling\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/flipchess.c",
+      "line": 101,
+      "keyword": "ble",
+      "lineSha256": "e578efc1cff3ee0edc0e7b178a4c3b145d71c1a21d9c52055ceb3ac5aca8ca8d",
+      "matchedWord": "variable_item_list",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/flipchess.c",
+      "line": 105,
+      "keyword": "ble",
+      "lineSha256": "0a64b18c8b3fee43ac57707d0eb3a43c26b3821ac7af594384c50be2ee83c9d0",
+      "matchedWord": "variable_item_list_get_view",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list_get_view\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/flipchess.c",
+      "line": 139,
+      "keyword": "ble",
+      "lineSha256": "780521361e1e43a83a689e998d362a6700e1eb5f24876298388bc06fd11427de",
+      "matchedWord": "variable_item_list_free",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list_free\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/flipchess.c",
+      "line": 158,
+      "keyword": "ble",
+      "lineSha256": "8a8fac656d49264efd91dc259fe2249281a2a166b97302fb34a793aa9b79a0f8",
+      "matchedWord": "Disabled",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"Disabled\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/flipchess.h",
+      "line": 13,
+      "keyword": "ble",
+      "lineSha256": "6a1cb784706a9392b0a1b6493228244327b08d2188d953e9f441e209e30eacea",
+      "matchedWord": "variable_item_list",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/flipchess.h",
+      "line": 30,
+      "keyword": "ble",
+      "lineSha256": "a799859e4d240754c47e28162b3c7644e29a5a545b6aff2898ac2bb5c4d8a654",
+      "matchedWord": "VariableItemList",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"VariableItemList\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 29,
+      "keyword": "ble",
+      "lineSha256": "56387b4fc69d5522c1c8c89c7bd9e30d0cdd50903debaea3a3ae3a22a4e4cffb",
+      "matchedWord": "VariableItem",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"VariableItem\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 30,
+      "keyword": "ble",
+      "lineSha256": "d18beca7c087dce6df0ff0241daf7edc32df981c8a351c5d9bc1ecccf56c649f",
+      "matchedWord": "variable_item_get_context",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_get_context\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 31,
+      "keyword": "ble",
+      "lineSha256": "3e58ecc844275f9b13abc34a303333393a9e1c15db7a13f6b4ed6d686a177ffe",
+      "matchedWord": "variable_item_get_current_value_index",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_get_current_value_index\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 32,
+      "keyword": "ble",
+      "lineSha256": "76ee2b836595ee79d8c275b03c4012e225206e605a5ad32473ac0e8930a4f1f8",
+      "matchedWord": "variable_item_set_current_value_text",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_set_current_value_text\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 36,
+      "keyword": "ble",
+      "lineSha256": "8ac1afa4d36f3df46993426f65ee900096450b895bce48398975fc119b6e5ace",
+      "matchedWord": "VariableItem",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"VariableItem\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 37,
+      "keyword": "ble",
+      "lineSha256": "d18beca7c087dce6df0ff0241daf7edc32df981c8a351c5d9bc1ecccf56c649f",
+      "matchedWord": "variable_item_get_context",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_get_context\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 38,
+      "keyword": "ble",
+      "lineSha256": "3e58ecc844275f9b13abc34a303333393a9e1c15db7a13f6b4ed6d686a177ffe",
+      "matchedWord": "variable_item_get_current_value_index",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_get_current_value_index\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 39,
+      "keyword": "ble",
+      "lineSha256": "c4f07f76418f56205e4669ed3c0890f66cd4e3b961ca80c13f6e77bb916a46e9",
+      "matchedWord": "variable_item_set_current_value_text",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_set_current_value_text\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 43,
+      "keyword": "ble",
+      "lineSha256": "edde76476bd4b935d79802260bafb520ba766da0fd6b5ece1f531b9d90a9d911",
+      "matchedWord": "VariableItem",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"VariableItem\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 44,
+      "keyword": "ble",
+      "lineSha256": "d18beca7c087dce6df0ff0241daf7edc32df981c8a351c5d9bc1ecccf56c649f",
+      "matchedWord": "variable_item_get_context",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_get_context\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 45,
+      "keyword": "ble",
+      "lineSha256": "3e58ecc844275f9b13abc34a303333393a9e1c15db7a13f6b4ed6d686a177ffe",
+      "matchedWord": "variable_item_get_current_value_index",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_get_current_value_index\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 46,
+      "keyword": "ble",
+      "lineSha256": "c4f07f76418f56205e4669ed3c0890f66cd4e3b961ca80c13f6e77bb916a46e9",
+      "matchedWord": "variable_item_set_current_value_text",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_set_current_value_text\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 57,
+      "keyword": "ble",
+      "lineSha256": "0a8b1313690ef31dcd0a573defd4840e4836874a454cbaef900a884e29458149",
+      "matchedWord": "VariableItem",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"VariableItem\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 61,
+      "keyword": "ble",
+      "lineSha256": "2f412175d0c29944e524c8a6c365b5cf1ad43d5a54ceffa4ca929617ef20c3ea",
+      "matchedWord": "variable_item_list_add",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list_add\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 62,
+      "keyword": "ble",
+      "lineSha256": "9228be7adb890ce2eb647d16e06fa16650b8d6ae8789b913d66a2f411e3dab89",
+      "matchedWord": "variable_item_list",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 64,
+      "keyword": "ble",
+      "lineSha256": "cdbd1ef5b30fb3b0148b1bf9b770bb7d543398a15fa85aedc115cc5e096632c8",
+      "matchedWord": "variable_item_set_current_value_index",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_set_current_value_index\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 65,
+      "keyword": "ble",
+      "lineSha256": "80f11de4032c1c0bff781c619fbf04dd39674ad1c8eb34e205cf3053ab974014",
+      "matchedWord": "variable_item_set_current_value_text",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_set_current_value_text\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 68,
+      "keyword": "ble",
+      "lineSha256": "2f412175d0c29944e524c8a6c365b5cf1ad43d5a54ceffa4ca929617ef20c3ea",
+      "matchedWord": "variable_item_list_add",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list_add\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 69,
+      "keyword": "ble",
+      "lineSha256": "1acaca7e2063e15ee56b739d36d4a08a2c8b1ee06528908f81c93303a73af0e3",
+      "matchedWord": "variable_item_list",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 71,
+      "keyword": "ble",
+      "lineSha256": "cdbd1ef5b30fb3b0148b1bf9b770bb7d543398a15fa85aedc115cc5e096632c8",
+      "matchedWord": "variable_item_set_current_value_index",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_set_current_value_index\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 72,
+      "keyword": "ble",
+      "lineSha256": "80f11de4032c1c0bff781c619fbf04dd39674ad1c8eb34e205cf3053ab974014",
+      "matchedWord": "variable_item_set_current_value_text",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_set_current_value_text\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 75,
+      "keyword": "ble",
+      "lineSha256": "2f412175d0c29944e524c8a6c365b5cf1ad43d5a54ceffa4ca929617ef20c3ea",
+      "matchedWord": "variable_item_list_add",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list_add\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 76,
+      "keyword": "ble",
+      "lineSha256": "621dd1de52985c42d02f9669e26e3c06a031d8cf988f60c06432e8cd71e8f8df",
+      "matchedWord": "variable_item_list",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 78,
+      "keyword": "ble",
+      "lineSha256": "cdbd1ef5b30fb3b0148b1bf9b770bb7d543398a15fa85aedc115cc5e096632c8",
+      "matchedWord": "variable_item_set_current_value_index",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_set_current_value_index\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 79,
+      "keyword": "ble",
+      "lineSha256": "bf1d9c06103106f3368b49518e567768736c80969029dc51df08d3f99e8eca8f",
+      "matchedWord": "variable_item_set_current_value_text",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_set_current_value_text\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 95,
+      "keyword": "ble",
+      "lineSha256": "a7578e317e602cf9dcdd330ed49d86adfd287c4d75b4b96c73550d57c6550a91",
+      "matchedWord": "variable_item_list_set_selected_item",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list_set_selected_item\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/scenes/flipchess_scene_settings.c",
+      "line": 96,
+      "keyword": "ble",
+      "lineSha256": "18f02d4a08a0dd218d2f2a46b7b854d2ffa07cb84de934e21e92df1b7174d187",
+      "matchedWord": "variable_item_list_reset",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list_reset\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/views/flipchess_scene_1.c",
+      "line": 19,
+      "keyword": "ble",
+      "lineSha256": "6932d12efd158ab3f64aa9fd9ee56a3738b01fc72597a8d587de37c56641924b",
+      "matchedWord": "ENABLE_960",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"ENABLE_960\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/views/flipchess_scene_1.c",
+      "line": 46,
+      "keyword": "ble",
+      "lineSha256": "c82db8fa3339142a5bfbbb6a4e1348b3df531763f3b7cffa3b20e8fe68ee2931",
+      "matchedWord": "ENABLE_960",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"ENABLE_960\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/views/flipchess_scene_1.c",
+      "line": 187,
+      "keyword": "ble",
+      "lineSha256": "699f8595c8c60f5f623d558a7cdc45a7cb2aae79dd2ec535b2d5ce92f6a206df",
+      "matchedWord": "double",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"double\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/views/flipchess_scene_1.c",
+      "line": 423,
+      "keyword": "ble",
+      "lineSha256": "c82db8fa3339142a5bfbbb6a4e1348b3df531763f3b7cffa3b20e8fe68ee2931",
+      "matchedWord": "ENABLE_960",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"ENABLE_960\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/views/flipchess_scene_1.c",
+      "line": 446,
+      "keyword": "ble",
+      "lineSha256": "c82db8fa3339142a5bfbbb6a4e1348b3df531763f3b7cffa3b20e8fe68ee2931",
+      "matchedWord": "ENABLE_960",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"ENABLE_960\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/views/flipchess_scene_1.c",
+      "line": 462,
+      "keyword": "ble",
+      "lineSha256": "c82db8fa3339142a5bfbbb6a4e1348b3df531763f3b7cffa3b20e8fe68ee2931",
+      "matchedWord": "ENABLE_960",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"ENABLE_960\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/views/flipchess_scene_1.c",
+      "line": 489,
+      "keyword": "ble",
+      "lineSha256": "a969f93849750a345d5ab119df23088dce3bab9dca7d128ad9984ffb55d50cf5",
+      "matchedWord": "double",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"double\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/views/flipchess_scene_1.c",
+      "line": 501,
+      "keyword": "ble",
+      "lineSha256": "360ecd843b8f37b5fabaeab60bcd452bbb04343f83fde54ed2eb4f7595054cb6",
+      "matchedWord": "possibleMoves",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"possibleMoves\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/views/flipchess_scene_1.c",
+      "line": 503,
+      "keyword": "ble",
+      "lineSha256": "388d4153e30b9dd265b1e90d52788713c6b2e19a709497045732ac55c4f39a4b",
+      "matchedWord": "possibleMoves",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"possibleMoves\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/views/flipchess_scene_1.c",
+      "line": 505,
+      "keyword": "ble",
+      "lineSha256": "4d219139c19c8333e8f7c877ec3cb01a3ffb2c7db05a8c21f1e35831d89b58cb",
+      "matchedWord": "possibleMoves",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"possibleMoves\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/views/flipchess_scene_1.c",
+      "line": 678,
+      "keyword": "ble",
+      "lineSha256": "b8a94820e99a1e026e04445c52c743d56d92a5b2c354c9a311368b1f065ecf3e",
+      "matchedWord": "applicable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"applicable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/chess/views/flipchess_scene_1.c",
+      "line": 689,
+      "keyword": "ble",
+      "lineSha256": "f3693b31a18da3ed4d69c586a5293a8019b858fc055476edaaba220a7f05d692",
+      "matchedWord": "applicable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"applicable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/flipper95/flipper95.c",
+      "line": 72,
+      "keyword": "ble",
+      "lineSha256": "8260debf9ae2a4bc520598236d7708b23e409cfb1e1d9625360d154c52e48929",
+      "matchedWord": "available",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"available\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/flipper95/flipper95.c",
+      "line": 197,
+      "keyword": "ble",
+      "lineSha256": "95951fbb9ea498be8dbac41cc56f770e2e29560c17b0ca704482ba1a5d11de7d",
+      "matchedWord": "double",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"double\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/flipper95/flipper95.c",
+      "line": 380,
+      "keyword": "ble",
+      "lineSha256": "9825e5b41af7ad871af0f8749f90c4ad05ef6841b886012ff9cc8d2a4c645075",
+      "matchedWord": "double",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"double\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/network_subnet/core/subnet_math.c",
+      "line": 39,
+      "keyword": "ble",
+      "lineSha256": "94fd992bb285fbff239316d6e56217b2f443c01089583280c9c060886a39284c",
+      "matchedWord": "usable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"usable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/network_subnet/core/subnet_math.h",
+      "line": 63,
+      "keyword": "ble",
+      "lineSha256": "94fd992bb285fbff239316d6e56217b2f443c01089583280c9c060886a39284c",
+      "matchedWord": "usable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"usable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/network_subnet/network_subnet.h",
+      "line": 14,
+      "keyword": "ble",
+      "lineSha256": "944efef64c767bd991ab1c8d57e51790b244e3e41f2933daad340370402571a6",
+      "matchedWord": "usable",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"usable\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/programmer_calc/calculation_logic.c",
+      "line": 7,
+      "keyword": "ble",
+      "lineSha256": "9d9f02ef611a8ef811ecb8daf7d6e83e2b992c540f3415adce549efd58ed9a23",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/programmer_calc/calculation_logic.c",
+      "line": 8,
+      "keyword": "ble",
+      "lineSha256": "c403b3bfbeeba9023475169a36d4b69a66e004ad5442ee14b407b3eceed8bf13",
+      "matchedWord": "HEX_TO_BINARY_TABLE",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"HEX_TO_BINARY_TABLE\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/programmer_calc/calculation_logic.c",
+      "line": 129,
+      "keyword": "ble",
+      "lineSha256": "23849d361450a93dc188cec1c64bd2e77b7e5340fac8a6ca6e925363eb2ec438",
+      "matchedWord": "HEX_TO_BINARY_TABLE",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"HEX_TO_BINARY_TABLE\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/programmer_calc/calculation_logic.c",
+      "line": 131,
+      "keyword": "ble",
+      "lineSha256": "927f6f16a871f90edae433758d8955e78b6c050544981416c79df60e175f3984",
+      "matchedWord": "HEX_TO_BINARY_TABLE",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"HEX_TO_BINARY_TABLE\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/programmer_calc/calculation_logic.c",
+      "line": 133,
+      "keyword": "ble",
+      "lineSha256": "e2ae7bab591e21de12050c9e8e371f2cec6edd7f595967f1cf6927f801ff7883",
+      "matchedWord": "HEX_TO_BINARY_TABLE",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"HEX_TO_BINARY_TABLE\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/programmer_calc/calculation_logic.c",
+      "line": 157,
+      "keyword": "ble",
+      "lineSha256": "4078e850a77f3f08d9fb4b7d0d2df7808e81b4a36fffac1434ced697e74d0d53",
+      "matchedWord": "HEX_TO_BINARY_TABLE",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"HEX_TO_BINARY_TABLE\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/programmer_calc/calculation_logic.c",
+      "line": 159,
+      "keyword": "ble",
+      "lineSha256": "4f6976fe7a0a491f3bfb8ec90d753ca20c727faf86fe38695bb900e95dec7bca",
+      "matchedWord": "HEX_TO_BINARY_TABLE",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"HEX_TO_BINARY_TABLE\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/programmer_calc/calculation_logic.c",
+      "line": 161,
+      "keyword": "ble",
+      "lineSha256": "b537d41d3f1f4c48a96ac7c190a42c57a75e0878c565ca3c9af23c2c19e50410",
+      "matchedWord": "HEX_TO_BINARY_TABLE",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"HEX_TO_BINARY_TABLE\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/vin_decoder/vin_decoder.c",
+      "line": 514,
+      "keyword": "jam",
+      "lineSha256": "7e54559e551fcfa1f255af149638355efd5dd3d432a9045c4ff12d53322ca52d",
+      "matchedWord": "James",
+      "reason": "Substring \"jam\" occurs inside the surname \"James\" (\"Brian James\", a manufacturer-attribution string in vin_decoder.c's lookup table) - a person's name, not jamming behavior."
+    },
+    {
+      "file": "applications_user/vin_decoder/vin_decoder.c",
+      "line": 836,
+      "keyword": "ble",
+      "lineSha256": "b6ad2bfea1077a1d58dd4ad13bfc54412c78bc9441ad86e14f426f23cd8ede55",
+      "matchedWord": "Flxible",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"Flxible\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/vin_decoder/vin_decoder.c",
+      "line": 1167,
+      "keyword": "jam",
+      "lineSha256": "cd0f4cee6b03a5fe1f231c8c61092d7b2a5703a5a8bd814f601a567fe10e76ab",
+      "matchedWord": "JAM",
+      "reason": "Literal 3-letter WMI (World Manufacturer Identifier) code \"JAM\" for Isuzu, in vin_decoder.c's manufacturer lookup table (a data value, not the English word \"jam\" or any RF jamming/interference behavior; no jamming code exists anywhere in this app - confirmed by the zero furi_hal_subghz matches elsewhere in this same scan)."
+    },
+    {
+      "file": "applications_user/quadratic_solver/app.c",
+      "line": 36,
+      "keyword": "ble",
+      "lineSha256": "aba3464e917c8cc2d363757ac38472ee4b6770137d8bb9a6a48af57b682fe670",
+      "matchedWord": "double",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"double\" (a (double) cast) - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/quadratic_solver/app.c",
+      "line": 77,
+      "keyword": "ble",
+      "lineSha256": "d84f9a944b7211c1e97dac242976c464bceda70e27e7cf5d56cfefdd928b5522",
+      "matchedWord": "double",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"double\" (a (double) cast) - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/quadratic_solver/app.c",
+      "line": 81,
+      "keyword": "ble",
+      "lineSha256": "027dca0436e23b2d84973dfe315195f9e884b74857f7243d344f578caa936ed8",
+      "matchedWord": "double",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"double\" (a (double) cast) - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/quadratic_solver/app.c",
+      "line": 85,
+      "keyword": "ble",
+      "lineSha256": "656e5780377f14cf8df2bdca8bb11a5b1cdfaf8efba2e444ffb793c74c3a4011",
+      "matchedWord": "double",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"double\" (a (double) cast) - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/quadratic_solver/app.c",
+      "line": 218,
+      "keyword": "ble",
+      "lineSha256": "b9ebdf80046bb9b03e0a2bfe81c4485008c0f7bed7e467ed8cc64287178b714e",
+      "matchedWord": "enabled",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"enabled\" (view_port_enabled_set) - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/sudoku/sudoku.c",
+      "line": 674,
+      "keyword": "ble",
+      "lineSha256": "693bf5a39b6c0edea25d18c20266ea7a0f301de324036fa394d11c9ab6118c36",
+      "matchedWord": "enabled",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"enabled\" (view_port_enabled_set) - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/sd_info/main.c",
+      "line": 121,
+      "keyword": "ble",
+      "lineSha256": "20f0e729f63b65ab6dc53c17daf1bb927294714bb941cf90aacfa72b0c29f7f6",
+      "matchedWord": "double",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"double\" (a (double) cast) - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/sd_info/main.c",
+      "line": 163,
+      "keyword": "ble",
+      "lineSha256": "d944b965b9f1373bd8d47ea9b815dcd7e16e11d3990fdafe4f3325f07709b4a0",
+      "matchedWord": "double",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"double\" (a (double) cast) - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/sd_info/main.c",
+      "line": 164,
+      "keyword": "ble",
+      "lineSha256": "c546ba2ba92aa50ec985b9afd357aecd3d41b91b0c016f46c48cee19ca431816",
+      "matchedWord": "double",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"double\" (a (double) cast) - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/sd_info/main.c",
+      "line": 489,
+      "keyword": "ble",
+      "lineSha256": "b9ebdf80046bb9b03e0a2bfe81c4485008c0f7bed7e467ed8cc64287178b714e",
+      "matchedWord": "enabled",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"enabled\" (view_port_enabled_set) - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 9,
+      "keyword": "ble",
+      "lineSha256": "6a1cb784706a9392b0a1b6493228244327b08d2188d953e9f441e209e30eacea",
+      "matchedWord": "variable_item_list",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list\" (a header include) - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 22,
+      "keyword": "ble",
+      "lineSha256": "5c7f50e1b1b8d104c7eab88c6d8a678ba93fc8fc5424206d0f90a1cbdf30c8a9",
+      "matchedWord": "available",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"available\" (a comment) - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 58,
+      "keyword": "ble",
+      "lineSha256": "d0f5e590298417d74804ba3f5f891858e5902c818548013abf27cc76ab645be1",
+      "matchedWord": "enabled",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"enabled\" (a comment) - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 73,
+      "keyword": "ble",
+      "lineSha256": "0e1f00e02a547f53a52293d2c9ddcebbd15a894a757b239ed9b9b881eb00636f",
+      "matchedWord": "scrolling",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"scrolling\" (a comment) - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 660,
+      "keyword": "ble",
+      "lineSha256": "a057c8e2c2cf308838453ffcc3c1187bf4d4db11cf9e9a922f9cdc043ae52aa3",
+      "matchedWord": "VariableItem",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"VariableItem\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 661,
+      "keyword": "ble",
+      "lineSha256": "571fef3e8da64de840cf1549578f5310cb1218ebcc33d7ddaa2b11a857aef3ff",
+      "matchedWord": "variable_item_get_context",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_get_context\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 667,
+      "keyword": "ble",
+      "lineSha256": "3e58ecc844275f9b13abc34a303333393a9e1c15db7a13f6b4ed6d686a177ffe",
+      "matchedWord": "variable_item_get_current_value_index",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_get_current_value_index\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 668,
+      "keyword": "ble",
+      "lineSha256": "d28c7d38e676fc49ddd66307582bf4f021d7b06b8de61019aefa31eeb7ec0fee",
+      "matchedWord": "variable_item_set_current_value_text",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_set_current_value_text\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 688,
+      "keyword": "ble",
+      "lineSha256": "95fc82863a288982de3ad4cdc62e35777697972032732610eafae8abcba523b3",
+      "matchedWord": "VariableItem",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"VariableItem\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 689,
+      "keyword": "ble",
+      "lineSha256": "571fef3e8da64de840cf1549578f5310cb1218ebcc33d7ddaa2b11a857aef3ff",
+      "matchedWord": "variable_item_get_context",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_get_context\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 695,
+      "keyword": "ble",
+      "lineSha256": "3e58ecc844275f9b13abc34a303333393a9e1c15db7a13f6b4ed6d686a177ffe",
+      "matchedWord": "variable_item_get_current_value_index",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_get_current_value_index\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 696,
+      "keyword": "ble",
+      "lineSha256": "e10f08dee38728f83fa694a228c70f431425429ce70618a9cd33ee759b5bffce",
+      "matchedWord": "variable_item_set_current_value_text",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_set_current_value_text\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 757,
+      "keyword": "ble",
+      "lineSha256": "b0ae7310473591750b2a22c2ff4e63e5b1d59fa62b01e637d0ff35ea4560e071",
+      "matchedWord": "scrolling",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"scrolling\" (a comment) - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 799,
+      "keyword": "ble",
+      "lineSha256": "b0ae7310473591750b2a22c2ff4e63e5b1d59fa62b01e637d0ff35ea4560e071",
+      "matchedWord": "scrolling",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"scrolling\" (a comment) - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 810,
+      "keyword": "ble",
+      "lineSha256": "9f8a1a2a73a242502e44a30aac2df554ea8647849fa38d285af3e5139891e5a8",
+      "matchedWord": "variable_item_list_alloc",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list_alloc\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 813,
+      "keyword": "ble",
+      "lineSha256": "fe579937d764ef5c69d8a91fb879b64fdf8d3c9a23e54e4412fe66c5788ec034",
+      "matchedWord": "VariableItem",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"VariableItem\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 819,
+      "keyword": "ble",
+      "lineSha256": "d7f0b3bcc714d7467885437069a309ad93a11226d529fc74ed34e68b621b2348",
+      "matchedWord": "variable_item_set_current_value_index",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_set_current_value_index\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 820,
+      "keyword": "ble",
+      "lineSha256": "eeca7017f14b71b4859ba6d52eac886cb77e0c120696d14b7c8a28676ed54b30",
+      "matchedWord": "variable_item_set_current_value_text",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_set_current_value_text\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 824,
+      "keyword": "ble",
+      "lineSha256": "2f412175d0c29944e524c8a6c365b5cf1ad43d5a54ceffa4ca929617ef20c3ea",
+      "matchedWord": "variable_item_list_add",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list_add\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 830,
+      "keyword": "ble",
+      "lineSha256": "e0e5f24e52efc271a0d74fab6fc6c4c656b75485d3396160d374ab22fcef1ef0",
+      "matchedWord": "variable_item_set_current_value_index",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_set_current_value_index\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 831,
+      "keyword": "ble",
+      "lineSha256": "eeca7017f14b71b4859ba6d52eac886cb77e0c120696d14b7c8a28676ed54b30",
+      "matchedWord": "variable_item_set_current_value_text",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_set_current_value_text\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 835,
+      "keyword": "ble",
+      "lineSha256": "f9a1422420d245b57b8b97010ce6df3524f28b444dc38916768886064eb6a76d",
+      "matchedWord": "variable_item_list_get_view",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list_get_view\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 839,
+      "keyword": "ble",
+      "lineSha256": "09c1a89cbce113d0dffab3199c28df81a94824611a5536aac086a72d00e8c667",
+      "matchedWord": "variable_item_list_get_view",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list_get_view\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 916,
+      "keyword": "ble",
+      "lineSha256": "f87f7eff48dc058e585bb66817a05c1195f01170210a85248d290c5a9dde243f",
+      "matchedWord": "variable_item_list_free",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"variable_item_list_free\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/docviewlite/docviewlite.c",
+      "line": 86,
+      "keyword": "ble",
+      "lineSha256": "7db2bc1afa6d17f09f28631b91d6bc583fda82d1be6ea353cec2b58a46e1728b",
+      "matchedWord": "VariableItemList",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"VariableItemList\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/resistors/src/resistor_logic.c",
+      "line": 90,
+      "keyword": "ble",
+      "lineSha256": "734a58dc80913223c0bb5a5384cb0e0466f1a39109b5821f1f53c6b3430b46f2",
+      "matchedWord": "double",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"double\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/resistors/src/resistor_logic.c",
+      "line": 115,
+      "keyword": "ble",
+      "lineSha256": "6cf131c185855e649613ff411876ad4fe3347ef55135605fa62c6bd7cfb9c36c",
+      "matchedWord": "double",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"double\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/resistors/src/resistor_logic.c",
+      "line": 129,
+      "keyword": "ble",
+      "lineSha256": "6886e7bf3f328725f5dcccdedc98cc0d4769dfdb0803329f887baeead8650bb9",
+      "matchedWord": "double",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"double\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/resistors/src/resistor_logic.c",
+      "line": 147,
+      "keyword": "ble",
+      "lineSha256": "70f5f2a5999b0554e5c775bae9c5f622b693f111139cb6093463bd9b9f5bdeb6",
+      "matchedWord": "double",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"double\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/resistors/src/resistor_logic.h",
+      "line": 33,
+      "keyword": "ble",
+      "lineSha256": "fcec7b88a8a970dbcc46c3f5a3bd36b562ada710042889ba43a815720c04c38a",
+      "matchedWord": "double",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"double\" - not the Bluetooth LE API."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 39,
+      "keyword": "ble",
+      "lineSha256": "0f5098ec3a214d12f2e2ded5c4d668f62ae354ddb3d9efedd0d96060cf3cc01f",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 48,
+      "keyword": "ble",
+      "lineSha256": "1b8b9aec7f7ab75d99540e033136b425df5d8f7eac251771dc7ac49265311374",
+      "matchedWord": "is_table_updated",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"is_table_updated\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 90,
+      "keyword": "ble",
+      "lineSha256": "434a62d97ffe13d827366a7f5d31cc6f8948345740507b60c859ac4e69df79ec",
+      "matchedWord": "table / draw_table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table / draw_table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 93,
+      "keyword": "ble",
+      "lineSha256": "8886db958d16b30d193cb35a26ddb237f6bb022aeebfa5086e92edb36be72dfd",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 115,
+      "keyword": "ble",
+      "lineSha256": "53e1fd8b0ae88beb437b27ee71a2d19443d76525e314765b4ef46a8854898575",
+      "matchedWord": "draw_table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"draw_table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 206,
+      "keyword": "ble",
+      "lineSha256": "bb99f98f4e3eac34cff2cb2c40d639961847f27b2e578583f1f272c2699d8957",
+      "matchedWord": "is_table_updated",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"is_table_updated\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 221,
+      "keyword": "ble",
+      "lineSha256": "bb99f98f4e3eac34cff2cb2c40d639961847f27b2e578583f1f272c2699d8957",
+      "matchedWord": "is_table_updated",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"is_table_updated\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 228,
+      "keyword": "ble",
+      "lineSha256": "94a2a34626d32197b0afdbf094ad6175786b5d9e587332dba2c63be3f2496968",
+      "matchedWord": "is_table_updated",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"is_table_updated\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 236,
+      "keyword": "ble",
+      "lineSha256": "972a58a7bede7ebbd090efbbdca4f42f6fac3d6198ce001f71e258d3f5c13729",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 238,
+      "keyword": "ble",
+      "lineSha256": "e0da5cab5ea0f0ebe40eb3af1f1744eee44bb34b7f03fd67d4edc3b8693b8db0",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 242,
+      "keyword": "ble",
+      "lineSha256": "6f695daba6a4a46d6542fb10dc6912505b59a7069c23e728b126c50355c0fa5f",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 244,
+      "keyword": "ble",
+      "lineSha256": "e3c5da2b23c2689257f01181f461c95a0ad7dae59b8a123a1b9de9598c087b9c",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 245,
+      "keyword": "ble",
+      "lineSha256": "e0da5cab5ea0f0ebe40eb3af1f1744eee44bb34b7f03fd67d4edc3b8693b8db0",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 246,
+      "keyword": "ble",
+      "lineSha256": "e3c5da2b23c2689257f01181f461c95a0ad7dae59b8a123a1b9de9598c087b9c",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 250,
+      "keyword": "ble",
+      "lineSha256": "9a0df31ae5edb7f01e9f25fab8a3a5e9cbbb9d5abc9d9547f0397d5302bf2c49",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 253,
+      "keyword": "ble",
+      "lineSha256": "5c3ca9fb965ca5f084be26be1110e5e9a06a0b3247c63b202b4921ffade027e2",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 255,
+      "keyword": "ble",
+      "lineSha256": "3e60523211da5175bedcd0ea42b703b905a7183406d7d9b75d61e869c4422813",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 259,
+      "keyword": "ble",
+      "lineSha256": "dddfa3e19b1b56e4b4b0ff1776267e638efd7cb5b163aec2cb612cce8475ff9e",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 262,
+      "keyword": "ble",
+      "lineSha256": "5c3ca9fb965ca5f084be26be1110e5e9a06a0b3247c63b202b4921ffade027e2",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 266,
+      "keyword": "ble",
+      "lineSha256": "3e60523211da5175bedcd0ea42b703b905a7183406d7d9b75d61e869c4422813",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 275,
+      "keyword": "ble",
+      "lineSha256": "d0a77c4b368f6f9ee22ce295eb13c514a92bb5fa0ff413ebf682c21363e16499",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 287,
+      "keyword": "ble",
+      "lineSha256": "c8c3e1016db4ad928b5d7f4fdc803237affc41e89d175bff34b7cb981ec45d7b",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 291,
+      "keyword": "ble",
+      "lineSha256": "1dc1bd66257639dd4875866a9fd14bb494ce715f64461a2419cde3d0e60c171e",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 344,
+      "keyword": "ble",
+      "lineSha256": "ff0bf666fdd176e1a9158aa372ba9de7e1437e8e23ab17db23747947231b2ef8",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 347,
+      "keyword": "ble",
+      "lineSha256": "d0a77c4b368f6f9ee22ce295eb13c514a92bb5fa0ff413ebf682c21363e16499",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 355,
+      "keyword": "ble",
+      "lineSha256": "048767469504633af289b61f1c9209af1a81e53a4006e72a36a4c0aae2315950",
+      "matchedWord": "tmp_table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"tmp_table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 359,
+      "keyword": "ble",
+      "lineSha256": "a33bc1c5bc0a3516e4c63e959159e90ab84a4b061e049060654e5076745a58cc",
+      "matchedWord": "tmp_table / table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"tmp_table / table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 360,
+      "keyword": "ble",
+      "lineSha256": "e2514478b09a717850176dab5b3f771475442725d529329fb032f2249004da78",
+      "matchedWord": "tmp_table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"tmp_table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 361,
+      "keyword": "ble",
+      "lineSha256": "f8f8ace96b4928b8407fc5a2e3c9e5da9820c58b77cce31c6d58afdb852838c1",
+      "matchedWord": "is_table_updated",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"is_table_updated\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 364,
+      "keyword": "ble",
+      "lineSha256": "a33bc1c5bc0a3516e4c63e959159e90ab84a4b061e049060654e5076745a58cc",
+      "matchedWord": "tmp_table / table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"tmp_table / table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 365,
+      "keyword": "ble",
+      "lineSha256": "4985d334ea995d1cba33ff2e7a3d133a4b79350b6cf75708e29bfafe3fd11fe3",
+      "matchedWord": "tmp_table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"tmp_table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 366,
+      "keyword": "ble",
+      "lineSha256": "f8f8ace96b4928b8407fc5a2e3c9e5da9820c58b77cce31c6d58afdb852838c1",
+      "matchedWord": "is_table_updated",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"is_table_updated\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 369,
+      "keyword": "ble",
+      "lineSha256": "a33bc1c5bc0a3516e4c63e959159e90ab84a4b061e049060654e5076745a58cc",
+      "matchedWord": "tmp_table / table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"tmp_table / table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 370,
+      "keyword": "ble",
+      "lineSha256": "479fba5851162eadc091235759d0692ddd43aa1a6eced4f94a50f6467f5c38b4",
+      "matchedWord": "tmp_table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"tmp_table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 371,
+      "keyword": "ble",
+      "lineSha256": "f8f8ace96b4928b8407fc5a2e3c9e5da9820c58b77cce31c6d58afdb852838c1",
+      "matchedWord": "is_table_updated",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"is_table_updated\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 374,
+      "keyword": "ble",
+      "lineSha256": "a33bc1c5bc0a3516e4c63e959159e90ab84a4b061e049060654e5076745a58cc",
+      "matchedWord": "tmp_table / table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"tmp_table / table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 375,
+      "keyword": "ble",
+      "lineSha256": "0a4dad35af887a3defc6b718646b2143df16de227d18d9598394dbf283c11d94",
+      "matchedWord": "tmp_table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"tmp_table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 376,
+      "keyword": "ble",
+      "lineSha256": "f8f8ace96b4928b8407fc5a2e3c9e5da9820c58b77cce31c6d58afdb852838c1",
+      "matchedWord": "is_table_updated",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"is_table_updated\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 452,
+      "keyword": "ble",
+      "lineSha256": "823c2cbf4330a5baba4930424e53faff0693c0912c644d69868a16ed19fcccdf",
+      "matchedWord": "is_table_updated",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"is_table_updated\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 457,
+      "keyword": "ble",
+      "lineSha256": "a567fce182bb1cfa2a10d906efa0c5535c726c98a7704f58cbdaa354fe2fba83",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 460,
+      "keyword": "ble",
+      "lineSha256": "e2dcfc82958cc48c3d99c83625deb773632173ea53655234f792d968286d8d30",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 463,
+      "keyword": "ble",
+      "lineSha256": "8a6ebec90bbcb6a3bc5e3ecd54ef11c93ca1628b559e981715f3a55ab721532e",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 466,
+      "keyword": "ble",
+      "lineSha256": "b68225776d33a399d3bdaeb2f2e564829dea2706f1c72d063cecaebd3a08c45d",
+      "matchedWord": "table",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"table\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/2048/game_2048.c",
+      "line": 481,
+      "keyword": "ble",
+      "lineSha256": "958927bd567ec7bbd406d8802dd9510c8e99d80b21f63f883b8062946c138a05",
+      "matchedWord": "is_table_updated",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"is_table_updated\" - not the Bluetooth LE API (this app's board array is named 'table')."
+    },
+    {
+      "file": "applications_user/resistors/src/resistor_logic.c",
+      "line": 118,
+      "keyword": "ble",
+      "lineSha256": "bb5c2e37da414fa52a55fe932300946bf6cdffec1d48e2c9f5f59c4e96fbad5e",
+      "matchedWord": "double",
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"double\" - not the Bluetooth LE API."
+    }
+  ],
+  "reviewedFalsePositivesPolicy": "Structured, auditable allowlist of individually-reviewed benign risky-keyword matches. This is NOT a blanket suppression: tools/phase2a_validate.ps1 only treats a live scan match as 'reviewed' when ALL FOUR of (file path, line number, keyword, SHA-256 hash of the exact trimmed line text) match an entry below exactly. If the matched line is edited, moved, or the file is renamed, the hash/line-number match breaks and the match reverts to unreviewed automatically - there is no way for a stale entry to keep silently approving changed code. Each entry also records the specific benign word/token that produced the substring match and a human-readable reason, so every entry is independently auditable without re-deriving it. Entries were generated by scanning the exact commit this config file was authored against (Phase 2A.8) and are expected to need periodic regeneration/review as Phase 2A app source changes - a match with no allowlist entry is NEVER auto-approved, regardless of how 'obviously benign' it might look. High-confidence keywords (see highConfidenceUnsafeKeywords above) are held to the exact same matching mechanism but a stricter failure consequence when unreviewed (hard FAIL vs NEEDS_REVIEW).",
+  "knownAcceptableBaseFirmwareKeywordsOutsidePhase2A": {
+    "note": "The base Unleashed firmware (applications/, lib/, everything outside applications_user/<phase2a-app>) legitimately and extensively uses furi_hal_subghz, furi_hal_nfc, furi_hal_bt/ble, furi_hal_gpio, furi_hal_infrared, and furi_hal_usb_hid, because it IS the platform providing those subsystems to all apps. The risky-keyword scan in this tooling is scoped ONLY to the 5 Phase 2A app directories listed in allowedSourcePaths above, and must never be run against applications/, lib/, assets/, or any other base-firmware path - doing so would produce meaningless, alarming false 'fails' against Unleashed's own legitimate platform code.",
+    "keywords": [
+      "furi_hal_subghz",
+      "furi_hal_nfc",
+      "furi_hal_bt",
+      "ble_profile",
+      "furi_hal_gpio",
+      "furi_hal_infrared",
+      "furi_hal_usb_hid"
+    ]
+  },
+  "expectedAppPrivateStoragePaths": {
+    "chess": "/ext/apps_data/flipchess/",
+    "network_subnet": null,
+    "programmercalc": null,
+    "vin_decoder": null,
+    "flipper95": null,
+    "flipfetch": null,
+    "quadratic_solver": null,
+    "sudoku": "/ext/apps_data/sudoku/",
+    "sd_info": "NOT app-private - see note. Real, transient storage behavior: writes/reads/deletes benchmark blocks at /ext/sdtest.tmp* (SD card root) only during an explicit, user-initiated SD speed test; self-cleaning, not persistent, not automatic. See docs/PHASE2C_1_SOURCE_LICENSE_VERIFICATION.md.",
+    "docviewlite": null,
+    "resistance_calculator": null,
+    "crypto_dict": null,
+    "2048_improved": "/ext/apps_data/game_2048/ - confirmed by direct source read (game_2048.c: SAVING_DIRECTORY = EXT_PATH(\"apps_data/game_2048\"), a hardcoded literal path, not the appid-based APP_DATA_PATH macro). Also performs a one-time legacy-path migration check against /ext/apps/Games/game_2048.save on load (silently a no-op on this fresh import - no such legacy file exists). See docs/PHASE2D_1_SOURCE_LICENSE_VERIFICATION.md and docs/PHASE2D_2_SAFETY_REVIEW.md."
+  },
+  "expectedAppPrivateStoragePathsNote": "null means the app is not expected to persist any file under normal use; any storage write by these apps outside their own entry (or any write at all, for the null-path apps) is a fail condition per the hardware smoke-test plan, not something this static config enumerates further. sudoku's path is derived from source-code analysis, not hardware observation: sudoku.c uses APP_DATA_PATH(\"save.dat\") (storage.h: APP_DATA_PATH(path) => \"/data/\" path), and the storage service resolves the virtual \"/data\" prefix to \"/ext/apps_data/<appid>\" at runtime using the launched thread's own appid (storage_processing.c) - for sudoku that appid is \"sudoku\" per its own application.fam. This has not been confirmed by an actual device/SD-card observation (see docs/PHASE2A_HARDWARE_SMOKE_TEST_CHECKLIST.md discipline) - only by reading the real, current storage-resolution source, which is the same evidentiary bar chess's /ext/apps_data/flipchess/ entry was held to before this one existed.",
+  "toolchain": {
+    "vendorToolchainHost": "update.flipperzero.one",
+    "note": "The real pinned Flipper toolchain is downloaded by fbt from this host on first build. If network policy blocks this host (as it does in the cloud sandbox this project has used - confirmed via repeated 403s against the proxy), Build mode must be marked BLOCKED with that exact reason, never faked as PASS or worked around with an unofficial substitute toolchain in this project's own history/artifacts."
+  }
+}

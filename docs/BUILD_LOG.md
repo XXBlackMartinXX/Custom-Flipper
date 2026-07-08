@@ -904,6 +904,77 @@ and untouched by this phase.**
 
 ---
 
+## Phase 2D.2 update: implementation/import of the cleared 3-app batch — BUILD BLOCKED / UPDATER_PACKAGE CI TOOLING
+
+Imported `resistors` (`621229a`), `crypto_dictionary` (`f9fcc57`), and
+`2048` (`52b1361`) one at a time onto a new branch,
+`integration/phase2d-first-batch`, from
+`RogueMaster/flipperzero-firmware-wPlugins` at the same pinned commit
+`472f6925e8aca9bd031cb37e3cb80b551772c957` Phase 2D.1 verified. Each
+import preserved its own `LICENSE` file verbatim (MIT for `resistors`
+and `2048`, GPLv3 for `crypto_dictionary`), excluded the non-build-input
+material identified in Phase 2D.1 (`resistors`'s
+`.flipcorg/`/`design/`/`img/`/`screenshots/`, `2048`'s `images/`/`img/`),
+and passed a per-app static safety scan with zero real unsafe/capability
+matches.
+
+Added `tools/phase2d_validate_config.json` (13-app superset of the
+Phase 2C config) and
+`.github/workflows/phase2d-windows-validation.yml` (modeled on the Phase
+2C CI workflow).
+
+**Real CI result across 3 attempts, reported honestly rather than
+rounded up**:
+
+- **Attempt 1** (run `28905289140`): full **PASS** — firmware, updater
+  package, and all 13 `.fap` outputs all succeeded (`firmware.dfu`
+  862,825 bytes, updater `.tgz` 2,783,994 bytes). One separate,
+  non-blocking tooling bug found and fixed in the same commit sequence:
+  the workflow's "Upload per-app .fap artifacts" convenience step warned
+  "no files found" because `fbt`'s FAP output directory (`.extapps`) is
+  dot-prefixed and `actions/upload-artifact@v4` excludes dot-prefixed
+  directories by default — fixed by adding `include-hidden-files: true`
+  (commit `e01370d`).
+- **Attempt 2** (run `28906654889`, two executions on two different
+  runner instances, same commit): firmware build and all 13 `.fap`
+  outputs **PASS** both times; the separate `updater_package` build
+  step **BLOCKED** both times ("fbt.cmd could not be launched as a
+  process"), and the updater `.tgz` was consequently never produced.
+  A `rerun_failed_jobs` was used to get a second, independent data point
+  before concluding this was reproducible rather than a one-off runner
+  flake — the second execution reproduced the identical failure at the
+  identical step on a different runner, for the identical commit.
+
+**This is treated as a real, currently-unresolved CI/tooling
+finding, not an app-source defect** — none of the 3 imported apps'
+source changed between the passing and failing attempts; the only change
+was an unrelated workflow-YAML edit to a later artifact-upload step. Full
+per-attempt detail, including the evidentiary limits on further
+root-causing this (Azure Blob artifact-log downloads remain blocked in
+this session, the same established limitation from prior phases), is in
+`docs/PHASE2D_2_BUILD_REPORT.md`.
+
+Also corrects a real documentation error surfaced while building the
+validator config: `docs/PHASE2D_1_SOURCE_LICENSE_VERIFICATION.md` had
+claimed `resistors` showed "zero raw substring matches at all" against
+the safety keyword scan — this was too strong. 6 benign
+`double`-substring false positives exist (the C floating-point type,
+not the Bluetooth LE API), now individually reviewed with exact evidence
+in `tools/phase2d_validate_config.json`. See
+`docs/PHASE2D_2_SAFETY_REVIEW.md` for the full correction.
+
+**Final classification: `PHASE 2D.2 BUILD BLOCKED / UPDATER_PACKAGE CI
+TOOLING`** — not `IMPORT PASS`. See `docs/PHASE2D_2_GO_NO_GO.md` for the
+full reasoning and next recommended gate. No `applications/` (core
+firmware) changes. No hardware touched, no hardware-connected validation
+mode run. Phase 2D.3 was **not** started — the `updater_package` CI
+blocker must be resolved or explicitly accepted as a tracked known issue
+first. Release status remains **TEST-READY ONLY / NOT RELEASE-READY**.
+`fcc_id_lookup` remains deferred, unresolved, and untouched by this
+phase.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
