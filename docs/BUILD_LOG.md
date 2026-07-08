@@ -1393,6 +1393,45 @@ available. `fcc_id_lookup` remains deferred, unresolved, and untouched.
 `image_viewer/example_images/` remains excluded, confirmed absent by
 this gate's own automated check in every run this phase.
 
+## Phase 2F planning update: candidate review package (planning only, no import)
+
+Reviewed the entire remaining clean candidate pool from the original Top
+25 (`docs/PHASE1_5_TOP_25_CANDIDATES.md`) against the accepted 16-app
+Phase 2E baseline: `hex_viewer`, `qrcode`, `barcode_gen` — the only 3
+Top-25 apps not already imported and not hard-deferred
+(`fcc_id_lookup`, `upython`, `iconedit`, `c_book`,
+`animation_switcher`, `theme_manager`, none of which was reopened or
+re-reviewed in this phase).
+
+Wrote `docs/PHASE2F_CANDIDATE_REVIEW.md`, `docs/PHASE2F_RECOMMENDED_BATCH.md`,
+`docs/PHASE2F_RISK_REGISTER.md`, `docs/PHASE2F_LICENSE_REVIEW.md`,
+`docs/PHASE2F_INTEGRATION_PLAN.md`, `docs/PHASE2F_GO_NO_GO.md`
+(**GO WITH CONDITIONS**), and `docs/PHASE2F_NEXT_GATE.md`, all grounded
+in the existing Phase 1.6 individual source audit (re-cited verbatim,
+not re-derived) rather than any fresh source read in this phase. All 3
+candidates recommended as the tiny batch — the entire remaining clean
+pool, not a padded selection.
+
+The single most important finding: Phase 1.6's own citations for
+`hex_viewer` ("2 files touch storage APIs") and `barcode_gen` ("3 files
+touch storage APIs") do not explicitly confirm read-only behavior,
+despite both apps' names implying pure viewing/display. Per the same
+caution that caught `sd_info`'s real storage behavior being undersold at
+planning stage in Phase 2C.1, both are flagged as requiring direct
+Phase 2F.1 source verification before any import decision, not assumed
+clean on citation alone. `qrcode`'s existing record shows no such
+ambiguity. `barcode_gen`'s 4 bundled encoding-table files (Code39/128/
+128C/Codabar) are also flagged for a provenance confirmation, though
+their open-technical-standard nature is a materially lower concern than
+`image_viewer`'s bundled bitmap images were.
+
+**No code imported. No `applications/` or `applications_user/` change.
+No firmware/app source touched. No hardware flashed.**
+`integration/phase2f-first-batch` does not exist as of this update.
+Release status remains **TEST-READY ONLY / NOT RELEASE-READY**. Next
+gate: Phase 2F.1 (pre-import source/license verification), on the
+project owner's own explicit further request only.
+
 ---
 
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
