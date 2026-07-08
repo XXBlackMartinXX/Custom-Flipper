@@ -1055,6 +1055,39 @@ runs. Hardware flashing/testing remains **NOT PERFORMED**. Release
 status remains **TEST-READY ONLY / NOT RELEASE-READY**. `fcc_id_lookup`
 remains deferred, unresolved, and untouched.
 
+## Phase 2D.3 completion: finalize-baseline workflow actually ran — real result
+
+`.github/workflows/phase2d-finalize-baseline.yml` was mirrored to this
+docs branch, dispatched via `workflow_dispatch` against
+`integration/phase2d-first-batch`, and completed in ~37 seconds with
+conclusion **success** (run
+[`28943002724`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/28943002724)),
+verified via the real job log, not inferred from the run's status alone.
+
+Real, computed (never fabricated) results: `firmware.dfu` 862,825 bytes,
+SHA-256 `4f3703a8778543257759f367bc02f50d440ef85d21da05b630f705564084b6a8`;
+`flipper-z-f7-update-local.tgz` 2,783,170 bytes, SHA-256
+`3e015f6c0b303536fab14e4a8b85233b8c439c0f642087cb92f3781bf1b16c49`; 6
+validation report/build log files and all 35 `.fap` artifacts (13
+expected apps plus 22 benign Unleashed-bundled example/plugin FAPs) also
+hashed — full table in `docs/PHASE2D_3_ARTIFACT_HASHES.md`. The workflow
+committed these results to `integration/phase2d-first-batch` (commit
+`f8edb1c`) and created two new tags, neither of which existed before:
+`phase2d-ci-baseline-20260708` → `d0812638a02c50389b9e713ad98f2c8215b75dd5`,
+`phase2d-acceptance-record-20260708` → `f8edb1c9c0cac5cf947df7aa96de2450aaedc14b`.
+All 6 prior Phase 2A/2B/2C tags were verified unchanged afterward.
+
+`docs/PHASE2D_3_GO_NO_GO.md`'s "Finalization workflow result" section was
+then updated in place with this real outcome (previously an honest
+placeholder), and all Phase 2D.3 docs were mirrored from
+`integration/phase2d-first-batch` to this docs branch to keep both
+branches consistent. **Final classification: PHASE 2D.3 BASELINE
+ACCEPTANCE PASS.** No app or firmware source changed. No hardware testing
+performed. Release status remains **TEST-READY ONLY / NOT
+RELEASE-READY**. Next allowed path: a Phase 2D hardware-assisted gate or
+Phase 2E planning only, both pending the project owner's own explicit
+further request.
+
 ---
 
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
