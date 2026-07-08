@@ -180,3 +180,70 @@ acceptance record and finalizes real artifact hashes — see
 
 Neither a hardware gate nor Phase 2E planning is started by this
 document.
+
+---
+
+## Phase 2D.4 update: hardware-assisted validation gate is now active
+
+**This section supersedes the Phase 2D.3 update above for the current
+decision point. Both earlier sections are left unmodified as the
+historical record.**
+
+Phase 2D.4 creates and executes, where possible, a hardware-assisted
+validation gate for the accepted Phase 2D CI baseline —
+`tools/phase2d_hardware_gate.ps1` and
+`tools/phase2d_hardware_gate_config.json`, documented in
+`docs/PHASE2D_HARDWARE_ASSISTED_VALIDATION.md`, with real (not fabricated)
+results recorded in `docs/PHASE2D_HARDWARE_ASSISTED_RESULTS.md` and a
+13-app human-performed checklist in
+`docs/PHASE2D_HARDWARE_SMOKE_TEST_CHECKLIST.md`.
+
+### Current status against this gate (as of Phase 2D.4)
+
+| Step | Status |
+|---|---|
+| Phase 2D planning through Phase 2D.3 | Complete — see prior sections above |
+| Phase 2D.4 (hardware-assisted validation gate) | **HARDWARE VALIDATION BLOCKED - DEVICE NOT AVAILABLE** — see `docs/PHASE2D_HARDWARE_ASSISTED_RESULTS.md` for the real, current result |
+| Real artifact hash verification | NOT RUN — real artifacts confirmed undownloadable in this session's sandbox (Azure Blob Storage `403`, same as every prior phase) |
+| Synthetic mismatch test | Performed, clearly labeled synthetic — proves the hash-comparison logic correctly rejects a wrong file even at the exact expected size |
+| Device detection | Attempted, `BLOCKED` — no Windows machine, no physical device in this session's environment |
+| Hardware flashing | NOT RUN — never attempted, never offered (`-AllowFlashPrompt` never passed) |
+| GUI smoke test (13 apps) | NOT RUN — requires a human on real hardware; checklist ready in `docs/PHASE2D_HARDWARE_SMOKE_TEST_CHECKLIST.md` |
+| Hardware-assisted validation | Unchanged in substance — still no device, no Windows machine available in this AI session's own environment |
+| `fcc_id_lookup` license gap | Unchanged — still open, untouched by any Phase 2D sub-phase |
+| Release status | **TEST-READY ONLY / NOT RELEASE-READY** — unchanged |
+
+### Next allowed paths (from Phase 2D.4 onward)
+
+- **Phase 2D.4 classified BLOCKED because no device/Windows machine is
+  available in this session** — per this phase's own instructions, that
+  means **Phase 2E planning may still start, but only as
+  non-hardware-dependent planning.** Phase 2E import must not start, and
+  no release-ready claim may be made, until real hardware validation
+  actually completes (device detection, real artifact hash verification,
+  and the full 13-app human-observed smoke test) and is explicitly
+  accepted.
+- **If a Windows machine and a physical Flipper Zero later become
+  available**: run `tools/phase2d_hardware_gate.ps1 -Mode Preflight`,
+  then `-Mode HashVerify -ArtifactDir <real downloaded artifacts>`, then
+  `-Mode DetectDevice`, then walk through
+  `docs/PHASE2D_HARDWARE_SMOKE_TEST_CHECKLIST.md` for all 13 apps — only
+  on the project owner's own explicit request, per
+  `docs/PHASE2D_HARDWARE_ASSISTED_RESULTS.md`'s "What would need to happen
+  for a real result."
+- **If Phase 2D.4 is later re-run and FAILS** (a real check failure, not a
+  BLOCKED/no-device result): Phase 2E planning/import must not start until
+  that failure is resolved.
+- **`fcc_id_lookup` remains deferred** until its license-evidence gap is
+  resolved in a separate, narrow phase dedicated to exactly that
+  question — nothing in Phase 2D.4 resolves it as a side effect.
+- **Release-ready remains blocked** regardless of which path is taken,
+  until real hardware validation is actually complete (both the automated
+  checks and a human-observed GUI checklist) and explicitly accepted —
+  nothing in this document, or in Phase 2D.4, on its own, ever constitutes
+  that acceptance.
+
+Only non-hardware-dependent Phase 2E planning is allowed next, and only on
+the project owner's own explicit further request. No Phase 2E import, no
+hardware gate re-run, and no release-ready claim is started by this
+document.

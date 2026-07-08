@@ -1088,6 +1088,45 @@ RELEASE-READY**. Next allowed path: a Phase 2D hardware-assisted gate or
 Phase 2E planning only, both pending the project owner's own explicit
 further request.
 
+## Phase 2D.4 update: hardware-assisted validation gate created and executed
+
+Added `tools/phase2d_hardware_gate.ps1` and
+`tools/phase2d_hardware_gate_config.json`, extending the Phase 2C.4
+hardware-gate pattern to the full 13-app accepted Phase 2D baseline
+(the 10 apps already covered plus `resistors`, `crypto_dictionary`, and
+`2048`), and preserving the Phase 2C.4 collision-resistant report-filename
+fix unchanged. New storage checks were added for the 3 new apps:
+`resistors` (confirmed zero-storage), `crypto_dictionary` (confirmed
+read-only bundled glossary), and `2048` (confirmed app-scoped save path
+`/ext/apps_data/game_2048/`) — all sourced directly from
+`docs/PHASE2D_2_SAFETY_REVIEW.md`'s own findings, not assumed.
+
+Real execution in this session (Linux sandbox, no Windows machine, no
+physical device): `-Mode Preflight`, `-Mode DetectDevice`,
+`-Mode ReportOnly`, and `-Mode HardwareAssisted` (no `-ArtifactDir`, no
+`-AllowFlashPrompt`) all ran via `pwsh`, each correctly and honestly
+classifying `HARDWARE VALIDATION BLOCKED - DEVICE NOT AVAILABLE` — the
+same result every prior phase's own hardware gate produced in this same
+sandbox. A real download URL for the accepted CI run's firmware artifact
+(`28941093859`, artifact `8167725019`) was actually requested via the
+GitHub API and resolved successfully, but fetching it hit the same,
+already-documented Azure Blob Storage egress block (`403`) as every prior
+phase's artifact-download attempt — so real artifact hash verification
+was **not run**. A synthetic mismatch test (two `/dev/urandom` files at
+the exact expected sizes, clearly labeled as synthetic) confirmed the
+hash-comparison logic correctly rejects a same-size, wrong-content file as
+`FAIL` rather than passing on size alone. No flash was attempted or
+offered. No GUI smoke test was performed — `docs/PHASE2D_HARDWARE_SMOKE_TEST_CHECKLIST.md`
+(all 13 apps) remains for a human to complete on real hardware.
+
+**Final classification: HARDWARE VALIDATION BLOCKED - DEVICE NOT
+AVAILABLE.** No app or firmware source changed. No hardware flashed.
+Release status remains **TEST-READY ONLY / NOT RELEASE-READY**. Per
+`docs/PHASE2D_NEXT_GATE.md`'s Phase 2D.4 update, non-hardware-dependent
+Phase 2E planning may now start on the project owner's own explicit
+request; Phase 2E import and release-ready both remain blocked until real
+hardware validation actually completes and is explicitly accepted.
+
 ---
 
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
