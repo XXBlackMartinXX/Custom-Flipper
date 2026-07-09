@@ -761,6 +761,24 @@ if ($Mode -eq 'Build' -or $Mode -eq 'HardwareAssisted') {
                 $ErrorActionPreference = $previousUpdaterErrorActionPreference
                 Pop-Location
             }
+            # Phase 2F.2A: the updater_package log file only exists inside a
+            # workflow artifact that has proven repeatedly undownloadable for
+            # direct inspection this phase. Now that the stderr/exception fix
+            # above lets the real build run to a real exit code instead of
+            # aborting early, print the log's own tail directly to console so
+            # the actual compiler/scons output (not just the exit code) is
+            # visible here - this is required to tell a genuine compile
+            # defect apart from any other non-zero-exit cause, without
+            # guessing.
+            if (Test-Path $updaterLogPath) {
+                $updaterLogTail = Get-Content -Path $updaterLogPath -Tail 150
+                Write-Host '--- Tail of updater_package build log (last 150 lines) ---'
+                $updaterLogTail | ForEach-Object { Write-Host $_ }
+                Write-Host '--- End tail of updater_package build log ---'
+            }
+            else {
+                Write-Host "updater_package build log not found at $updaterLogPath"
+            }
             if ($updaterExit -eq 0) {
                 Add-Result -Name 'Updater package build (.\fbt.cmd COMPACT=1 DEBUG=0 updater_package)' -Status 'PASS' -Detail "Exit code 0. Full log: $updaterLogPath"
             }
