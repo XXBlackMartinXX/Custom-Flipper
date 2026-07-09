@@ -1491,6 +1491,69 @@ Release status remains **TEST-READY ONLY / NOT RELEASE-READY**. Next
 gate: Phase 2F.2 (implementation/import of the exact cleared 3-app
 batch), on the project owner's own explicit further request only.
 
+## Phase 2F.2 update: implementation/import of the cleared 3-app batch — BUILD BLOCKED / REPRODUCIBLE UPDATER_PACKAGE CI TOOLING
+
+Created `integration/phase2f-first-batch` from
+`integration/phase2e-first-batch` (commit `fcdbb29`) and imported
+`qrcode` (`79f50cc`), `hex_viewer` (`04715de`), and `barcode_gen`
+(`2512644`) one at a time from
+`RogueMaster/flipperzero-firmware-wPlugins` at the pinned commit
+`472f6925e8aca9bd031cb37e3cb80b551772c957`, re-fetched fresh into a
+scratch clone and re-verified against the exact SHA before any file was
+copied. `barcode_gen`'s real appid is `barcode_app`, not `barcode_gen` —
+noted precisely, same class of directory-name-vs-appid mismatch already
+seen in Phase 2E. README-only illustration screenshots
+(`qrcode/ss1.png`/`ss2.png`, `hex_viewer/img/1.png`/`2.png`,
+`barcode_gen/img/`/`screenshots/`) were excluded for cleanliness only —
+none referenced by any manifest or source file.
+
+Built `tools/phase2f_validate_config.json` (19-app superset, 464 total
+reviewed-false-positive entries — 91 new, all benign `ble`-substring
+hits inside words like `variable`/`Table`/`scrollable`/`visible`, zero
+real capability matches) and
+`.github/workflows/phase2f-windows-validation.yml` (modeled on Phase
+2E's, inheriting the Phase 2D.2A `updater_package` remediation and the
+Phase 2D.2 `.fap` hidden-path upload fix unchanged). Local build:
+`BUILD BLOCKED / ENVIRONMENT` (toolchain download blocked, `403`, the
+same root cause every prior phase has hit) — not faked as a pass. Local
+Static validation: `PASS_WITH_REVIEWED_FALSE_POSITIVES`.
+
+**Real CI run `28979764650` — 2 attempts, both firmware-build PASS, both
+`updater_package`-build BLOCKED.** Attempt 1 (`workflow_dispatch`): Static
+PASS, firmware build PASS (862,825 bytes), `updater_package` failed to
+launch as a process ("fbt.cmd could not be launched as a process on this
+machine/OS"), and `build\f7-firmware-C\.extapps` was confirmed empty of
+all 19 expected `.fap` files — despite the `.fap`-artifact upload step
+still producing a non-empty, 115,177-byte artifact (contents not
+independently verified; downloading it hit the same, already-documented
+Azure Blob Storage egress block as every prior phase). A rerun via
+`rerun_failed_jobs` (attempt 2, a distinct runner instance, confirmed by
+differing `fbt.cmd` timestamp and volume serial number) reproduced every
+finding **identically**: same firmware.dfu size, byte-identical
+`updater_package` error text, the same 19-app FAP-missing list, and an
+identically-sized (but differently-hashed) 115,177-byte `.fap` artifact.
+
+This is a **reproducible** finding across 2 independent real CI attempts
+(unlike Phase 2D.2A's own `updater_package` launch-failure finding, which
+was established as ~50% intermittent across 4 total attempts) — not yet
+enough data to say definitively whether this is the same class of
+intermittent issue or a new, more consistent regression. No compile
+error or app-specific failure text was found anywhere in either attempt's
+log for `qrcode`, `hex_viewer`, or `barcode_gen`.
+
+**Final classification: PHASE 2F.2 BUILD BLOCKED / REPRODUCIBLE
+UPDATER_PACKAGE CI TOOLING — not a pass.** No app or firmware source was
+touched. No hardware touched, no `HardwareAssisted` mode run. A narrow
+Phase 2F.2A remediation plan is proposed in
+`docs/PHASE2F_2_GO_NO_GO.md` (more CI attempts, direct build-log
+inspection, a diagnostic step to list `build\f7-firmware-C\` contents
+right after the firmware build, and direct inspection of the anomalous
+`.fap`-artifact contents) but **not implemented** — pending the project
+owner's own explicit further request. Hardware flashing/testing remains
+**NOT PERFORMED**. Release status remains **TEST-READY ONLY / NOT
+RELEASE-READY**. `fcc_id_lookup` remains deferred, unresolved, and
+untouched. Phase 2F.3 does not start until Phase 2F.2 actually passes.
+
 ---
 
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)

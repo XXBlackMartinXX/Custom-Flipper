@@ -162,10 +162,9 @@
    update**: `fcc_id_lookup` was again not imported and not re-reviewed
    during Phase 2D.2's actual import of `resistors`/`crypto_dictionary`/
    `2048` (see `docs/PHASE2D_2_GO_NO_GO.md`). Still open, unaffected.
-7. **RESOLVED (was: reproducibly BLOCKED) — the `updater_package`
-   `fbt.cmd` build target's failure was intermittent, not deterministic,
-   and is remediated by a narrow launch-mechanism fix confirmed twice on
-   real CI.** Phase 2D.2's real CI validation
+7. **REOPENED as of Phase 2F.2 (was: RESOLVED as of Phase 2D.3) — the
+   `updater_package` `fbt.cmd` build target's failure has recurred,
+   reproducibly, on the 19-app Phase 2F batch.** Phase 2D.2's real CI validation
    (`.github/workflows/phase2d-windows-validation.yml`) ran 3 times
    total: the first attempt (run `28905289140`) passed cleanly in full,
    including the updater `.tgz` (2,783,994 bytes). The second attempt
@@ -221,6 +220,43 @@
    HEAD, on a 3rd different runner instance) also passed in full —
    `updater_package` PASS, updater `.tgz` 2,783,170 bytes, all 13 `.fap`
    outputs present. This run is the one Phase 2D.3's acceptance record
-   and finalize-baseline workflow are built against. Item remains
-   RESOLVED; the two pre-fix failures remain preserved, never erased, in
+   and finalize-baseline workflow are built against. Item remained
+   RESOLVED through Phase 2D.4, Phase 2E planning/2E.1/2E.2/2E.3/2E.4,
+   and Phase 2F planning/2F.1; the two pre-fix Phase 2D failures remain
+   preserved, never erased, in
    `docs/PHASE2D_2A_UPDATER_PACKAGE_BLOCKER_ANALYSIS.md`.
+   **Phase 2F.2 update — REOPENED**: real CI validation of the 19-app
+   Phase 2F batch (run `28979764650`) ran twice, on two independent
+   GitHub-hosted Windows runner instances (confirmed by differing
+   `fbt.cmd` file timestamps and volume serial numbers). **Both attempts
+   failed identically**: Static PASS, firmware build PASS (862,825
+   bytes both times, unchanged from the accepted Phase 2E baseline
+   size), but `updater_package` failed to launch as a process on both
+   attempts, with byte-identical error text
+   ("fbt.cmd could not be launched as a process on this machine/OS") to
+   the original Phase 2D.2 pre-fix failures. `build\f7-firmware-C\.extapps`
+   was confirmed empty of all 19 expected `.fap` files on both attempts
+   — a detail not previously confirmed one way or the other during the
+   original Phase 2D.2/2D.2A investigation, since that diagnostic
+   logging did not exist early enough in that investigation to check it.
+   The `.fap`-artifact upload step still produced a non-empty,
+   identically-sized (115,177 bytes) but differently-hashed artifact on
+   both attempts — contents not independently verified, since
+   downloading it hit the same Azure Blob Storage egress block as every
+   prior phase's own artifact-download attempts. **0 of 2 real Phase
+   2F.2 CI attempts passed** — a materially worse rate than the ~50%
+   (2 of 4) pre-fix rate observed in Phase 2D.2, though the sample size
+   here (2) is too small to establish a new base rate with confidence.
+   **Not evidence of a defect in `qrcode`, `hex_viewer`, or
+   `barcode_gen`'s own source** — no compile error or app-specific
+   failure text appears anywhere in either attempt's log, and the
+   firmware itself built correctly both times. Full detail in
+   `docs/PHASE2F_2_BUILD_REPORT.md` and `docs/PHASE2F_2_GO_NO_GO.md`. A
+   narrow Phase 2F.2A remediation plan (more CI attempts to establish a
+   real base rate, direct build-log inspection, a diagnostic step
+   listing `build\f7-firmware-C\` contents right after the firmware
+   build, and direct inspection of the anomalous `.fap`-artifact
+   contents) is proposed in `docs/PHASE2F_2_GO_NO_GO.md` but **not
+   implemented** — pending the project owner's own explicit further
+   request. Phase 2F.2 does not pass, and Phase 2F.3 does not start,
+   until this item is resolved again.
