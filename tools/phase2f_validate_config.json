@@ -3887,11 +3887,11 @@
     },
     {
       "file": "applications_user/barcode_gen/views/create_view.c",
-      "line": 348,
+      "line": 341,
       "keyword": "ble",
       "lineSha256": "4015651920f2ad319eac8c64e7adad90f6941ed2fdbad3402a8a4d94e8171c11",
       "matchedWord": "Unable",
-      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"Unable\" - not the Bluetooth LE API."
+      "reason": "Substring \"ble\" occurs inside the benign identifier/word \"Unable\" - not the Bluetooth LE API. Line number updated from 348 to 341 in Phase 2F.2A: the Phase 2F.2A barcode_gen source fix (commit b6445ed) removed 7 unrelated lines above this one (dead calls to an unwired custom-keyboard function), shifting this unchanged line down - content and hash are identical to the original Phase 2F.2 review, confirmed by direct re-hash."
     },
     {
       "file": "applications_user/barcode_gen/keyboard/text_input.c",

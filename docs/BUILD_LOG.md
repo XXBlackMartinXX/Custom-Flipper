@@ -1541,18 +1541,84 @@ intermittent issue or a new, more consistent regression. No compile
 error or app-specific failure text was found anywhere in either attempt's
 log for `qrcode`, `hex_viewer`, or `barcode_gen`.
 
-**Final classification: PHASE 2F.2 BUILD BLOCKED / REPRODUCIBLE
-UPDATER_PACKAGE CI TOOLING — not a pass.** No app or firmware source was
-touched. No hardware touched, no `HardwareAssisted` mode run. A narrow
-Phase 2F.2A remediation plan is proposed in
-`docs/PHASE2F_2_GO_NO_GO.md` (more CI attempts, direct build-log
-inspection, a diagnostic step to list `build\f7-firmware-C\` contents
-right after the firmware build, and direct inspection of the anomalous
-`.fap`-artifact contents) but **not implemented** — pending the project
-owner's own explicit further request. Hardware flashing/testing remains
-**NOT PERFORMED**. Release status remains **TEST-READY ONLY / NOT
+**Final classification (at the time): PHASE 2F.2 BUILD BLOCKED /
+REPRODUCIBLE UPDATER_PACKAGE CI TOOLING — not a pass.** No app or
+firmware source was touched. No hardware touched, no `HardwareAssisted`
+mode run. Hardware flashing/testing remained **NOT PERFORMED**. Release
+status remained **TEST-READY ONLY / NOT RELEASE-READY**. `fcc_id_lookup`
+remained deferred, unresolved, and untouched. **This blockage was fully
+resolved in Phase 2F.2A — see the entry immediately below.**
+
+---
+
+## Phase 2F.2A update: root-cause investigation and resolution of the `updater_package`/`.fap` blockage — RESOLVED
+
+Full narrative in `docs/PHASE2F_2A_CI_BLOCKER_ANALYSIS.md`; exact
+commit/run sequence in `docs/PHASE2F_2A_DIAGNOSTIC_LOG.md` (both on
+`integration/phase2f-first-batch`).
+
+**Two real, distinct defects were found and fixed, in this order:**
+
+1. Added console-visible diagnostics to `tools/phase2a_validate.ps1`
+   (commit `224a9b0`) — this initial diagnostic run (`29003000398`)
+   crashed on a self-inflicted `PropertyNotFoundException` in the new
+   FAP-search code before reaching `updater_package`: `$x = if
+   (Test-Path $p) { @(Get-ChildItem ...) } else { @() }` collapses to
+   `$null` (not an empty array) when the `Get-ChildItem` branch produces
+   zero output — reproduced locally, fixed by wrapping the whole
+   `if/else` in an outer `@(...)` (commit `0260ca6`).
+2. With that fixed, run `29003824450` finally revealed the real exception
+   behind every prior "fbt.cmd could not be launched" report across this
+   project's history: a `System.Management.Automation.RemoteException`
+   wrapping the first line of a routine GCC compiler diagnostic
+   (`applications_user\barcode_gen\views\create_view.c: In function
+   'text_input_callback':`) — Windows PowerShell had been escalating a
+   native command's ordinary stderr output into a terminating exception
+   under `$ErrorActionPreference = 'Stop'`, hiding every subsequent line
+   of real build output, including the actual error, behind a misleading
+   process-launch-failure classification. Fixed by scoping
+   `$ErrorActionPreference = 'Continue'` around just the `updater_package`
+   invocation, relying on `$LASTEXITCODE` as the authoritative signal
+   (commit `8e5f78f`, confirmed by run `29004603660`: real exit code 2
+   surfaced instead of a launch exception).
+3. Added one more diagnostic (commit `d1a2de7`) to print the build log's
+   tail to console, revealing the real compiler error (run `29005529368`):
+   `create_view.c:165:5: error: implicit declaration of function
+   'text_input_show_illegal_symbols' [-Werror=implicit-function-declaration]`.
+   Direct source inspection confirmed this function belongs only to
+   `barcode_gen`'s own bundled, never-wired-in custom keyboard fork
+   (`keyboard/text_input.c`/`.h`) — the app's real `text_input` widget is
+   a **system** `TextInput` instance (`text_input_alloc()`,
+   `barcode_app.c:349`), whose module has no such function and a
+   different internal model layout. This evidence was presented to the
+   project owner via `AskUserQuestion`; **the owner explicitly approved a
+   narrow source fix.** Applied: removed the 5 dead call sites (2 were
+   accidental upstream duplicate calls) in
+   `applications_user/barcode_gen/views/create_view.c` (commit `b6445ed`).
+4. That fix shifted a previously-reviewed benign false-positive's line
+   number (348 → 341) in the same file, correctly triggering the
+   validator's own designed self-healing "unreviewed" behavior; updated
+   `tools/phase2f_validate_config.json`'s line number to match (content
+   hash unchanged, confirmed by direct re-hash) — commit `78914b3`.
+
+**Confirmed by 2 independent real Windows CI runs, both fully passing:**
+run `29015213503` (`Static: PASS_WITH_REVIEWED_FALSE_POSITIVES`, `Build:
+PASS`, firmware.dfu 862,825 bytes, updater `.tgz` 2,877,979 bytes, all 19
+`.fap` outputs found including `qrcode.fap`/`hex_viewer.fap`/
+`barcode_app.fap`) and run `29015788839` (independent dispatch, distinct
+runner instance, identical classification, firmware.dfu 862,825 bytes,
+updater `.tgz` 2,878,003 bytes, all 19 FAPs found).
+
+**Final classification: PHASE 2F.2 IMPORT PASS WITH CI TOOLING + APP
+SOURCE REMEDIATION.** Code changed: `tools/phase2a_validate.ps1` (shared
+validator script, CI/tooling fix), `tools/phase2f_validate_config.json`
+(1 line-number update, content unchanged), and exactly one app-source
+file, `applications_user/barcode_gen/views/create_view.c` (7 lines
+removed, user-approved). No other app touched. No hardware touched, no
+`HardwareAssisted` mode run. Hardware flashing/testing remains **NOT
+PERFORMED**. Release status remains **TEST-READY ONLY / NOT
 RELEASE-READY**. `fcc_id_lookup` remains deferred, unresolved, and
-untouched. Phase 2F.3 does not start until Phase 2F.2 actually passes.
+untouched. **Phase 2F.3 is now allowed.**
 
 ---
 

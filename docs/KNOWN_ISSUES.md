@@ -162,9 +162,12 @@
    update**: `fcc_id_lookup` was again not imported and not re-reviewed
    during Phase 2D.2's actual import of `resistors`/`crypto_dictionary`/
    `2048` (see `docs/PHASE2D_2_GO_NO_GO.md`). Still open, unaffected.
-7. **REOPENED as of Phase 2F.2 (was: RESOLVED as of Phase 2D.3) — the
-   `updater_package` `fbt.cmd` build target's failure has recurred,
-   reproducibly, on the 19-app Phase 2F batch.** Phase 2D.2's real CI validation
+7. **RESOLVED again as of Phase 2F.2A (history: RESOLVED as of Phase
+   2D.3, REOPENED as of Phase 2F.2, RESOLVED as of Phase 2F.2A) — the
+   `updater_package` `fbt.cmd` build target's failure recurred,
+   reproducibly, on the 19-app Phase 2F batch, and was root-caused to two
+   real defects (see the Phase 2F.2A update at the end of this item).**
+   Phase 2D.2's real CI validation
    (`.github/workflows/phase2d-windows-validation.yml`) ran 3 times
    total: the first attempt (run `28905289140`) passed cleanly in full,
    including the updater `.tgz` (2,783,994 bytes). The second attempt
@@ -247,16 +250,49 @@
    2F.2 CI attempts passed** — a materially worse rate than the ~50%
    (2 of 4) pre-fix rate observed in Phase 2D.2, though the sample size
    here (2) is too small to establish a new base rate with confidence.
-   **Not evidence of a defect in `qrcode`, `hex_viewer`, or
-   `barcode_gen`'s own source** — no compile error or app-specific
-   failure text appears anywhere in either attempt's log, and the
-   firmware itself built correctly both times. Full detail in
-   `docs/PHASE2F_2_BUILD_REPORT.md` and `docs/PHASE2F_2_GO_NO_GO.md`. A
-   narrow Phase 2F.2A remediation plan (more CI attempts to establish a
-   real base rate, direct build-log inspection, a diagnostic step
-   listing `build\f7-firmware-C\` contents right after the firmware
-   build, and direct inspection of the anomalous `.fap`-artifact
-   contents) is proposed in `docs/PHASE2F_2_GO_NO_GO.md` but **not
-   implemented** — pending the project owner's own explicit further
-   request. Phase 2F.2 does not pass, and Phase 2F.3 does not start,
-   until this item is resolved again.
+   At the time, this was **not evidence of a defect in `qrcode`,
+   `hex_viewer`, or `barcode_gen`'s own source** by direct log inspection
+   — no compile error or app-specific failure text had appeared anywhere
+   in either attempt's log, since neither attempt's log file was ever
+   downloadable. **RESOLVED again as of Phase 2F.2A.** Full narrative in
+   `docs/PHASE2F_2A_CI_BLOCKER_ANALYSIS.md`; exact commit/run sequence in
+   `docs/PHASE2F_2A_DIAGNOSTIC_LOG.md`. Root-caused to **two real,
+   distinct, compounding defects**, both now fixed:
+   1. A genuine CI/tooling defect in `tools/phase2a_validate.ps1`:
+      Windows PowerShell was escalating a native command's routine
+      stderr output (an ordinary GCC compiler diagnostic line) into a
+      terminating exception under `$ErrorActionPreference = 'Stop'`,
+      hiding every subsequent line of real build output — including the
+      actual compile error — behind the generic "fbt.cmd could not be
+      launched as a process on this machine/OS" text. The real exception
+      type, seen directly in a console log for the first time in this
+      project's history of this failure class (run `29003824450`), was
+      `System.Management.Automation.RemoteException` wrapping compiler
+      stderr text, never a genuine process-launch-failure type. Fixed by
+      scoping `$ErrorActionPreference = 'Continue'` around just the
+      `updater_package` invocation, relying on `$LASTEXITCODE` as the
+      authoritative signal (commit `8e5f78f`).
+   2. A genuine app-source defect in `barcode_gen`: `views/create_view.c`
+      called `text_input_show_illegal_symbols()`, a function belonging
+      only to this app's own bundled, never-wired-in custom keyboard fork
+      (`keyboard/text_input.c`/`.h`) — the app's real `text_input` widget
+      is a **system** `TextInput` instance with no such function and a
+      different internal model layout, confirmed by direct source
+      inspection. Presented to the project owner via `AskUserQuestion`;
+      **explicitly approved** before any source was touched. Fixed by
+      removing the 5 dead call sites (2 were accidental upstream
+      duplicate calls) in
+      `applications_user/barcode_gen/views/create_view.c` (commit
+      `b6445ed`).
+
+   **Confirmed by 2 independent real Windows CI runs, both fully
+   passing**: run `29015213503` (`Static:
+   PASS_WITH_REVIEWED_FALSE_POSITIVES`, `Build: PASS`, firmware.dfu
+   862,825 bytes, updater `.tgz` 2,877,979 bytes, all 19 `.fap` outputs
+   found including `qrcode.fap`/`hex_viewer.fap`/`barcode_app.fap`) and
+   run `29015788839` (independent dispatch, distinct runner instance,
+   identical classification, updater `.tgz` 2,878,003 bytes, all 19 FAPs
+   found). Full detail in the updated `docs/PHASE2F_2_BUILD_REPORT.md`
+   and `docs/PHASE2F_2_GO_NO_GO.md` (original 2 failed attempts preserved
+   unmodified in both). **Phase 2F.2 now passes; Phase 2F.3 is now
+   allowed.**
