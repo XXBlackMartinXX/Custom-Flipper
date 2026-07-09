@@ -1658,6 +1658,49 @@ source touched by this update — docs and one new workflow file only.
 
 ---
 
+## Phase 2F.3 completion: finalize-baseline workflow actually ran — real result
+
+Dispatched `Phase 2F Finalize Baseline` via the GitHub API
+(`workflow_dispatch` on `integration/phase2f-first-batch`) — run
+`29027115867`. Completed in ~59 seconds with conclusion **success**; all
+13 steps succeeded, verified via `get_workflow_run`/`list_workflow_jobs`,
+not claimed on trust.
+
+Real computed hashes (PowerShell `Get-FileHash -Algorithm SHA256` on a
+GitHub-hosted `windows-latest` runner, from the actual downloaded
+artifacts of run `29017861599`): `firmware.dfu` — 862,825 bytes, SHA-256
+`27f60598d43657710207510520159ba6626722a2825ed8adf5768d002a3a005b`;
+`flipper-z-f7-update-local.tgz` — 2,878,428 bytes, SHA-256
+`341fa331625c488ff8c6bf079ed0c82b553ef1a11441687a81139464f3f91772`. 41
+`.fap` files hashed (19 expected Phase 2A-2F apps plus 22
+Unleashed-bundled example/plugin FAPs, the same benign-extras pattern
+Phase 2E's own finalization observed). Full table in
+`docs/PHASE2F_3_ARTIFACT_HASHES.md`.
+
+The workflow committed its own docs patch (`51df041` — "docs: finalize
+Phase 2F artifact hashes from CI artifacts") and pushed it directly to
+`integration/phase2f-first-batch`, then created both immutable tags:
+`phase2f-ci-baseline-20260709` → `37d11cada5a83afdeb752c6b2106216d7fc09b9f`
+and `phase2f-acceptance-record-20260709` → `51df041ed0dc9f49df23305b5f1966cd3294239d`
+(the workflow's own docs commit). Both tags did not exist before this run
+(no silent-overwrite path was exercised). Independently re-verified in
+this session via `git ls-remote --tags origin` — real dereferences match
+the workflow's own log output exactly. All 10 prior Phase
+2A/2B/2C/2D/2E tags confirmed unchanged at their original targets by the
+same direct check.
+
+`docs/PHASE2F_3_GO_NO_GO.md` updated with these real results — **PHASE
+2F.3 BASELINE ACCEPTANCE PASS**, no longer pending. Per
+`docs/PHASE2F_NEXT_GATE.md`: the next allowed path is a Phase 2F
+hardware-assisted gate (if/when a device and Windows machine become
+available) or Phase 2G planning only — both require the project owner's
+own further explicit request. `fcc_id_lookup` remains deferred,
+unresolved, untouched. No app or firmware source changed during Phase
+2F.3. No hardware testing performed. Release status remains **TEST-READY
+ONLY / NOT RELEASE-READY**.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
