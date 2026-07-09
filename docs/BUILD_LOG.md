@@ -1701,6 +1701,53 @@ ONLY / NOT RELEASE-READY**.
 
 ---
 
+## Phase 2F.4 update: hardware-assisted validation gate created and executed
+
+Built `tools/phase2f_hardware_gate.ps1` and
+`tools/phase2f_hardware_gate_config.json`, extending the established
+Phase 2A-2E hardware-gate pattern to all 19 apps in the accepted Phase 2F
+baseline (`37d11cada5a83afdeb752c6b2106216d7fc09b9f`, CI run
+`29017861599`, finalization run `29027115867`). Two Preflight-level
+automated checks: the `image_viewer/example_images/` absence check
+carried forward unchanged, plus a new check confirming
+`applications_user/barcode_gen/views/create_view.c` still does not
+contain a call to `text_input_show_illegal_symbols` — the Phase 2F.2A
+source fix (commit `b6445ed`).
+
+Real executions performed in this AI session's own Linux sandbox via
+`pwsh`: `-Mode Preflight`, `-Mode ReportOnly`, `-Mode DetectDevice`,
+`-Mode HashVerify` against a synthetic mismatch (two random-data files
+generated via `/dev/urandom` at the exact expected artifact sizes,
+862,825 and 2,878,428 bytes, outside the repo, deleted after — correctly
+produced `FAIL` for both, proving the hash-comparison logic works
+without claiming real artifact verification), and `-Mode HardwareAssisted`
+(no `-ArtifactDir`, no device, no `-AllowFlashPrompt`). `Get-PnpDevice`
+confirmed unavailable on Linux via the actual PowerShell error text, not
+assumed; no qFlipper install found. Real Phase 2F CI artifacts could not
+be downloaded in this sandbox (same Azure Blob Storage `403` egress
+limitation as every prior phase). Report-filename collision-resistance
+re-confirmed: 5 simultaneous `-Mode Preflight` invocations produced 10
+distinct report files with zero overwrites. Full detail in
+`docs/PHASE2F_HARDWARE_ASSISTED_VALIDATION.md` and
+`docs/PHASE2F_HARDWARE_ASSISTED_RESULTS.md`; the 19-app checklist
+(sections 1-16 reproduced from Phase 2E's, sections 17-19 new for
+`qrcode`/`hex_viewer`/`barcode_gen`) is in
+`docs/PHASE2F_HARDWARE_SMOKE_TEST_CHECKLIST.md`, not yet executed on real
+hardware.
+
+**Final classification: `HARDWARE VALIDATION BLOCKED - DEVICE NOT
+AVAILABLE`** — no Windows machine, no physical Flipper Zero, no qFlipper
+in this environment. No flash was offered or performed (`-AllowFlashPrompt`
+never passed). No GUI smoke test performed. No app or firmware source
+changed. `docs/PHASE2F_NEXT_GATE.md` updated: per this classification,
+Phase 2G planning may start as non-hardware-dependent-only (not import);
+a real hardware gate remains available whenever a device becomes
+available. `fcc_id_lookup` remains deferred, unresolved, untouched.
+`image_viewer/example_images/` remains excluded, confirmed absent.
+Release status remains **TEST-READY ONLY / NOT RELEASE-READY**.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is

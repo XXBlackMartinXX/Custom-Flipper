@@ -203,3 +203,72 @@ and `docs/PHASE2F_3_GO_NO_GO.md`.
 
 Neither a hardware gate nor Phase 2G planning is started by this
 document.
+
+---
+
+## Phase 2F.4 update: hardware-assisted validation gate
+
+**This section supersedes the Phase 2F.3 update above for the current
+decision point. The original content and the Phase 2F.3 update are left
+unmodified as the historical record; do not read this as retroactively
+editing either.**
+
+Phase 2F.4 built and executed `tools/phase2f_hardware_gate.ps1` (modeled
+on `tools/phase2e_hardware_gate.ps1`, extended to all 19 apps in the
+accepted Phase 2F baseline, with 2 new Preflight-level checks: the
+`image_viewer/example_images/` absence check carried forward unchanged,
+and a new `barcode_gen` source-fix preservation check). See
+`docs/PHASE2F_HARDWARE_ASSISTED_VALIDATION.md`,
+`docs/PHASE2F_HARDWARE_ASSISTED_RESULTS.md`, and
+`docs/PHASE2F_HARDWARE_SMOKE_TEST_CHECKLIST.md` for the full detail.
+
+### Current status against this gate (as of Phase 2F.4)
+
+| Step | Status |
+|---|---|
+| Phase 2F planning through Phase 2F.3 | Complete — see prior sections above |
+| Phase 2F.4 hardware gate tooling | Complete — `tools/phase2f_hardware_gate.ps1`, `tools/phase2f_hardware_gate_config.json` |
+| Phase 2F.4 hardware gate execution | Real runs performed in this AI session's own Linux sandbox — see `docs/PHASE2F_HARDWARE_ASSISTED_RESULTS.md` |
+| Final classification | **`HARDWARE VALIDATION BLOCKED - DEVICE NOT AVAILABLE`** — no Windows machine, no physical Flipper Zero, no qFlipper in this environment |
+| Real artifact hash verification | **NOT RUN** — real CI artifacts could not be downloaded (same Azure Blob Storage `403` egress limitation as every prior phase); a synthetic mismatch test (random data at the exact expected sizes) proved the comparison logic correctly produces `FAIL`, clearly labeled as synthetic |
+| GUI smoke test | **NOT PERFORMED** — no human observed a real device screen; all 19 apps enumerated as `REQUIRES_HUMAN_OBSERVATION`, pointing to `docs/PHASE2F_HARDWARE_SMOKE_TEST_CHECKLIST.md` |
+| Flashing | **NOT PERFORMED, NOT OFFERED** — `-AllowFlashPrompt` was never passed |
+| `fcc_id_lookup` license gap | Unchanged — still open, untouched by Phase 2F.4 |
+| `image_viewer/example_images/` | Unchanged — still excluded, confirmed absent by every run |
+| `barcode_gen` source fix (commit `b6445ed`) | Confirmed preserved by every run — new dedicated Preflight check |
+| Release status | **TEST-READY ONLY / NOT RELEASE-READY** — unchanged |
+
+### Next allowed paths (from Phase 2F.4 onward)
+
+- **Since this run classified `HARDWARE VALIDATION BLOCKED - DEVICE NOT
+  AVAILABLE`** (no device, not a failure): per this phase's own governing
+  instructions, **Phase 2G planning may still start, but only as
+  non-hardware-dependent planning** — the same class of work Phase 2F
+  planning itself was (candidate review, risk register, license review,
+  integration plan) — not import, and only if there remains a safe
+  candidate pool. A Phase 2G planning pass would need to start from a
+  fresh triage or resolve one of the hard-deferred apps' specific
+  concerns first, since the Phase 2F candidate pool was the entire
+  remaining clean pool from the original Top 25.
+- **A real hardware-assisted validation run** remains available any time a
+  Windows machine and a physical Flipper Zero become available — re-run
+  `tools/phase2f_hardware_gate.ps1 -Mode HardwareAssisted` (and, before
+  that, `-Mode HashVerify` against real downloaded artifacts) and complete
+  `docs/PHASE2F_HARDWARE_SMOKE_TEST_CHECKLIST.md` on the real device.
+  Nothing in Phase 2F.4 blocks this from happening later.
+- **Release-ready remains blocked** regardless of which path is taken,
+  until real hardware validation is actually complete (both the automated
+  checks and a human-observed GUI checklist) and explicitly accepted —
+  nothing in this document, or in Phase 2F.4, on its own, ever
+  constitutes that acceptance.
+- **`fcc_id_lookup` remains deferred** until its license-evidence gap is
+  resolved in a separate, narrow phase dedicated to exactly that
+  question — nothing in Phase 2F.4 resolves it as a side effect.
+- **`image_viewer/example_images/` remains excluded** — nothing in Phase
+  2F.4 changes that.
+
+Phase 2G planning (non-hardware-dependent only, per the classification
+above) is the only path this document leaves open next, and it is not
+started by this document — it requires the project owner's own separate,
+explicit request, exactly as every prior phase transition in this project
+has required.
