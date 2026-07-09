@@ -88,7 +88,29 @@
    `image_viewer/example_images/` absence check passed in every run this
    phase; the excluded directory was not reintroduced. Still open for the
    same underlying device/Windows-machine reason; nothing else new
-   introduced by this update.
+   introduced by this update. **Phase 2F.4 update**:
+   `tools/phase2f_hardware_gate.ps1` extends the same gate to the full
+   19-app Phase 2F baseline (adding `qrcode`, `hex_viewer`, and
+   `barcode_gen`-specific storage checks, plus a new automated check
+   confirming `applications_user/barcode_gen/views/create_view.c` still
+   does not contain a call to `text_input_show_illegal_symbols` — the
+   Phase 2F.2A source fix); also only exercised in this same cloud
+   sandbox, same result (`HARDWARE VALIDATION BLOCKED - DEVICE NOT
+   AVAILABLE`) for the same reason — see
+   `docs/PHASE2F_HARDWARE_ASSISTED_RESULTS.md`. The real Phase 2F CI
+   artifacts (run `29017861599`) again could not be downloaded due to the
+   same Azure Blob Storage egress block tracked in item 5 below; a
+   synthetic hash-mismatch test was run instead, clearly labeled as not
+   real artifact verification. The collision-resistant report-filename
+   fix (Phase 2C.4) was re-confirmed via a 5-way simultaneous invocation
+   stress test producing 10 distinct report files with zero overwrites —
+   no collision regression introduced. The
+   `image_viewer/example_images/` absence check and the new `barcode_gen`
+   source-fix preservation check both passed in every run this phase.
+   **Phase 2G planning update**: no hardware action of any kind was
+   taken in Phase 2G planning (candidate-review/no-import-batch
+   determination only) — still open for the same underlying
+   device/Windows-machine reason; nothing new introduced by this update.
 5. **RESOLVED — cloud sandbox cannot download GitHub Actions artifacts or push git
    tags.** Two separate, confirmed network/policy restrictions were hit during
    Phase 2A.10: (a) GitHub Actions artifact downloads always redirect to Azure Blob
@@ -162,6 +184,16 @@
    update**: `fcc_id_lookup` was again not imported and not re-reviewed
    during Phase 2D.2's actual import of `resistors`/`crypto_dictionary`/
    `2048` (see `docs/PHASE2D_2_GO_NO_GO.md`). Still open, unaffected.
+   **Phase 2G planning update**: `fcc_id_lookup` was again explicitly
+   excluded from re-review, per the project owner's own instruction not
+   to reopen it outside a dedicated narrow license-resolution phase (see
+   `docs/PHASE2G_CANDIDATE_REVIEW.md`,
+   `docs/PHASE2G_LICENSE_REVIEW.md`). Phase 2G's own conclusion (NO-GO /
+   clean candidate pool exhausted, see `docs/PHASE2G_GO_NO_GO.md`)
+   recommends a narrow `fcc_id_lookup` license-resolution phase as one of
+   several possible next steps — not started by that document. Still
+   open, unaffected, until its own dedicated license-confirmation
+   follow-up happens.
 7. **RESOLVED again as of Phase 2F.2A (history: RESOLVED as of Phase
    2D.3, REOPENED as of Phase 2F.2, RESOLVED as of Phase 2F.2A) — the
    `updater_package` `fbt.cmd` build target's failure recurred,

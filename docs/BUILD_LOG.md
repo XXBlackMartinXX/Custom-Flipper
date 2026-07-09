@@ -1748,6 +1748,49 @@ Release status remains **TEST-READY ONLY / NOT RELEASE-READY**.
 
 ---
 
+## Phase 2G planning update: NO-GO / clean candidate pool exhausted
+
+Determined whether any safe, clean, non-deferred candidate remains after
+Phase 2A through Phase 2F, drawing exclusively on existing planning/
+audit documentation (`docs/PHASE1_5_HIGH_VALUE_SHORTLIST.md`,
+`docs/PHASE1_5_TOP_25_CANDIDATES.md`, `docs/PHASE1_6_TOP25_SOURCE_AUDIT.md`,
+`docs/PHASE1_6_REJECTED_OR_DEFERRED_TOP25.md`, every phase's own
+`CANDIDATE_REVIEW.md`) — no new upstream source was fetched or read.
+
+The audited Top-25 candidate pool (the only pool this project has ever
+applied real per-app source verification to before recommending an
+import) is fully accounted for: 19 apps imported across Phase 2A-2F, 6
+apps hard-deferred for specific, documented, unresolved reasons
+(`fcc_id_lookup`: license-evidence gap; `upython`: undisclosed GPIO/IR
+capability; `iconedit`: HID keystroke-injection capability; `c_book`:
+unresolved copyright status of bundled K&R text; `animation_switcher`/
+`theme_manager`: shared `/ext/dolphin/` writes). No app in that pool
+remains available. The broader ~170-app remainder of the original
+195-app pool has never received individual source-level verification —
+recommending from it without a dedicated, fresh source-audit pass would
+repeat exactly the class of mistake this project has already made and
+corrected 4 separate times (`upython`, `iconedit`, `sd_info`,
+`hex_viewer`/`barcode_gen`), and performing that audit is out of this
+narrow planning phase's own scope.
+
+**Final classification: PHASE 2G NO-GO / CLEAN CANDIDATE POOL
+EXHAUSTED.** No import batch recommended, no `integration/
+phase2g-first-batch` branch proposed. Full detail in
+`docs/PHASE2G_CANDIDATE_REVIEW.md`, `docs/PHASE2G_RECOMMENDED_BATCH.md`,
+`docs/PHASE2G_RISK_REGISTER.md`, `docs/PHASE2G_LICENSE_REVIEW.md`,
+`docs/PHASE2G_INTEGRATION_PLAN.md`, `docs/PHASE2G_GO_NO_GO.md`, and
+`docs/PHASE2G_NEXT_GATE.md`. Recommended next actions instead: Phase 2F
+hardware-assisted validation on real hardware (highest value, unrelated
+to this outcome), a narrow `fcc_id_lookup` license-resolution phase, or
+maintenance/documentation/tooling-hardening work. `fcc_id_lookup`
+remains deferred, unresolved, untouched (not reopened, per explicit
+instruction). `image_viewer/example_images/` remains excluded,
+confirmed absent. No app or firmware source changed. No build attempted.
+No hardware testing performed. Release status remains **TEST-READY ONLY
+/ NOT RELEASE-READY**.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
