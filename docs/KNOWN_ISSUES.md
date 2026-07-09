@@ -147,8 +147,11 @@
    present (`firmware.dfu` 862,825 bytes; updater `.tgz` 2,732,909 bytes). Full
    detail in `PHASE2A_BUILD_REPORT.md`. Hardware flashing/testing: **NOT
    PERFORMED** — release status remains **TEST-READY ONLY / NOT RELEASE-READY**.
-6. **OPEN — `fcc_id_lookup` (Phase 2C candidate, not imported) has no `LICENSE`
-   file in the exact RogueMaster-vendored source this project cites.** Phase
+6. **RESOLVED as of the narrow `fcc_id_lookup` license-resolution phase
+   (history: OPEN since Phase 2C.1) — `fcc_id_lookup` (not imported) has
+   no `LICENSE` file in the exact RogueMaster-vendored source this
+   project cites, but the corroborating upstream MIT evidence is now
+   tied to the exact vendored revision.** Phase
    2C.1's real source read of `applications/external/fcc_id_lookup/` at commit
    `472f6925e8aca9bd031cb37e3cb80b551772c957` found no `LICENSE` file, no SPDX
    identifier, and no copyright header anywhere in its source. Strong
@@ -193,7 +196,31 @@
    recommends a narrow `fcc_id_lookup` license-resolution phase as one of
    several possible next steps — not started by that document. Still
    open, unaffected, until its own dedicated license-confirmation
-   follow-up happens.
+   follow-up happens. **Narrow license-resolution phase update —
+   RESOLVED**: a dedicated follow-up phase closed the specific
+   "not commit-pinned" gap identified in Phase 2C.1. Live fetches of the
+   upstream repository (`github.com/lrehmann/fcc-id-lookup-flipper`)
+   confirmed the real MIT `LICENSE` (Copyright (c) 2026 lsr) was added in
+   upstream commit `8c49c773eb9b0a399f9e6ede9153372d21056d08`. Three
+   concrete implementation features found by direct re-read of the
+   vendored `fcc_id_lookup.c` (a `FCC_DB_READ_CACHE_SIZE` read-cache, an
+   explicit corrupt-record bounds-check pattern, and the
+   zero-size-output-guarded `fcc_grantee_prefix()` signature) each map to
+   upstream commits chronologically newer than the LICENSE-adding commit
+   in the same linear history — establishing that the vendored copy was
+   necessarily pulled from an upstream revision that already included the
+   `LICENSE` file. This is real, source-content-based evidence, not a
+   repo-level licensing assumption and not date-matching alone. Full
+   detail in `docs/FCC_ID_LOOKUP_LICENSE_RESOLUTION.md`. The app-local
+   evidence itself is unchanged (still no in-repo `LICENSE`/SPDX/
+   copyright header) — resolution is conditioned on including the
+   confirmed upstream `LICENSE` file at actual import time, per
+   `docs/FCC_ID_LOOKUP_IMPORT_ELIGIBILITY.md`. **This app has still not
+   been imported** — this phase was licensing/provenance resolution
+   only, not an import phase. A dedicated pre-import verification pass
+   (safety scan, CI build, storage/safety review) remains required before
+   any future import, and remains gated behind the project owner's own
+   separate, explicit request.
 7. **RESOLVED again as of Phase 2F.2A (history: RESOLVED as of Phase
    2D.3, REOPENED as of Phase 2F.2, RESOLVED as of Phase 2F.2A) — the
    `updater_package` `fbt.cmd` build target's failure recurred,

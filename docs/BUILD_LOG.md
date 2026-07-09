@@ -1791,6 +1791,55 @@ No hardware testing performed. Release status remains **TEST-READY ONLY
 
 ---
 
+## `fcc_id_lookup` narrow license-resolution phase: LICENSE GAP RESOLVED
+
+A dedicated, narrow follow-up (not an import phase) closed the specific
+license-evidence gap tracked since Phase 2C.1
+(`docs/KNOWN_ISSUES.md` item 6): whether the strong corroborating
+upstream MIT evidence (`github.com/lrehmann/fcc-id-lookup-flipper`,
+Copyright (c) 2026 lsr) could be tied to the exact vendored revision
+(`RogueMaster/flipperzero-firmware-wPlugins` commit
+`472f6925e8aca9bd031cb37e3cb80b551772c957`).
+
+Re-read all 5 files in `applications/external/fcc_id_lookup/` from a
+verified local clone pinned to that exact commit; confirmed (again, no
+change) no app-local `LICENSE`, SPDX identifier, or copyright header
+anywhere in the vendored source. Live-fetched the upstream repository
+and found a real MIT `LICENSE` at current `HEAD`, added in commit
+`8c49c773eb9b0a399f9e6ede9153372d21056d08` ("Prepare source metadata for
+catalog"). Cross-referenced three concrete implementation features
+present in the vendored `fcc_id_lookup.c` — a `FCC_DB_READ_CACHE_SIZE`
+read-cache, explicit corrupt-record bounds-check comments, and the
+zero-size-output-guarded `fcc_grantee_prefix()` signature — against the
+upstream commit-message history, and found each maps to a specific
+upstream commit chronologically newer than the LICENSE-adding commit in
+the same linear history. This establishes, via real source-content
+evidence rather than a repo-level assumption or date-matching alone,
+that the vendored copy was necessarily pulled from an upstream revision
+that already included the `LICENSE` file.
+
+Re-confirmed the app's safety/scope characterization by direct source
+read: read-only (one `storage_file_open` call, `FSAM_READ`), no network/
+HTTP/Wi-Fi API, no credential/token/API-key handling, no unsafe
+hardware/radio API. The ~8.9 MB FCC frequency database itself is not
+bundled in the app source or this repository — the app's own `README.md`
+documents it as a separate, optional, user-sourced download.
+
+**Final classification: LICENSE GAP RESOLVED**, conditioned on including
+the confirmed upstream `LICENSE` file at actual import time. Full detail
+in `docs/FCC_ID_LOOKUP_LICENSE_RESOLUTION.md` and
+`docs/FCC_ID_LOOKUP_IMPORT_ELIGIBILITY.md`. `docs/KNOWN_ISSUES.md` item 6
+updated accordingly. **`fcc_id_lookup` was not imported** — this phase
+was licensing/provenance resolution only. A dedicated pre-import
+verification pass (safety scan, real CI build, storage/safety review),
+gated behind the project owner's own separate explicit request, remains
+required before any future import. No application directory was created
+or modified, no build was attempted, no firmware or app source changed,
+no hardware testing was performed. Release status remains **TEST-READY
+ONLY / NOT RELEASE-READY**.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
