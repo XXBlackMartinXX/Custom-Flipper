@@ -1840,6 +1840,58 @@ ONLY / NOT RELEASE-READY**.
 
 ---
 
+## `fcc_id_lookup` dedicated pre-import verification: CLEARED FOR FUTURE IMPORT PLANNING
+
+A dedicated pre-import verification pass, matching the depth every
+already-imported app received before its own import, using the verified
+local clone pinned to `RogueMaster/flipperzero-firmware-wPlugins` commit
+`472f6925e8aca9bd031cb37e3cb80b551772c957`.
+
+Confirmed `application.fam` parses (validated by parsing it with
+Python's own `ast` module against a stand-in `App()`/`FlipperAppType`
+namespace); `appid="fcc_id_lookup"` maps to expected FAP
+`fcc_id_lookup.fap` with no directory/appid discrepancy; entry point
+`fcc_id_lookup_app` exists with the standard Flipper external-app
+signature; the icon is a valid 10×10 1-bit PNG. Confirmed no FCC
+database is bundled or committed anywhere — the ~8.9 MB database remains
+a separate, optional, user-sourced download, enforced in code via a
+fallback setup-hint message if absent. Confirmed storage behavior is
+read-only and app-scoped: all 11 storage-related call sites across the
+source are read/open/close/free lifecycle operations, the one
+`storage_file_open` call uses `FSAM_READ`/`FSOM_OPEN_EXISTING` only, and
+the database path resolves under `APP_ASSETS_PATH` (app-scoped, not
+shared/root-level).
+
+Ran this project's own exact safety-keyword substring-scan methodology
+(`tools/phase2a_validate.ps1`'s keyword list) manually against both
+source files, since the app is not yet present under
+`applications_user/` for the tool itself to scan: zero matches against
+any high-confidence unsafe keyword (RF/Sub-GHz, NFC, RFID, iButton,
+BadUSB, HID, GPIO write, IR transmit, credential, exfil, brute, jam,
+deauth); 11 generic-keyword substring matches, all individually reviewed
+and confirmed benign ("available", and a static data-decompression
+lookup table of company-name suffixes mistakenly matching "token").
+Confirmed no network/HTTP behavior — the app's own displayed URLs are
+citation text only, never fetched. Confirmed a minimal, entirely
+standard dependency surface (Flipper SDK GUI/input/storage headers plus
+standard C library headers only).
+
+**Final classification: CLEARED FOR FUTURE IMPORT PLANNING.** Not itself
+an import approval — a future one-app import phase remains gated behind
+the project owner's own separate, explicit request, a real static scan
+through the project's own tooling once the app exists in-tree, a real CI
+build attempt, and a dedicated safety-review document at actual import
+time. Full detail in `docs/FCC_ID_LOOKUP_PREIMPORT_VERIFICATION.md`,
+`docs/FCC_ID_LOOKUP_IMPORT_READINESS_MATRIX.md`, and
+`docs/FCC_ID_LOOKUP_GO_NO_GO.md`. No new issue was found in this phase,
+so `docs/KNOWN_ISSUES.md` is not modified. `fcc_id_lookup` was not
+imported. No application directory was created or modified, no build
+was attempted, no firmware or app source changed, no hardware testing
+was performed. Release status remains **TEST-READY ONLY / NOT
+RELEASE-READY**.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
