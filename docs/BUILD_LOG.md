@@ -1622,6 +1622,42 @@ untouched. **Phase 2F.3 is now allowed.**
 
 ---
 
+## Phase 2F.3 update: CI baseline acceptance record and finalize-baseline workflow
+
+Checked for a later automatic CI run at the true current branch HEAD
+before finalizing (per this project's own established requirement):
+pushing the final Phase 2F.2A documentation commit (`37d11ca`, docs-only,
+no script/workflow edit) triggered an automatic `push`-event run,
+`29017861599`, on an independent runner instance — it completed with
+conclusion `success` (Static `PASS_WITH_REVIEWED_FALSE_POSITIVES`, Build
+`PASS`: firmware.dfu 862,825 bytes, updater `.tgz` 2,878,428 bytes, all
+19 `.fap` outputs found). Since this run validates the repository's
+actual current HEAD, it supersedes the two earlier Phase 2F.2A
+confirmation runs (`29015213503`/`29015788839`, commit `78914b3`) as the
+accepted CI baseline — those two remain real, valid evidence, not erased.
+
+Created `docs/PHASE2F_3_ACCEPTANCE_RECORD.md` (locked against run
+`29017861599`, commit `37d11cada5a83afdeb752c6b2106216d7fc09b9f`),
+`docs/PHASE2F_3_ARTIFACT_MANIFEST.md` (real GitHub Actions artifact
+metadata — 3 artifacts, IDs and archive digests recorded), and
+`docs/PHASE2F_3_ARTIFACT_HASHES.md` (explicitly marked PENDING — no hash
+fabricated). Updated `docs/PHASE2F_3_GO_NO_GO.md` (**PHASE 2F.3 BASELINE
+ACCEPTANCE PASS**, finalization workflow result pending) and
+`docs/PHASE2F_NEXT_GATE.md` (Phase 2F.3 status appended).
+
+Created `.github/workflows/phase2f-finalize-baseline.yml`, modeled
+directly on `phase2e-finalize-baseline.yml` (the same mechanism Phase
+2A.11/2B.3/2C.3/2D.3/2E.3 already used successfully): runs on a real
+GitHub-hosted `windows-latest` runner, downloads run `29017861599`'s
+artifacts via `gh run download`, computes real SHA-256 hashes with
+`Get-FileHash`, patches the docs above, and creates the two immutable
+Phase 2F baseline tags (`phase2f-ci-baseline-20260709`,
+`phase2f-acceptance-record-20260709`). `workflow_dispatch` only. No
+`HardwareAssisted` invocation anywhere in the file. No app or firmware
+source touched by this update — docs and one new workflow file only.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is

@@ -134,3 +134,72 @@ explicitly out of scope for Phase 2F entirely.
   alone.
 - **Does not reintroduce `image_viewer/example_images/`.** That exclusion
   is unrelated to and unaffected by anything in this document.
+
+---
+
+## Phase 2F.3 update: CI baseline acceptance and artifact hash finalization
+
+**This section supersedes the planning-stage gate above for the current
+decision point. The original content is left unmodified as the
+historical record; do not read this as retroactively editing it.**
+
+Phase 2F.1 (pre-import verification), Phase 2F.2 (implementation/import,
+3 apps: `qrcode`, `hex_viewer`, `barcode_gen`), and Phase 2F.2A
+(root-cause remediation of the `updater_package`/`.fap` blockage found in
+Phase 2F.2) have all completed. Phase 2F.3 (this update) creates the
+formal CI baseline acceptance record and finalizes real artifact hashes —
+see `docs/PHASE2F_3_ACCEPTANCE_RECORD.md`,
+`docs/PHASE2F_3_ARTIFACT_MANIFEST.md`, `docs/PHASE2F_3_ARTIFACT_HASHES.md`,
+and `docs/PHASE2F_3_GO_NO_GO.md`.
+
+### Current status against this gate (as of Phase 2F.3)
+
+| Step | Status |
+|---|---|
+| Phase 2F planning | Complete — **GO WITH CONDITIONS** |
+| Phase 2F.1 (pre-import verification) | Complete — all 3 apps cleared |
+| Phase 2F.2 (implementation/import) | Initially **BUILD BLOCKED**; see Phase 2F.2A |
+| Phase 2F.2A (root-cause remediation) | Complete — **RESOLVED**, 2 real defects fixed (CI/tooling + app-source), confirmed by 2 independent full-pass CI runs |
+| Phase 2F.2 (final reclassification) | **PHASE 2F.2 IMPORT PASS WITH CI TOOLING + APP SOURCE REMEDIATION** |
+| Phase 2F.3 (CI baseline acceptance / hash finalization) | See `docs/PHASE2F_3_GO_NO_GO.md` for the real, current result |
+| Hardware-assisted validation | Unchanged — no device, no Windows machine available in this AI session's environment |
+| `fcc_id_lookup` license gap | Unchanged — still open, untouched by any Phase 2F sub-phase |
+| `image_viewer/example_images/` | Unchanged — still excluded, confirmed absent |
+| Release status | **TEST-READY ONLY / NOT RELEASE-READY** — unchanged |
+
+### Next allowed paths (from Phase 2F.3 onward)
+
+- **If Phase 2F.3 finalization PASSES** (real artifact hashes generated,
+  both baseline tags created/verified): the next allowed path is either
+  **a Phase 2F hardware-assisted validation gate** (modeled on
+  `tools/phase2e_hardware_gate.ps1`, only if/when a device and Windows
+  machine become available, and only on explicit request) or
+  **Phase 2G planning only** (not import, and only if there remains a
+  safe candidate pool — the Phase 2F candidate pool was the entire
+  remaining clean pool from the original Top 25, so a Phase 2G planning
+  pass would need to start from a fresh triage or resolve one of the
+  hard-deferred apps' specific concerns first) — both require the project
+  owner's own separate, explicit request, exactly as every prior phase
+  transition in this project has required.
+- **If artifact hashing or tag creation is blocked**: that must be
+  resolved before any further Phase 2F or Phase 2G gate — see
+  `docs/PHASE2F_3_GO_NO_GO.md`'s "Finalization workflow result" section
+  for the real, current blocker if one exists, and
+  `docs/KNOWN_ISSUES.md` for its tracked status.
+- **Hardware remains unavailable in this AI session's own environment.**
+  This is labeled clearly and does not block non-hardware planning, but
+  it does block any release-ready claim — nothing in Phase 2F.3 changes
+  that.
+- **`fcc_id_lookup` remains deferred** until its license-evidence gap is
+  resolved in a separate, narrow phase dedicated to exactly that
+  question — nothing in Phase 2F.3 resolves it as a side effect.
+- **`image_viewer/example_images/` remains excluded** — nothing in Phase
+  2F.3 changes that.
+- **Release-ready remains blocked** regardless of which path is taken,
+  until real hardware validation is actually complete (both the
+  automated checks and a human-observed GUI checklist) and explicitly
+  accepted — nothing in this document, or in Phase 2F.3, on its own,
+  ever constitutes that acceptance.
+
+Neither a hardware gate nor Phase 2G planning is started by this
+document.
