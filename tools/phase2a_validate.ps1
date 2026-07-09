@@ -474,6 +474,63 @@ if ($Mode -eq 'Build' -or $Mode -eq 'HardwareAssisted') {
         Add-Result -Name 'Updater package build (.\fbt.cmd COMPACT=1 DEBUG=0 updater_package)' -Status 'NOT_RUN' -Detail '-SkipBuild was passed; only checking pre-existing artifacts.'
     }
     else {
+        # Phase 2F.2A diagnostics: printed once, before the firmware build
+        # even starts, purely additive (no pass/fail logic changed) - added
+        # to investigate why build\f7-firmware-C\.extapps was found empty
+        # of all expected .fap outputs on 2 of 2 real Phase 2F.2 CI
+        # attempts, immediately after a firmware build that itself reported
+        # exit code 0 both times. Narrow in scope: no secrets printed, no
+        # behavior changed.
+        Write-Host ''
+        Write-Host '--- Pre-firmware-build diagnostics (Phase 2F.2A) ---' -ForegroundColor Cyan
+        try {
+            $cmdCommand = Get-Command cmd.exe -ErrorAction Stop
+            Write-Host "cmd.exe resolved to: $($cmdCommand.Source)"
+            cmd /c "ver" 2>&1 | ForEach-Object { Write-Host "  $_" }
+        }
+        catch {
+            Write-Host "cmd.exe resolution check unavailable: $($_.Exception.Message)"
+        }
+        Write-Host "Runner image: ImageOS=$env:ImageOS ImageVersion=$env:ImageVersion"
+        Write-Host "ComSpec=$env:ComSpec NUMBER_OF_PROCESSORS=$env:NUMBER_OF_PROCESSORS TEMP=$env:TEMP TMP=$env:TMP"
+        $fbtItemPre = Get-Item $fbtPath
+        Write-Host "fbt.cmd metadata: Length=$($fbtItemPre.Length) LastWriteTime=$($fbtItemPre.LastWriteTime) Attributes=$($fbtItemPre.Attributes)"
+        Write-Host 'fbt.cmd first 5 lines:'
+        Get-Content -Path $fbtPath -TotalCount 5 | ForEach-Object { Write-Host "  $_" }
+        try {
+            $fbtAcl = Get-Acl -Path $fbtPath -ErrorAction Stop
+            Write-Host "fbt.cmd owner: $($fbtAcl.Owner)"
+            $aclSummary = ($fbtAcl.Access | ForEach-Object { "$($_.IdentityReference):$($_.FileSystemRights)" }) -join '; '
+            Write-Host "fbt.cmd access rules: $aclSummary"
+        }
+        catch {
+            Write-Host "fbt.cmd ACL check unavailable: $($_.Exception.Message)"
+        }
+        foreach ($newAppPath in @('applications_user\qrcode', 'applications_user\hex_viewer', 'applications_user\barcode_gen')) {
+            $fullNewAppPath = Join-Path $RepoRoot $newAppPath
+            Write-Host "Listing ${newAppPath}:"
+            if (Test-Path $fullNewAppPath) {
+                Get-ChildItem -Path $fullNewAppPath -Recurse -File | ForEach-Object { Write-Host "  $($_.FullName.Substring($RepoRoot.Length + 1)) ($($_.Length) bytes)" }
+            }
+            else {
+                Write-Host "  NOT FOUND at $fullNewAppPath"
+            }
+        }
+        Write-Host 'Parsed appids for all expected apps (from application.fam):'
+        foreach ($appEntry in $Config.expectedApps) {
+            $appFamPath = Join-Path $RepoRoot (Join-Path $appEntry.path 'application.fam')
+            if (Test-Path $appFamPath) {
+                $famContent = Get-Content -Raw -Path $appFamPath
+                $appidMatch = [regex]::Match($famContent, 'appid\s*=\s*"([^"]+)"')
+                $parsedAppid = if ($appidMatch.Success) { $appidMatch.Groups[1].Value } else { '(could not parse)' }
+                Write-Host "  $($appEntry.path): expected='$($appEntry.appid)' parsed='$parsedAppid' $(if ($parsedAppid -ne $appEntry.appid) { '<<< MISMATCH' })"
+            }
+            else {
+                Write-Host "  $($appEntry.path): application.fam NOT FOUND"
+            }
+        }
+        Write-Host '--- End pre-firmware-build diagnostics ---'
+        Write-Host ''
         # Distinguish two different failure kinds, which need different
         # classifications: the *process could not be launched at all* (a
         # native "failed to start" exception - an environment problem, e.g.
@@ -492,7 +549,12 @@ if ($Mode -eq 'Build' -or $Mode -eq 'HardwareAssisted') {
         catch {
             $buildLaunchFailed = $true
             $buildExit = 1
-            Add-Content -Path $buildLogPath -Value "LAUNCH EXCEPTION (process could not be started - this is an environment problem, not evidence of a source defect): $($_.Exception.Message)"
+            $buildLaunchExceptionText = "LAUNCH EXCEPTION (process could not be started - this is an environment problem, not evidence of a source defect): $($_.Exception.GetType().FullName): $($_.Exception.Message)"
+            Add-Content -Path $buildLogPath -Value $buildLaunchExceptionText
+            # Phase 2F.2A: also print to console (not just the log file),
+            # since the log file only exists inside a workflow artifact that
+            # may not always be downloadable for inspection.
+            Write-Host $buildLaunchExceptionText -ForegroundColor Red
         }
         finally {
             Pop-Location
@@ -532,6 +594,26 @@ if ($Mode -eq 'Build' -or $Mode -eq 'HardwareAssisted') {
             }
             cmd /c "dir `"$fbtPath`"" 2>&1 | ForEach-Object { Write-Host "  $_" }
             Write-Host "PowerShell version: $($PSVersionTable.PSVersion)"
+            # Phase 2F.2A diagnostic: the workflow declares `shell: pwsh`
+            # (PowerShell 7/Core), but $PSVersionTable.PSVersion alone
+            # doesn't distinguish engines cleanly across all reporting
+            # contexts - print PSEdition and the full table explicitly so a
+            # human reviewing the log can conclusively confirm which engine
+            # (Desktop = Windows PowerShell 5.1, Core = PowerShell 7) is
+            # actually executing this diagnostic block, immediately before
+            # the updater_package attempt.
+            Write-Host "PowerShell edition: $($PSVersionTable.PSEdition)"
+            Write-Host "Full PSVersionTable: $($PSVersionTable | Out-String)"
+            Write-Host "`$PID of this process: $PID"
+            try {
+                $parentProc = Get-CimInstance -ClassName Win32_Process -Filter "ProcessId=$PID" -ErrorAction Stop
+                Write-Host "This process's own image: $($parentProc.ExecutablePath)"
+                $grandParent = Get-CimInstance -ClassName Win32_Process -Filter "ProcessId=$($parentProc.ParentProcessId)" -ErrorAction SilentlyContinue
+                if ($grandParent) { Write-Host "Parent process image: $($grandParent.ExecutablePath)" }
+            }
+            catch {
+                Write-Host "Process image check unavailable: $($_.Exception.Message)"
+            }
             Write-Host "OS version: $([System.Environment]::OSVersion.VersionString)"
             $diagGitStatus = (Invoke-GitCapture -GitArgs @('status', '--porcelain')).Output
             Write-Host "git status --short (diagnostic, immediately pre-updater_package):"
@@ -540,6 +622,48 @@ if ($Mode -eq 'Build' -or $Mode -eq 'HardwareAssisted') {
             $extappsPath = Join-Path $RepoRoot 'build\f7-firmware-C\.extapps'
             Write-Host "build\f7-firmware-C\firmware.dfu exists: $(Test-Path $firmwareDfuPath)"
             Write-Host "build\f7-firmware-C\.extapps exists: $(Test-Path $extappsPath)"
+
+            # Phase 2F.2A diagnostics: on 2 of 2 real Phase 2F.2 CI attempts,
+            # build\f7-firmware-C\.extapps was found empty of all 19 expected
+            # .fap files at this exact checkpoint, immediately after a
+            # firmware build that itself reported exit code 0. Purely
+            # additive - no pass/fail logic changed here, only console
+            # visibility into where (if anywhere) real .fap files actually
+            # exist on this runner.
+            $f7BuildDir = Join-Path $RepoRoot 'build\f7-firmware-C'
+            if (Test-Path $f7BuildDir) {
+                Write-Host "Recursive listing of build\f7-firmware-C\ (top-level entries):"
+                Get-ChildItem -Path $f7BuildDir | ForEach-Object {
+                    $entryDesc = if ($_.PSIsContainer) { 'dir' } else { "$($_.Length) bytes" }
+                    Write-Host "  $($_.Name) [$entryDesc]"
+                }
+            }
+            else {
+                Write-Host "build\f7-firmware-C\ does not exist at all."
+            }
+            if (Test-Path $extappsPath) {
+                Write-Host "Recursive listing of build\f7-firmware-C\.extapps\:"
+                Get-ChildItem -Path $extappsPath -Recurse -Force | ForEach-Object { Write-Host "  $($_.FullName.Substring($RepoRoot.Length + 1)) ($($_.Length) bytes)" }
+            }
+            $buildDirPath = Join-Path $RepoRoot 'build'
+            $fapsUnderBuild = if (Test-Path $buildDirPath) { @(Get-ChildItem -Path $buildDirPath -Recurse -Filter '*.fap' -File -ErrorAction SilentlyContinue) } else { @() }
+            Write-Host "Real .fap files found anywhere under build\ (recursive): $($fapsUnderBuild.Count)"
+            $fapsUnderBuild | ForEach-Object { Write-Host "  $($_.FullName.Substring($RepoRoot.Length + 1)) ($($_.Length) bytes)" }
+            $fapsRepoWide = @(Get-ChildItem -Path $RepoRoot -Recurse -Filter '*.fap' -File -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '\\\.git\\' })
+            Write-Host "Real .fap files found anywhere in the repo (recursive, excluding .git): $($fapsRepoWide.Count)"
+            $fapsRepoWide | ForEach-Object { Write-Host "  $($_.FullName.Substring($RepoRoot.Length + 1)) ($($_.Length) bytes)" }
+            foreach ($namedFap in @('qrcode.fap', 'hex_viewer.fap', 'barcode_app.fap')) {
+                $found = $fapsRepoWide | Where-Object { $_.Name -eq $namedFap }
+                if ($found) {
+                    Write-Host "$namedFap FOUND at: $(($found | ForEach-Object { $_.FullName.Substring($RepoRoot.Length + 1) }) -join ', ')"
+                }
+                else {
+                    Write-Host "$namedFap NOT FOUND anywhere in the repo."
+                }
+            }
+            $uploadGlobPath = Join-Path $RepoRoot 'build\f7-firmware-C\.extapps'
+            $uploadGlobMatches = if (Test-Path $uploadGlobPath) { @(Get-ChildItem -Path $uploadGlobPath -Filter '*.fap' -File -ErrorAction SilentlyContinue) } else { @() }
+            Write-Host "Files the workflow's own upload-artifact glob (build/f7-firmware-C/.extapps/*.fap) would match: $($uploadGlobMatches.Count)"
             try {
                 $repoDriveLetter = (Get-Item $RepoRoot).PSDrive.Name
                 $repoDrive = Get-PSDrive -Name $repoDriveLetter -ErrorAction Stop
@@ -581,7 +705,17 @@ if ($Mode -eq 'Build' -or $Mode -eq 'HardwareAssisted') {
             catch {
                 $updaterLaunchFailed = $true
                 $updaterExit = 1
-                Add-Content -Path $updaterLogPath -Value "LAUNCH EXCEPTION (process could not be started - this is an environment problem, not evidence of a source defect): $($_.Exception.Message)"
+                $updaterLaunchExceptionText = "LAUNCH EXCEPTION (process could not be started - this is an environment problem, not evidence of a source defect): $($_.Exception.GetType().FullName): $($_.Exception.Message)"
+                Add-Content -Path $updaterLogPath -Value $updaterLaunchExceptionText
+                # Phase 2F.2A: also print to console (not just the log
+                # file), since the log file only exists inside a workflow
+                # artifact that may not always be downloadable for
+                # inspection - this is the single most important missing
+                # piece of evidence from the 2 real Phase 2F.2 CI failures.
+                Write-Host $updaterLaunchExceptionText -ForegroundColor Red
+                if ($_.Exception.InnerException) {
+                    Write-Host "Inner exception: $($_.Exception.InnerException.GetType().FullName): $($_.Exception.InnerException.Message)" -ForegroundColor Red
+                }
             }
             finally {
                 Pop-Location
