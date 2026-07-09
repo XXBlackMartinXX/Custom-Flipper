@@ -646,7 +646,16 @@ if ($Mode -eq 'Build' -or $Mode -eq 'HardwareAssisted') {
                 Get-ChildItem -Path $extappsPath -Recurse -Force | ForEach-Object { Write-Host "  $($_.FullName.Substring($RepoRoot.Length + 1)) ($($_.Length) bytes)" }
             }
             $buildDirPath = Join-Path $RepoRoot 'build'
-            $fapsUnderBuild = if (Test-Path $buildDirPath) { @(Get-ChildItem -Path $buildDirPath -Recurse -Filter '*.fap' -File -ErrorAction SilentlyContinue) } else { @() }
+            # The outer @(...) here is load-bearing, not decorative: an `if`
+            # expression whose taken branch is itself `@(Get-ChildItem ...)`
+            # still collapses to $null on assignment when that Get-ChildItem
+            # produces zero pipeline output - the inner @() alone does not
+            # survive being returned through the if-expression. Reproduced
+            # locally (this exact inner-only pattern assigns $null, not an
+            # empty array, causing a PropertyNotFoundException on .Count
+            # under Set-StrictMode -Version Latest). Wrapping the entire
+            # if/else in an outer @() is what actually guarantees an array.
+            $fapsUnderBuild = @(if (Test-Path $buildDirPath) { @(Get-ChildItem -Path $buildDirPath -Recurse -Filter '*.fap' -File -ErrorAction SilentlyContinue) } else { @() })
             Write-Host "Real .fap files found anywhere under build\ (recursive): $($fapsUnderBuild.Count)"
             $fapsUnderBuild | ForEach-Object { Write-Host "  $($_.FullName.Substring($RepoRoot.Length + 1)) ($($_.Length) bytes)" }
             $fapsRepoWide = @(Get-ChildItem -Path $RepoRoot -Recurse -Filter '*.fap' -File -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '\\\.git\\' })
@@ -662,7 +671,9 @@ if ($Mode -eq 'Build' -or $Mode -eq 'HardwareAssisted') {
                 }
             }
             $uploadGlobPath = Join-Path $RepoRoot 'build\f7-firmware-C\.extapps'
-            $uploadGlobMatches = if (Test-Path $uploadGlobPath) { @(Get-ChildItem -Path $uploadGlobPath -Filter '*.fap' -File -ErrorAction SilentlyContinue) } else { @() }
+            # Same load-bearing outer @() as $fapsUnderBuild above - see that
+            # comment for the reproduced-locally explanation.
+            $uploadGlobMatches = @(if (Test-Path $uploadGlobPath) { @(Get-ChildItem -Path $uploadGlobPath -Filter '*.fap' -File -ErrorAction SilentlyContinue) } else { @() })
             Write-Host "Files the workflow's own upload-artifact glob (build/f7-firmware-C/.extapps/*.fap) would match: $($uploadGlobMatches.Count)"
             try {
                 $repoDriveLetter = (Get-Item $RepoRoot).PSDrive.Name
