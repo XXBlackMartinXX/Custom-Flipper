@@ -697,6 +697,7 @@ if ($Mode -eq 'Build' -or $Mode -eq 'HardwareAssisted') {
             $updaterLogPath = Join-Path $ReportDir "build_updater_$RunTimestampForFilename.log"
             $updaterLaunchFailed = $false
             Push-Location $RepoRoot
+            $previousUpdaterErrorActionPreference = $ErrorActionPreference
             try {
                 # Phase 2D.2A fix: launch via an explicit `cmd /c` wrapper
                 # rather than PowerShell's own `&` call operator. This is
@@ -710,6 +711,34 @@ if ($Mode -eq 'Build' -or $Mode -eq 'HardwareAssisted') {
                 # whatever PowerShell-level process-creation condition was
                 # producing a native launch exception specifically for the
                 # second fbt.cmd invocation in the same job.
+                #
+                # Phase 2F.2A root-cause fix: real CI run 29003824450 caught,
+                # for the first time, the actual exception behind every prior
+                # "fbt.cmd could not be launched" classification - it was
+                # never a process-launch failure. It was a
+                # System.Management.Automation.RemoteException wrapping the
+                # first line of native stderr emitted while compiling
+                # applications_user\barcode_gen\views\create_view.c ("In
+                # function 'text_input_callback':"). Under
+                # $ErrorActionPreference = 'Stop' (script scope, line ~109),
+                # Windows PowerShell wraps a native command's stderr output in
+                # NativeCommandError records; the first such record becomes a
+                # terminating exception, aborting the whole updater_package
+                # invocation before it can finish emitting that diagnostic,
+                # let alone complete the FAP build - regardless of whether
+                # the stderr text represents a real fatal compiler error or
+                # an ordinary diagnostic/warning. This is the direct, evidenced
+                # explanation for why build\f7-firmware-C\.extapps has been
+                # empty and zero .fap files have ever been produced anywhere
+                # in this project's Phase 2F.2/2F.2A CI history: the
+                # FAP-compiling step of updater_package never got to run to
+                # completion. Scoping $ErrorActionPreference to 'Continue' for
+                # just this external invocation lets native stderr text land
+                # in the log like any other output instead of being escalated
+                # to a terminating exception; $LASTEXITCODE (captured below)
+                # remains the real, authoritative pass/fail signal, exactly as
+                # it already is for the firmware build above.
+                $ErrorActionPreference = 'Continue'
                 cmd /c ".\fbt.cmd COMPACT=1 DEBUG=0 updater_package" *> $updaterLogPath
                 $updaterExit = $LASTEXITCODE
             }
@@ -729,6 +758,7 @@ if ($Mode -eq 'Build' -or $Mode -eq 'HardwareAssisted') {
                 }
             }
             finally {
+                $ErrorActionPreference = $previousUpdaterErrorActionPreference
                 Pop-Location
             }
             if ($updaterExit -eq 0) {
