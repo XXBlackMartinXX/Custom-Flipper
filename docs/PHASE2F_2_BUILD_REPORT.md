@@ -262,6 +262,10 @@ passes:**
 own sandbox — unrelated to the real CI result above, same toolchain-
 download egress restriction every prior phase has hit.
 
+## Phase 2F.3 artifact hash finalization
+
+Real SHA-256 hashes of the `firmware.dfu`/updater `.tgz` from run 29017861599 were finalized by the `Phase 2F Finalize Baseline` workflow (run [`29027115867`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/29027115867)) - see `docs/PHASE2F_3_ARTIFACT_HASHES.md` for the values. Phase 2F.3 finalized this build's artifacts; nothing about the build result itself changed.
+
 ## Conclusion
 
 **Static PASS_WITH_REVIEWED_FALSE_POSITIVES. Build PASS — firmware,
