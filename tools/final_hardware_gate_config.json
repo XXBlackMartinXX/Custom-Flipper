@@ -1,0 +1,188 @@
+{
+  "_comment": "Final 20-app hardware-assisted validation gate configuration. Consumed by tools/final_hardware_gate.ps1. Docs/tooling artifact - not firmware source. Superset of tools/phase2f_hardware_gate_config.json (which remains frozen/untouched for its own accepted Phase 2F-only baseline) - covers all 20 apps now in the final accepted baseline (19 Phase 2A-2F apps + fcc_id_lookup, imported and baseline-finalized via its own dedicated one-app import phase). image_viewer's example_images/ (including spongebob.bm, dolphin.bm, cat.bm) remains excluded and is not referenced here as an expected asset. The optional fcc_id_lookup FCC frequency/applicant database (fcc_freq_v2.bin) is never bundled and this gate checks for its accidental presence.",
+
+  "acceptedBaseline": {
+    "branch": "integration/fcc-id-lookup-one-app-import",
+    "ciBaselineSha": "86265727b5b8cfce5086eb88f8bb93d0169ab9a9",
+    "ciValidationRunId": "29068148596",
+    "finalizationWorkflowRunId": "29096377711",
+    "note": "This is the exact commit and CI evidence docs/FCC_ID_LOOKUP_BASELINE_ACCEPTANCE_RECORD.md, docs/FCC_ID_LOOKUP_ARTIFACT_HASHES.md, and docs/PROJECT_BASELINE_AUDIT.md cover - the final 20-app non-hardware CI baseline. Hardware-assisted validation against a different commit is not itself wrong, but should be flagged for review rather than silently treated as validating this same accepted baseline."
+  },
+
+  "priorRemediationNotes": {
+    "phase2d2aCiToolingFix": "tools/phase2a_validate.ps1's updater_package call site was narrowly fixed to use an explicit cmd /c launch wrapper instead of PowerShell's & operator, resolving an intermittent 'fbt.cmd could not be launched as a process' failure. Not re-verified directly by this gate (CI-only behavior), recorded here for traceability.",
+    "phase2f2aCiToolingFix": "tools/phase2a_validate.ps1 was further fixed (commit 8e5f78f) so native stderr output from the updater_package invocation no longer becomes a misleading terminating PowerShell exception under $ErrorActionPreference='Stop' - scoped to 'Continue' around just that call, relying on $LASTEXITCODE as the authoritative signal. Not re-verified directly by this gate (CI-only behavior), recorded here for traceability.",
+    "barcodeGenSourceFix": "applications_user/barcode_gen/views/create_view.c had 5 dead calls to text_input_show_illegal_symbols() removed (commit b6445ed) - a function belonging only to an unwired, never-integrated custom keyboard fork bundled in the app. The app's real text_input widget is a system TextInput instance with no such function. User-approved fix after direct evidence was presented via AskUserQuestion. This gate performs a Preflight-level source-content check confirming this fix remains preserved.",
+    "fccIdLookupLicenseAddition": "applications_user/fcc_id_lookup/LICENSE (confirmed upstream MIT text, Copyright (c) 2026 lsr) was added at import time because the vendored source shipped with no LICENSE/SPDX/copyright header. The evidence chain tying this license to the exact vendored revision is in docs/FCC_ID_LOOKUP_LICENSE_RESOLUTION.md. This gate performs a Preflight-level check confirming this LICENSE file remains present and contains the expected copyright line."
+  },
+
+  "expectedArtifacts": {
+    "firmwareDfu": {
+      "fileName": "firmware.dfu",
+      "expectedSizeBytes": 862833,
+      "expectedSha256": "e8c11b62429677e727a42682b2e7f2bf8eaf8e5a84e8887f2d3db6b137328f1d"
+    },
+    "updaterPackage": {
+      "fileName": "flipper-z-f7-update-local.tgz",
+      "expectedSizeBytes": 2891859,
+      "expectedSha256": "eec5b148892a3d89c724006bd082f1ca083e05990aa7b8cad43868bf8347cc55"
+    },
+    "note": "These are the real, GitHub-Actions-generated values recorded in docs/FCC_ID_LOOKUP_ARTIFACT_HASHES.md (finalization run 29096377711) - not fabricated, not archive-level digests. HashVerify/HardwareAssisted modes compare a locally-downloaded artifact directory's actual files against these exact values."
+  },
+
+  "allowedArtifactFileNames": [
+    "firmware.dfu",
+    "flipper-z-f7-update-local.tgz"
+  ],
+
+  "allowedApps": [
+    { "id": "network_subnet", "appid": "network_subnet", "displayName": "Network Subnet Helper", "category": "Tools" },
+    { "id": "programmer_calc", "appid": "programmercalc", "displayName": "Programmer Calculator", "category": "Tools" },
+    { "id": "vin_decoder", "appid": "vin_decoder", "displayName": "VIN Decoder", "category": "Tools" },
+    { "id": "flipper95", "appid": "flipper95", "displayName": "Flipper95", "category": "Tools" },
+    { "id": "chess", "appid": "chess", "displayName": "Chess", "category": "Games" },
+    { "id": "flipfetch", "appid": "flipfetch", "displayName": "Flipfetch", "category": "Tools" },
+    { "id": "quadratic_solver", "appid": "quadratic_solver", "displayName": "Quadratic Solver", "category": "Tools" },
+    { "id": "sudoku", "appid": "sudoku", "displayName": "Sudoku", "category": "Games" },
+    { "id": "sd_info", "appid": "sd_info", "displayName": "SD Info", "category": "Tools" },
+    { "id": "docviewlite", "appid": "docviewlite", "displayName": "Doc Viewer Lite", "category": "Tools" },
+    { "id": "resistors", "appid": "resistance_calculator", "displayName": "Resistor Calculator", "category": "Tools" },
+    { "id": "crypto_dictionary", "appid": "crypto_dict", "displayName": "Crypto Dictionary", "category": "Tools" },
+    { "id": "2048", "appid": "2048_improved", "displayName": "2048", "category": "Games" },
+    { "id": "image_viewer", "appid": "image_viewer", "displayName": "Image Viewer", "category": "Tools" },
+    { "id": "boilerplate", "appid": "fap_boilerplate", "displayName": "FAP Boilerplate", "category": "Tools" },
+    { "id": "minesweeper", "appid": "minesweeper_redux", "displayName": "Minesweeper Redux", "category": "Games" },
+    { "id": "qrcode", "appid": "qrcode", "displayName": "QR Code", "category": "Tools" },
+    { "id": "hex_viewer", "appid": "hex_viewer", "displayName": "HEX Viewer", "category": "Tools" },
+    { "id": "barcode_gen", "appid": "barcode_app", "displayName": "Barcode App", "category": "Tools" },
+    { "id": "fcc_id_lookup", "appid": "fcc_id_lookup", "displayName": "FCC ID Lookup", "category": "Tools" }
+  ],
+
+  "expectedFapNames": [
+    "network_subnet.fap",
+    "programmercalc.fap",
+    "vin_decoder.fap",
+    "flipper95.fap",
+    "chess.fap",
+    "flipfetch.fap",
+    "quadratic_solver.fap",
+    "sudoku.fap",
+    "sd_info.fap",
+    "docviewlite.fap",
+    "resistance_calculator.fap",
+    "crypto_dict.fap",
+    "2048_improved.fap",
+    "image_viewer.fap",
+    "fap_boilerplate.fap",
+    "minesweeper_redux.fap",
+    "qrcode.fap",
+    "hex_viewer.fap",
+    "barcode_app.fap",
+    "fcc_id_lookup.fap"
+  ],
+
+  "expectedFapNamesNote": "All 20 filenames are the manifest-declared appid-based .fap output names, confirmed present in the accepted CI run's job log and independently re-hashed by the finalization workflow (docs/FCC_ID_LOOKUP_ARTIFACT_HASHES.md). fcc_id_lookup.fap is the 20th app specifically (20,196 bytes, SHA-256 168025ddcffb01f94e1af8eefcead2ac80d69f6b7ad9856a603e1a7d30317658 per that document). These are informational only in this gate - this script does not itself build or inspect .fap files, since no Windows/fbt build is performed here.",
+
+  "expectedAppPrivateStoragePaths": {
+    "chess": "/ext/apps_data/flipchess/",
+    "network_subnet": null,
+    "programmercalc": null,
+    "vin_decoder": null,
+    "flipper95": null,
+    "flipfetch": null,
+    "quadratic_solver": null,
+    "sudoku": "/ext/apps_data/sudoku/",
+    "sd_info": "NOT app-private - see sdInfoStorageNote below",
+    "docviewlite": null,
+    "resistance_calculator": null,
+    "crypto_dict": null,
+    "2048_improved": "/ext/apps_data/game_2048/",
+    "image_viewer": null,
+    "fap_boilerplate": "/ext/apps_data/boilerplate/",
+    "minesweeper_redux": "/ext/apps_data/mine_sweeper_redux/",
+    "qrcode": null,
+    "hex_viewer": null,
+    "barcode_app": "/ext/apps_data/barcodes/",
+    "fcc_id_lookup": "/ext/apps_assets/fcc_id_lookup/ (read-only, optional database access only - see fccIdLookupStorageNote below)"
+  },
+
+  "expectedAppPrivateStoragePathsNote": "null means the app is not expected to persist any file under normal use; any storage write by these apps outside their own entry (or any write at all, for the null-path apps) is a fail condition per the hardware smoke-test checklist. All notes for the 19 already-accepted apps are unchanged, carried forward from tools/phase2f_hardware_gate_config.json. fcc_id_lookup (new in this final gate) is covered by a dedicated note below, matching the direct source-level findings in docs/FCC_ID_LOOKUP_SAFETY_REVIEW.md.",
+
+  "sdInfoStorageNote": "sd_info is NOT zero-storage and NOT app-private, per the real source read in Phase 2C.1/2C.2: its SD-card speed test writes, reads back, and deletes benchmark blocks at /ext/sdtest.tmp* (SD-card root, TEST_FILE_PATH = \"/ext/sdtest.tmp\"), 48 write/read/verify/delete cycles of 32KB blocks, ONLY when the user explicitly presses OK to start the test on the app's own test page. This is controlled, self-cleaning, and transient - not persistent, not automatic, not a safety-exclusion-list capability - but it is a real, user-initiated write to the SD-card root, materially different from an app-private save file or a read-only app. The hardware smoke-test checklist must confirm no /ext/sdtest.tmp* files remain after a normal test completion or after aborting mid-test.",
+
+  "docviewliteStorageNote": "docviewlite is confirmed read-only by source: it opens and reads a user-selected .txt file via the standard Flipper file-browser dialog and storage_file_read only - no storage_file_write call exists anywhere in its source. The hardware smoke-test checklist should confirm no new file or modification appears anywhere on the SD card after using this app.",
+
+  "resistorsStorageNote": "resistors is confirmed zero-storage by source: no storage_, file_stream, RECORD_STORAGE, FSAM_, or FSOM_ reference anywhere in its source, and zero furi_hal usage of any kind. The hardware smoke-test checklist should confirm no file of any kind appears on the SD card after using this app.",
+
+  "cryptoDictionaryStorageNote": "crypto_dictionary is confirmed read-only bundled-glossary access by source: it opens only its own bundled resources/**/*.txt cipher-glossary files via FSAM_READ/FSOM_OPEN_EXISTING - no write call anywhere in its source, and zero furi_hal usage. There is no text-input field or code path for user-supplied data to enter the app at all. The hardware smoke-test checklist should confirm no new file or modification appears anywhere on the SD card after using this app, including after searching/browsing the bundled glossary.",
+
+  "game2048StorageNote": "2048 is confirmed to write only to its own app-scoped save path, per direct source read: /ext/apps_data/game_2048/game_2048.save via a hardcoded EXT_PATH(\"apps_data/game_2048\") literal (functionally app-scoped even though it does not use the APP_DATA_PATH macro). It also performs a one-time legacy-path migration check against /ext/apps/Games/game_2048.save on load, which is a silent no-op on this baseline (no such file exists) and should not be observed to write anywhere outside /ext/apps_data/game_2048/. The hardware smoke-test checklist should confirm the only file written during play is game_2048.save under that directory.",
+
+  "imageViewerStorageNote": "image_viewer is confirmed read-only by source: it opens whatever file the user selects via the standard Flipper file-browser dialog with FSAM_READ only - no storage_file_write call anywhere in its source. The bundled example_images/ directory (cat.bm, dolphin.bm, and spongebob.bm - the latter confirmed to depict a recognizable trademarked/copyrighted cartoon character with no attribution or redistribution-rights evidence) was excluded at import and MUST remain absent from applications_user/image_viewer/ - this app's own behavior does not depend on it, since it opens whatever the user selects, not a hardcoded bundled filename. The hardware smoke-test checklist must confirm no new file or modification appears anywhere on the SD card after using this app, and must confirm example_images/ is not present in the imported app directory before testing.",
+
+  "boilerplateStorageNote": "boilerplate is confirmed app-private by source: it writes its own configuration file to /ext/apps_data/boilerplate/boilerplate.conf. The hardware smoke-test checklist should confirm any write by this app is confined to /ext/apps_data/boilerplate/ and nowhere else on the SD card.",
+
+  "minesweeperStorageNote": "minesweeper is confirmed app-private by source: it writes save/config state to /ext/apps_data/mine_sweeper_redux/ via an atomic write-then-rename pattern. The hardware smoke-test checklist should confirm any write by this app is confined to /ext/apps_data/mine_sweeper_redux/ and nowhere else on the SD card, and that no partial/temp file from an interrupted write survives outside that directory.",
+
+  "qrcodeStorageNote": "qrcode is confirmed read-only for QR content by source, plus performs local QR generation/display only (no radio/RF/network interaction of any kind): qrcode_load_file() uses flipper_format_read_* calls exclusively - no write function exists in this version of the app for QR content itself. One real, bounded, benign storage-write pattern exists: a one-time legacy-folder migration at every launch (storage_common_copy(ANY_PATH(\"qrcodes\"), QRCODE_FOLDER) followed by storage_common_remove(ANY_PATH(\"qrcodes\"))), the same class of migration already accepted for 2048. The hardware smoke-test checklist should confirm this migration (if it occurs at all - only relevant if a legacy /ext/qrcodes/ folder exists) completes cleanly and no other write occurs anywhere on the SD card while displaying/generating QR codes.",
+
+  "hexViewerStorageNote": "hex_viewer is confirmed genuinely read-only for viewed files by source: files are opened with FSAM_READ/FSOM_OPEN_EXISTING only - no write, edit, patch, overwrite, or delete call touches the viewed file anywhere in the source. Its own settings (4 boolean toggles) are app-private at /ext/apps_data/hex_viewer/. The hardware smoke-test checklist should confirm the viewed file is never modified, and that any settings write is confined to /ext/apps_data/hex_viewer/.",
+
+  "barcodeGenStorageNote": "barcode_gen (real appid barcode_app) is confirmed app-private by source, and performs local barcode display/generation only (no radio/RF/hardware-peripheral interaction, no scanner-emulation, access-control, HID, or NFC/USB behavior): all create/edit/rename/delete operations (storage_simply_mkdir, storage_common_rename, storage_simply_remove) are confined to /ext/apps_data/barcodes/ (DEFAULT_USER_BARCODES). The hardware smoke-test checklist should confirm any write by this app is confined to /ext/apps_data/barcodes/ and nowhere else on the SD card.",
+
+  "fccIdLookupStorageNote": "fcc_id_lookup is confirmed to have zero write-capable storage calls anywhere in its source (all 11 storage call sites inventoried are read/open/close/free/seek/size operations; storage_file_open uses FSAM_READ/FSOM_OPEN_EXISTING only). Its only optional data access is a read-only, app-scoped lookup of a user-supplied FCC frequency/applicant database at /ext/apps_assets/fcc_id_lookup/fcc_freq_v2.bin - this database is NEVER bundled by this project (confirmed absent from applications_user/fcc_id_lookup/, confirmed absent from this repository entirely) and the app degrades gracefully (an in-app setup-hint message) if it is absent. The app has zero network/HTTP behavior - its only http-prefixed strings are two display-only attribution citation URLs (https://fcc.id, https://fccid.io) never fetched by the app itself. The hardware smoke-test checklist should confirm no file of any kind is written to the SD card after using this app, and that the optional-database setup-hint message displays correctly when the database is absent (the expected state for this baseline).",
+
+  "excludedAssetsNote": "applications_user/image_viewer/example_images/ (3 bundled .bm demo images: cat.bm, dolphin.bm, spongebob.bm) remains excluded from the accepted final baseline and must not be reintroduced by this gate, any script it invokes, or any hardware test performed against docs/FINAL_HARDWARE_SMOKE_TEST_CHECKLIST.md. spongebob.bm specifically was confirmed to depict a recognizable trademarked/copyrighted cartoon character with no attribution or redistribution-rights evidence anywhere in the app. This script performs a directory-absence check for applications_user/image_viewer/example_images/ as part of its Preflight/automated checks.",
+
+  "barcodeGenSourceFixNote": "applications_user/barcode_gen/views/create_view.c must NOT contain any call to text_input_show_illegal_symbols - that function belongs only to this app's own unwired, never-integrated custom keyboard fork (keyboard/text_input.c/.h) and was removed (5 dead call sites, commit b6445ed, user-approved) because the app's real text_input widget is a system TextInput instance with a different, incompatible internal model layout. This script performs a Preflight-level source-content check confirming this fix remains preserved.",
+
+  "fccIdLookupLicenseNote": "applications_user/fcc_id_lookup/LICENSE must be present and must contain the expected copyright line 'Copyright (c) 2026 lsr' - the confirmed upstream MIT license text added at import time because the vendored source shipped with no LICENSE/SPDX/copyright header of its own. This script performs a Preflight-level presence-and-content check confirming this LICENSE file remains preserved.",
+
+  "fccDatabaseAbsenceNote": "No FCC frequency/applicant database file (fcc_freq_v2.bin, or any other .bin file) may exist anywhere under applications_user/fcc_id_lookup/ or elsewhere in this repository - it is an optional, ~8.9MB, end-user-sourced download that this project never bundles, commits, or generates. This script performs a Preflight-level check for the absence of any *.bin file under applications_user/fcc_id_lookup/.",
+
+  "forbiddenTestCategories": [
+    "Sub-GHz / RF transmit or receive",
+    "NFC read/write/emulate/clone",
+    "RFID/LFRFID read/write/emulate/clone",
+    "iButton read/write/emulate/clone",
+    "BadUSB / HID keystroke injection",
+    "BLE spam/beacon/profile interaction",
+    "Direct GPIO control",
+    "Infrared transmit",
+    "Credential, token, or password handling/extraction",
+    "Any cloning, brute force, jamming, deauth, or bypass behavior",
+    "Any unauthorized-access or security-abuse demonstration"
+  ],
+
+  "forbiddenTestCategoriesNote": "This script contains no code path for any of the above, for any app, under any flag or mode - this is not a configuration toggle to disable, it is simply not implemented anywhere in tools/final_hardware_gate.ps1.",
+
+  "expectedHardwareStatusWording": {
+    "notRun": "Hardware-assisted validation: NOT RUN",
+    "notPerformed": "Hardware flashing/testing: NOT PERFORMED"
+  },
+
+  "expectedReleaseStatusWording": "TEST-READY ONLY / NOT RELEASE-READY",
+
+  "flashConfirmationPhrase": "I UNDERSTAND THIS WILL FLASH THE CONNECTED DEVICE",
+
+  "flashConfirmationNote": "The script never performs a flash itself under any circumstance - even after -AllowFlashPrompt and a correctly-typed confirmation phrase, flashing remains a manual, deliberate action performed by the operator using qFlipper or fbt flash_usb outside this script. The confirmation gate exists to make sure the operator has seen the artifact hashes and rollback warning before proceeding, not to automate the flash itself.",
+
+  "deviceDetection": {
+    "expectedFriendlyNameSubstring": "Flipper",
+    "expectedVidPid": "VID_0483&PID_5740",
+    "note": "Flipper Zero enumerates as a USB CDC-ACM serial device (ST Microelectronics VID 0483, PID 5740) when running normal firmware. Detection uses Windows PnP device enumeration (Get-PnpDevice) only - no serial communication, no RPC, no data exchange with the device."
+  },
+
+  "officialToolingDetection": {
+    "qFlipperExecutableNames": ["qFlipper.exe"],
+    "qFlipperCommonInstallDirs": [
+      "$env:ProgramFiles\\qFlipper",
+      "${env:ProgramFiles(x86)}\\qFlipper",
+      "$env:LOCALAPPDATA\\Programs\\qFlipper",
+      "$env:LOCALAPPDATA\\qFlipper"
+    ],
+    "note": "Best-effort detection only (PATH lookup, common install directories, and the Windows uninstall registry key). Absence of a detected install does not necessarily mean qFlipper isn't present under a nonstandard path - it means this script could not confirm it automatically, and flashing tooling should be classified BLOCKED / TOOLING NOT AVAILABLE rather than assumed present."
+  },
+
+  "reportFilenameCollisionFix": "Millisecond-precision timestamp plus a short random hex suffix (yyyyMMdd_HHmmss_fff_XXXX), collision-resistant even for rapid repeated invocations - the same fix introduced in tools/phase2c_hardware_gate.ps1 and preserved unchanged through tools/phase2d_hardware_gate.ps1, tools/phase2e_hardware_gate.ps1, tools/phase2f_hardware_gate.ps1, and this script. Phase 2A's and Phase 2B's own scripts are deliberately left unmodified, per this project's standing instruction not to touch them."
+}
