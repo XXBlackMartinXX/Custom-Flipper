@@ -1,86 +1,103 @@
 # FCC ID Lookup — Go / No-Go
 
-Docs only. Planning only. **NO CODE IMPORT PERFORMED.**
+Final classification for the dedicated one-app `fcc_id_lookup` import,
+mirroring the format of this project's existing per-batch
+`PHASEX_2_GO_NO_GO.md` documents.
 
-## Final classification: **CLEARED FOR FUTURE IMPORT PLANNING**
+## Final classification: **FCC_ID_LOOKUP IMPORT PASS**
 
-`fcc_id_lookup` has now passed both a dedicated license-resolution phase
-(`docs/FCC_ID_LOOKUP_LICENSE_RESOLUTION.md`) and a dedicated pre-import
-verification pass (`docs/FCC_ID_LOOKUP_PREIMPORT_VERIFICATION.md`,
-`docs/FCC_ID_LOOKUP_IMPORT_READINESS_MATRIX.md`) matching the same depth
-every other app in this project's accepted 19-app baseline received
-before its own import. Every check performed came back clean: license
-gap resolved, clean minimal dependency surface, read-only app-scoped
-storage, zero unsafe API/capability matches, no bundled database, low
-estimated build risk.
+Real Windows CI (`fcc-id-lookup-windows-validation.yml`, run
+[`29067243595`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/29067243595),
+commit `ff5a69b`) confirmed, independently via `get_job_logs`/
+`list_workflow_jobs` (not claimed on trust): `Static:
+PASS_WITH_REVIEWED_FALSE_POSITIVES`, `Build: PASS`, `firmware.dfu`
+generated (862,833 bytes), updater `.tgz` generated (2,891,283 bytes),
+all 20 expected `.fap` outputs present including `fcc_id_lookup.fap`.
+Full detail in `docs/FCC_ID_LOOKUP_BUILD_REPORT.md`.
 
-**This classification is not itself an import approval.** It states
-that `fcc_id_lookup` is eligible to be the subject of a future,
-separately-requested one-app import-planning phase — nothing in this
-document starts that phase.
+## Imported app
 
-## Is a future one-app import phase allowed?
+`fcc_id_lookup` — appid `fcc_id_lookup`, imported to
+`applications_user/fcc_id_lookup/`, from `RogueMaster/flipperzero-firmware-wPlugins`
+commit `472f6925e8aca9bd031cb37e3cb80b551772c957`
+(`applications/external/fcc_id_lookup/`).
 
-**Yes, on the project owner's own explicit future request** — following
-this project's standing one-app-at-a-time, commit-per-app,
-validate-after-each discipline, exactly as every prior import (Phase
-2A-2F) has followed. Nothing in this document authorizes starting that
-phase now.
+## Code changed summary
 
-## Conditions before implementation
+- **Added**: `applications_user/fcc_id_lookup/` (6 files: `README.md`,
+  `application.fam`, `fcc_id_lookup.c`, `fcc_id_lookup_icon.png`,
+  `fcc_qr_code.h` — all 5 byte-identical to the pinned upstream commit —
+  plus a new `LICENSE` file with the confirmed upstream MIT text).
+- **Modified**: `applications_user/.gitignore` (one new per-app allowlist
+  entry, following this project's established pattern).
+- **No other application directory, and no core firmware source, was
+  touched.**
+- `tools/fcc_id_lookup_validate_config.json` (new, superset of
+  `tools/phase2f_validate_config.json`) and
+  `.github/workflows/fcc-id-lookup-windows-validation.yml` (new) — tooling
+  additions only, no existing validator config or workflow modified.
 
-1. **Project owner's own explicit request** to begin a one-app import
-   phase for `fcc_id_lookup` specifically. Not implied or auto-triggered
-   by this document.
-2. **Include the confirmed upstream `LICENSE` file** (MIT, Copyright (c)
-   2026 lsr) alongside the app's own source at the moment of actual
-   import — not merely cited in a planning document.
-3. **A real static safety scan** via `tools/phase2a_validate.ps1` run
-   against the app once it actually exists under `applications_user/`,
-   confirming the manual scan performed in this phase reproduces
-   identically through the project's own tooling.
-4. **A real CI build attempt** (Windows validation workflow), confirming
-   a clean compile as part of the current 19-app baseline, with no
-   `updater_package`/`.fap`-output regression — the one check this
-   planning phase could not perform without importing.
-5. **A dedicated safety-review document** (`PHASEX_Y_SAFETY_REVIEW.md`-
-   equivalent) at actual import time, matching this project's per-app
-   documentation standard, rather than citing this planning phase's
-   findings as a substitute.
-6. **A `THIRD_PARTY_NOTICES.md`-equivalent entry** naming the upstream
-   project, its MIT license, and explicitly noting the database is not
-   bundled.
+## Build/CI status
 
-## Exact stop conditions
+**PASS.** See `docs/FCC_ID_LOOKUP_BUILD_REPORT.md` for full detail,
+including the process note on the first CI attempt's self-inflicted
+concurrency-cancellation (not a build defect — resolved by the second,
+clean run).
 
-If any of the following occurs during a future import attempt, stop
-immediately and re-classify:
+## Safety status
 
-- If the real static safety scan (condition 3) produces any match
-  against a high-confidence unsafe keyword not already reviewed and
-  recorded here, or any match this manual pass did not find — stop, mark
-  NEEDS REVIEW, do not import until resolved.
-- If the real CI build fails for any reason tied to `fcc_id_lookup`'s
-  own source (not a CI/tooling issue of the kind Phase 2D.2A/2F.2A
-  root-caused) — stop, mark BLOCKED, do not import until resolved.
-- If the upstream `LICENSE` file cannot be confirmed to still be the
-  real, current MIT license at actual import time (e.g., if the upstream
-  repository's license has since changed) — stop, mark NEEDS REVIEW, and
-  re-verify before proceeding.
-- If any evidence emerges that the vendored copy's actual pinned commit
-  at the moment of import differs materially from
-  `472f6925e8aca9bd031cb37e3cb80b551772c957` in a way that could affect
-  the license-resolution chain of evidence — stop, mark NEEDS REVIEW,
-  and re-run the license-resolution check against the new commit.
-- If the app requires any source change outside its own
-  `applications_user/fcc_id_lookup/` directory to build — stop, mark
-  NEEDS REVIEW, per this project's standing policy on apps requiring
-  changes outside their own directory.
+**CLEAR.** Real static scan via `tools/phase2a_validate.ps1` (both a
+local pre-CI run and the real CI run) confirmed
+`PASS_WITH_REVIEWED_FALSE_POSITIVES`: zero unreviewed matches, zero
+high-confidence-unsafe matches, 11 matches newly attributable to
+`fcc_id_lookup` (8 "ble"-in-"available", 3 "token"-in-a-data-table),
+each individually reviewed with file/line/keyword/line-content-hash
+evidence. No network/HTTP behavior, no credential/token/API-key
+handling, no RF/Sub-GHz/NFC/RFID/iButton/BadUSB/BLE/GPIO/IR behavior.
+Full detail in `docs/FCC_ID_LOOKUP_SAFETY_REVIEW.md`.
 
-## Statement
+## Storage/database status
 
-**NO CODE IMPORT PERFORMED.** No application directory was created or
-modified, no build was attempted, and no firmware or app source changed
-as a result of this phase or this document. Hardware flashing/testing:
-**NOT PERFORMED.** Release status: **TEST-READY ONLY / NOT
-RELEASE-READY** — unaffected by this document.
+**CLEAR.** Zero write-capable storage calls anywhere in
+`fcc_id_lookup.c` (11 call sites, all read/open/close/free lifecycle
+operations). The single read path resolves to the app-scoped
+`/ext/apps_assets/fcc_id_lookup/` directory, not shared or root-level.
+No FCC database file was bundled, committed, or staged at any point in
+this import — confirmed by directory listing
+(`applications_user/fcc_id_lookup/` contains exactly 6 files, none a
+database) and by `git status`/`git diff --stat` before every commit.
+
+## Hardware status
+
+**NOT PERFORMED.** No `-Mode HardwareAssisted` invocation exists
+anywhere in this phase. No device, no flash, no hardware claim of any
+kind.
+
+## Release status
+
+**TEST-READY ONLY / NOT RELEASE-READY.** This import does not change
+that status — hardware-assisted validation of the full (now 20-app)
+baseline remains outstanding, exactly as it was before this phase for
+the 19-app baseline.
+
+## Next gate
+
+This one-app import does **not** itself authorize:
+
+- **Baseline finalization** (a new accepted CI baseline, tags, artifact
+  hash finalization) — per the task's own explicit instruction, this
+  phase does not start that; it remains a separate, future,
+  explicitly-requested step, mirroring the Phase 2X.3 pattern this
+  project has used for every prior batch.
+- **A broader Phase 2G/2H batch** — this was a dedicated one-app import,
+  not a reopening of Phase 2G's own NO-GO / clean-candidate-pool-exhausted
+  conclusion.
+- **Hardware-assisted validation** — not run, not started by this
+  document.
+- **Release.** Nothing here claims or authorizes release-readiness.
+
+The natural next gate, if the project owner wants to formally accept
+this CI-validated 20-app state as the new baseline, would be a
+dedicated Phase-2X.3-style CI baseline acceptance and artifact hash
+finalization pass over this exact commit — a separate, explicitly-requested
+phase, not started here.

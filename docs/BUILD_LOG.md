@@ -1892,6 +1892,66 @@ RELEASE-READY**.
 
 ---
 
+## `fcc_id_lookup` one-app import: FCC_ID_LOOKUP IMPORT PASS
+
+A dedicated one-app import phase, on a new branch
+`integration/fcc-id-lookup-one-app-import` (created from the latest
+pushed `integration/phase2f-first-batch`) — not a Phase 2G/2H batch, and
+not a reopening of Phase 2G's own NO-GO / clean-candidate-pool-exhausted
+conclusion.
+
+Imported `fcc_id_lookup` from `RogueMaster/flipperzero-firmware-wPlugins`
+commit `472f6925e8aca9bd031cb37e3cb80b551772c957`
+(`applications/external/fcc_id_lookup/`) into
+`applications_user/fcc_id_lookup/` — all 5 upstream files copied
+byte-identical (verified via `diff`/`cmp` before commit), plus the
+confirmed upstream MIT `LICENSE` (Copyright (c) 2026 lsr, independently
+fetched live and confirmed to match the canonical MIT template exactly)
+added alongside the source. No FCC frequency/applicant database was
+bundled, committed, or staged at any point. Commit `579b355` ("fcc:
+import fcc_id_lookup").
+
+Added `tools/fcc_id_lookup_validate_config.json` (a superset of
+`tools/phase2f_validate_config.json`, extending `expectedApps` to 20)
+and `.github/workflows/fcc-id-lookup-windows-validation.yml` (modeled on
+`phase2f-windows-validation.yml`). Ran the real static safety scan
+locally first (`PASS_WITH_REVIEWED_FALSE_POSITIVES`, 11 new reviewed
+entries for `fcc_id_lookup`, all benign) before committing. Commit
+`b3e428a` ("fcc: add validation config and workflow"). Local build:
+`fbt.cmd` confirmed to be a Windows batch file, unrunnable in this
+Linux sandbox — classified honestly as BUILD BLOCKED / ENVIRONMENT, not
+faked.
+
+Real Windows CI: the first dispatch (run `29066998462`) was
+auto-cancelled mid-Build because a docs-only push to the same branch
+triggered the workflow's own concurrency `cancel-in-progress` policy —
+every individual step had already succeeded up to that point, not a
+real defect. The second, uninterrupted run
+([`29067243595`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/29067243595),
+commit `ff5a69b`) is the authoritative result, independently confirmed
+via `get_job_logs`: `Static: PASS_WITH_REVIEWED_FALSE_POSITIVES`,
+`Build: PASS`, `firmware.dfu` 862,833 bytes, updater
+`flipper-z-f7-update-local.tgz` 2,891,283 bytes, all 20 expected `.fap`
+outputs present (including `fcc_id_lookup.fap`, confirmed via the
+validator's own per-app check, not aggregate count alone).
+
+**Final classification: FCC_ID_LOOKUP IMPORT PASS.** Full detail in
+`docs/FCC_ID_LOOKUP_IMPORT_LOG.md`, `docs/FCC_ID_LOOKUP_SAFETY_REVIEW.md`,
+`docs/FCC_ID_LOOKUP_BUILD_REPORT.md`,
+`docs/FCC_ID_LOOKUP_LICENSE_ATTRIBUTION.md`,
+`docs/FCC_ID_LOOKUP_THIRD_PARTY_NOTICES.md`, and
+`docs/FCC_ID_LOOKUP_GO_NO_GO.md`. No app outside `fcc_id_lookup` was
+touched; no core firmware source changed;
+`applications_user/image_viewer/example_images/` remains excluded,
+confirmed absent; the Phase 2F.2A `barcode_gen` source fix remains
+preserved, confirmed intact. No hardware testing performed. This import
+does not itself start baseline finalization, hardware-assisted
+validation, or a broader batch — each remains a separate, future,
+explicitly-requested step. Release status remains **TEST-READY ONLY /
+NOT RELEASE-READY**.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
