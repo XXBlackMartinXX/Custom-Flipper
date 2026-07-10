@@ -55,3 +55,10 @@
 !/hex_viewer/**
 !/barcode_gen/
 !/barcode_gen/**
+
+# Custom-Flipper fcc_id_lookup dedicated one-app import (same
+# explicit-exception pattern; cleared via its own dedicated
+# license-resolution and pre-import verification phases, see
+# docs/FCC_ID_LOOKUP_GO_NO_GO.md)
+!/fcc_id_lookup/
+!/fcc_id_lookup/**
