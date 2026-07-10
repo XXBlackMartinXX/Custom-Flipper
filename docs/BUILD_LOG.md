@@ -1952,6 +1952,77 @@ NOT RELEASE-READY**.
 
 ---
 
+## `fcc_id_lookup` baseline finalization: FCC_ID_LOOKUP BASELINE ACCEPTANCE PASS
+
+Finalized the dedicated `fcc_id_lookup` one-app import CI baseline on
+`integration/fcc-id-lookup-one-app-import`. Before finalizing, checked
+for a later successful CI run at the true current branch HEAD rather
+than trusting the earlier-cited run number: HEAD had moved one commit
+past `ff5a69b` (the commit run `29067243595` validated) to `8626572`
+(`86265727b5b8cfce5086eb88f8bb93d0169ab9a9`), and a later run,
+[`29068148596`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/29068148596),
+existed at that exact HEAD with an independently-confirmed `success`
+conclusion (`Static: PASS_WITH_REVIEWED_FALSE_POSITIVES`, `Build:
+PASS`, all 20 `.fap` outputs present) — this later run was used as the
+accepted baseline instead, per this phase's own baseline-selection
+rule.
+
+Added `.github/workflows/fcc-id-lookup-finalize-baseline.yml`, modeled
+on the Phase 2F.3 finalizer, running entirely on a GitHub-hosted
+`windows-latest` runner (to work around this sandbox's known Azure
+Blob Storage artifact-download and tag-push blocks). Dispatched with
+`source_run_id=29068148596`,
+`ci_baseline_sha=86265727b5b8cfce5086eb88f8bb93d0169ab9a9`,
+`acceptance_tag_name=fcc-id-lookup-acceptance-record-20260710`,
+`ci_tag_name=fcc-id-lookup-ci-baseline-20260710`. Run
+[`29096377711`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/29096377711)
+completed with **all 13 steps `conclusion: success`**, independently
+confirmed via `list_workflow_jobs`/`get_job_logs`, not claimed on
+trust.
+
+Real, independently-computed SHA-256 hashes (`Get-FileHash -Algorithm
+SHA256` on the runner, from `source_run_id`'s own uploaded artifacts
+via `gh run download`):
+
+- `firmware.dfu` — 862,833 bytes,
+  `e8c11b62429677e727a42682b2e7f2bf8eaf8e5a84e8887f2d3db6b137328f1d`
+- `flipper-z-f7-update-local.tgz` — 2,891,859 bytes,
+  `eec5b148892a3d89c724006bd082f1ca083e05990aa7b8cad43868bf8347cc55`
+- `fcc_id_lookup.fap` — 20,196 bytes,
+  `168025ddcffb01f94e1af8eefcead2ac80d69f6b7ad9856a603e1a7d30317658`
+- All 42 total `.fap` files hashed; full table in
+  `docs/FCC_ID_LOOKUP_ARTIFACT_HASHES.md`.
+
+The workflow committed the patched
+`docs/FCC_ID_LOOKUP_ARTIFACT_HASHES.md` and
+`docs/FCC_ID_LOOKUP_ARTIFACT_MANIFEST.md` as commit `1c0232b` under the
+`github-actions[bot]` identity and pushed two annotated tags, both
+independently re-verified via a fresh `git ls-remote --tags origin`
+(not just trusted from the workflow's own log):
+`fcc-id-lookup-ci-baseline-20260710` → `86265727b5b8cfce5086eb88f8bb93d0169ab9a9`,
+`fcc-id-lookup-acceptance-record-20260710` → `1c0232b4137c366c5b79f651136b3097abf69a69`.
+All 10 prior Phase 2A–2F tags confirmed unchanged. A follow-up
+docs-only commit then closed out the "Finalization workflow result"
+sections in `docs/FCC_ID_LOOKUP_BASELINE_ACCEPTANCE_RECORD.md` and
+`docs/FCC_ID_LOOKUP_BASELINE_GO_NO_GO.md` (which the workflow's own
+sentinel-replacement step does not touch by design) and fixed two
+artifact-manifest rows the sentinel patch missed/left stale (updater
+`.tgz` SHA-256, firmware SHA-256 wording).
+
+**Final classification: FCC_ID_LOOKUP BASELINE ACCEPTANCE PASS.** No
+app import, no firmware/app source modification, no database bundling,
+and no hardware flashing occurred in this phase. No hardware testing
+performed. Release status remains **TEST-READY ONLY / NOT
+RELEASE-READY**. Next allowed gate: hardware-assisted validation and/or
+a future broader import batch, each a separate, explicitly-requested
+step — neither started here. Full detail in
+`docs/FCC_ID_LOOKUP_BASELINE_ACCEPTANCE_RECORD.md`,
+`docs/FCC_ID_LOOKUP_ARTIFACT_MANIFEST.md`,
+`docs/FCC_ID_LOOKUP_ARTIFACT_HASHES.md`, and
+`docs/FCC_ID_LOOKUP_BASELINE_GO_NO_GO.md`.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
