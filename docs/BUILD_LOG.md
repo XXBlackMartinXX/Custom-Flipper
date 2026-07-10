@@ -2023,6 +2023,85 @@ step — neither started here. Full detail in
 
 ---
 
+## Full project consolidation and QA audit — NON-HARDWARE CI BASELINE ACCEPTED
+
+A docs-only, read-only consolidation and QA audit performed after the
+final 20-app baseline, synthesizing all 7 accepted milestones (Phase
+2A–2F plus the dedicated `fcc_id_lookup` one-app import and baseline
+finalization) into a single source-grounded view. No app was imported,
+no firmware/app source was modified, no workflow was changed, and no
+hardware was flashed to produce this audit.
+
+Eight new documents were added on
+`integration/fcc-id-lookup-one-app-import`, then mirrored here:
+
+- `docs/PROJECT_BASELINE_AUDIT.md` — top-level summary: overall status,
+  final accepted baseline (`86265727b5b8cfce5086eb88f8bb93d0169ab9a9`,
+  CI run
+  [`29068148596`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/29068148596),
+  finalization run
+  [`29096377711`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/29096377711)),
+  all 7 phases, all 14 baseline tags (independently re-verified via
+  `git ls-remote --tags origin`, zero drift from any recorded target),
+  deferred/excluded apps, and the 3 known real source modifications
+  (`chess` SAM removal, `fcc_id_lookup` upstream LICENSE addition,
+  `barcode_gen` dead-call removal) plus the `image_viewer/example_images`
+  asset exclusion.
+- `docs/CUSTOM_APP_INVENTORY.md` — full 20-app table (appid, FAP name,
+  phase, source repo/commit, license, attribution, bundled/excluded
+  assets, storage behavior, safety notes, CI status).
+- `docs/THIRD_PARTY_LICENSE_AUDIT.md` — per-app license/provenance,
+  including `boilerplate`'s README-only permissive statement,
+  `qrcode`'s bundled third-party MIT QR library (ricmoo/Nayuki),
+  `barcode_gen`'s encoding-table provenance, `fcc_id_lookup`'s upstream
+  MIT LICENSE evidence chain, the `image_viewer/example_images`
+  exclusion (including the `spongebob.bm` copyright concern), and the
+  6 deferred/excluded candidates including `c_book`'s still-unresolved
+  copyrighted-book-content concern.
+- `docs/SAFETY_CAPABILITY_AUDIT.md` — consolidated safety-scan result:
+  475 cumulative reviewed keyword matches across all 20 apps, zero
+  unreviewed, zero high-confidence-unsafe API matches (Sub-GHz, NFC,
+  RFID, iButton, BadUSB, HID, GPIO write, IR transmit) in any of the 7
+  phases, zero real credential/token/network findings.
+  Source/CI-based only — no hardware testing performed.
+- `docs/STORAGE_AND_DATA_BEHAVIOR_AUDIT.md` — per-app storage/data
+  behavior, including `sd_info`'s transient, user-initiated,
+  non-app-scoped benchmark writes at `/ext/sdtest.tmp*` (the project's
+  one non-app-private write, reviewed and accepted as safe) and the
+  `2048`/`qrcode` legacy-path migration behaviors.
+- `docs/CI_BASELINE_SUMMARY.md` — every CI run ID, finalization run ID,
+  and artifact hash across all 7 milestones, FAP verification summary,
+  and the two real `updater_package` CI-tooling fixes (Phase 2D.2A
+  intermittent-launch remediation; Phase 2F.2A stderr-escalation fix,
+  which also uncovered the real `barcode_gen` source defect).
+- `docs/REMAINING_GAPS_AND_NEXT_ACTIONS.md` — honest inventory of what
+  has not been done (hardware validation, GUI smoke testing, on-device
+  rollback verification, release candidate declaration) and the
+  recommended order of next actions.
+- `docs/FINAL_NON_HARDWARE_GO_NO_GO.md` — final classification: **NON-
+  HARDWARE CI BASELINE ACCEPTED**, **HARDWARE VALIDATION BLOCKED —
+  DEVICE NOT AVAILABLE**, **RELEASE STATUS: TEST-READY ONLY / NOT
+  RELEASE-READY**, with an explicit statement that this audit is not a
+  release approval.
+
+`docs/KNOWN_ISSUES.md` item 6 was updated with a currency correction:
+it previously ended with "This app has still not been imported,"
+reflecting its state as of the license-resolution phase; `fcc_id_lookup`
+has since been imported and its own baseline finalized. The item's
+original text is left unmodified as a historical record; an update note
+was appended reflecting the current, accurate status. No other
+`KNOWN_ISSUES.md` item was touched — this audit surfaced no new
+unresolved issue.
+
+**Final classification: NON-HARDWARE CI BASELINE ACCEPTED.** No app
+import, no firmware/app source modification, no workflow change, and no
+hardware flashing occurred in this phase. Hardware testing: **NOT
+PERFORMED**. Release status remains **TEST-READY ONLY / NOT
+RELEASE-READY**. This audit is not a release approval. Full detail in
+the 8 documents listed above.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is

@@ -215,12 +215,30 @@
    evidence itself is unchanged (still no in-repo `LICENSE`/SPDX/
    copyright header) — resolution is conditioned on including the
    confirmed upstream `LICENSE` file at actual import time, per
-   `docs/FCC_ID_LOOKUP_IMPORT_ELIGIBILITY.md`. **This app has still not
-   been imported** — this phase was licensing/provenance resolution
-   only, not an import phase. A dedicated pre-import verification pass
-   (safety scan, CI build, storage/safety review) remains required before
-   any future import, and remains gated behind the project owner's own
-   separate, explicit request.
+   `docs/FCC_ID_LOOKUP_IMPORT_ELIGIBILITY.md`. At the time of that
+   phase, this app had still not been imported — that phase was
+   licensing/provenance resolution only, not an import phase.
+   **Import + baseline finalization update — RESOLVED, imported**: a
+   dedicated pre-import verification pass (safety scan, CI build,
+   storage/safety review), a one-app import phase, and a baseline
+   finalization phase have since all completed. `fcc_id_lookup` is now
+   imported at `applications_user/fcc_id_lookup/` (commit `579b355`),
+   its own dedicated CI baseline is accepted (commit
+   `86265727b5b8cfce5086eb88f8bb93d0169ab9a9`, CI run
+   [`29068148596`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/29068148596),
+   finalization run
+   [`29096377711`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/29096377711)),
+   and it is the 20th app in the project's full baseline. This item's
+   text above (describing the app as not-yet-imported) reflects the
+   state at the time the license-resolution phase was written and is
+   left unmodified as a historical record; this update note is the
+   current, accurate status. Full detail in
+   `docs/FCC_ID_LOOKUP_IMPORT_LOG.md`,
+   `docs/FCC_ID_LOOKUP_BASELINE_ACCEPTANCE_RECORD.md`,
+   `docs/FCC_ID_LOOKUP_BASELINE_GO_NO_GO.md`, and the full-project
+   `docs/PROJECT_BASELINE_AUDIT.md`. No hardware testing has been
+   performed; release status remains TEST-READY ONLY / NOT
+   RELEASE-READY.
 7. **RESOLVED again as of Phase 2F.2A (history: RESOLVED as of Phase
    2D.3, REOPENED as of Phase 2F.2, RESOLVED as of Phase 2F.2A) — the
    `updater_package` `fbt.cmd` build target's failure recurred,
