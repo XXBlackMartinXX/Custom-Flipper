@@ -114,6 +114,11 @@ validation proceeds via CI (`docs/FCC_ID_LOOKUP_BUILD_REPORT.md`).
 
 ## Final import status
 
-See `docs/FCC_ID_LOOKUP_BUILD_REPORT.md` for the real CI result and
-`docs/FCC_ID_LOOKUP_GO_NO_GO.md` for the final classification — both
-recorded after the actual CI run completed, not before.
+**FCC_ID_LOOKUP IMPORT PASS.** Real CI run
+([`29067243595`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/29067243595),
+commit `ff5a69b`) confirmed `Static: PASS_WITH_REVIEWED_FALSE_POSITIVES`,
+`Build: PASS`, `firmware.dfu` (862,833 bytes) and updater `.tgz`
+(2,891,283 bytes) both generated, all 20 expected `.fap` outputs present
+including `fcc_id_lookup.fap`. Full detail in
+`docs/FCC_ID_LOOKUP_BUILD_REPORT.md`; final classification in
+`docs/FCC_ID_LOOKUP_GO_NO_GO.md`.
