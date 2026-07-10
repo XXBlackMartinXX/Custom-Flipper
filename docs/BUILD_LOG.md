@@ -2421,6 +2421,89 @@ next, has not occurred in this phase and is not claimed.
 
 ---
 
+## Pre-Flash Canonical Blob Integrity Fix — cross-platform false-FAIL corrected
+
+A narrow, tooling/docs-only correctness fix to the pinned finalization-
+workflow exception in `tools/pre_flash_safeguard_gate.ps1`, prompted by
+real evidence from a real Windows session with `core.autocrlf=true`. No
+app import, no firmware/app source modification, no workflow file
+modification, no hardware flashing.
+
+**Root cause**: the pinned-exception check hashed the **checked-out
+working-tree file** (`Get-FileHash`) and compared that to the pinned
+SHA256. On a Windows checkout with `core.autocrlf=true`, Git converts
+the repository's canonical `LF` line endings to `CRLF` at checkout time,
+so the on-disk file differs, byte for byte, from the reviewed and
+pinned Git blob — even though the committed object itself is completely
+unchanged. This produced a real false `FAIL`: reported working-tree
+SHA256 `58affd8ab...654f4` versus the pinned canonical value
+`3350d940...7ecc5`, despite `git status` showing the path clean and the
+HEAD blob (`094ed7bf30eecae5efe384568c5c0aa543260b2f`) matching exactly
+what was reviewed.
+
+**The fix**: the decision is now made entirely from canonical Git object
+content, never working-tree bytes. `Get-PinnedWorkflowExceptionResult`
+(new) resolves the pinned path's Git blob ID at HEAD via
+`git rev-parse HEAD:<path>`, requires it to equal the pinned
+`ExpectedBlobId` exactly, reads the exact canonical bytes of that blob
+via `git cat-file blob <id>` (captured through the child process's raw
+`StandardOutput.BaseStream` in `Get-CanonicalGitBlobBytes` — never a
+text pipeline, so no newline translation or re-encoding occurs on any
+platform or PowerShell version), hashes those bytes and requires the
+result to equal the pinned `ExpectedSha256` exactly (defense in depth),
+and confirms the path is clean via `git status --porcelain` (which
+itself already accounts for `core.autocrlf` normalization, so a
+checkout-time line-ending conversion alone never makes this dirty — only
+a genuine uncommitted edit does). The working-tree SHA256 is still
+computed and shown for diagnostic/operator-awareness text only; it never
+determines PASS/FAIL. `core.autocrlf` itself is never read or modified,
+and the reviewed workflow file is never rewritten, staged, or checked
+out by this script.
+
+Extended `tools/pre_flash_safeguard_gate.tests.ps1` with a byte-capture
+sanity check plus Blob Tests A–M: canonical LF blob match (PASS); a
+**real** `core.autocrlf=true` reproduction — Git config set for real in
+a scratch repo and the file re-checked out, producing genuine CRLF
+working-tree bytes with a different SHA256, `git status` still clean,
+result still `PASS` because it is blob-decided (Blob Test B, the
+load-bearing proof for this fix — a real exercise of Git's own
+checkout/smudge logic, not a hand-rolled mock); committed content
+modified (FAIL); matching blob ID but a deliberately wrong pinned
+SHA256, i.e. simulated config drift (FAIL); dirty unstaged edit (FAIL);
+dirty staged-but-uncommitted edit (FAIL); unrelated workflow file
+(FAIL); missing workflow path (FAIL); baseline not an ancestor of HEAD
+(BLOCKED); docs/tools-only descendant plus the exact pinned blob (PASS);
+`applications_user/` change (FAIL); canonical-extraction failure via a
+removed loose Git object, confirmed to fail closed through a `catch`
+branch rather than an uncaught exception or silent skip (FAIL); and a
+re-confirmation that the existing USB-identity regressions (exact
+normal-mode ID, exact DFU ID, camera DFU rejection) remain intact. The
+pre-existing Ancestry Tests B, C, and D were updated to carry the new
+`ExpectedBlobId` field. **All 30 assertions in the file passed** when
+run for real via `pwsh` in this session.
+
+Real execution against this repository's actual current HEAD in this
+sandbox: `tools/pre_flash_safeguard_gate.ps1 -Mode Preflight`'s
+"Baseline ancestry and diff-scope verification" check continues to show
+`PASS - ACCEPTED BASELINE WITH REVIEWED TOOLING/DOCS DESCENDANT AND
+PINNED FINALIZATION WORKFLOW`, now decided from the Git blob ID and
+canonical bytes rather than a working-tree hash. Overall run
+classification remains `NEEDS_REVIEW`, driven only by the same benign
+uncommitted-working-tree condition documented since this gate's first
+run — not by any hardware, artifact, or workflow-integrity check.
+
+**Final classification: PRE-FLASH CANONICAL BLOB INTEGRITY PATCH PASS.**
+No app import, no firmware/app source modification, no workflow file
+modification, no CI workflow change, and no hardware flashing occurred
+in this phase. Hardware testing: **NOT PERFORMED**. Release status
+remains **TEST-READY ONLY / NOT RELEASE-READY**. This fix was verified
+in this Linux sandbox, including a real reproduction of
+`core.autocrlf=true` behavior (Blob Test B) — no actual Windows machine
+ran this fix in this session; the Windows evidence that prompted it was
+supplied by the project owner from their own real session.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is

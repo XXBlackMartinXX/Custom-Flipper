@@ -491,9 +491,48 @@
     check or ignoring the finding, this exact one file was individually
     audited against 7 required safety claims (all confirmed true — see
     `docs/PRE_FLASH_WORKFLOW_EXCEPTION_REVIEW.md`) and is now permitted
-    via a narrow, pinned-SHA256 exception: only this exact path, only
-    while its live content hashes to the exact reviewed value, never the
-    `.github/workflows/` directory in general. Any future edit to this
-    one file invalidates the pin and fails closed again until re-
+    via a narrow, pinned exception: only this exact path, only while its
+    canonical Git blob ID and blob content match the exact reviewed
+    values, never the `.github/workflows/` directory in general (see
+    item 11 below for how "canonical" is determined). Any future edit to
+    this one file invalidates the pin and fails closed again until re-
     reviewed. This is a deliberate, reviewed, documented condition of
     this repository's real history — not an open defect awaiting a fix.
+
+11. **RESOLVED — the pinned finalization-workflow exception (item 10
+    above) decided its integrity check from checked-out working-tree
+    bytes (`Get-FileHash` on the file on disk), which is wrong on any
+    platform where Git rewrites line endings at checkout. A real Windows
+    session with `core.autocrlf=true` reported a working-tree SHA256
+    (`58affd8ab...654f4`) that did not match the pinned canonical value
+    (`3350d940...7ecc5`), even though the committed Git object (blob
+    `094ed7bf30eecae5efe384568c5c0aa543260b2f`) was completely
+    unchanged and `git status` reported the path clean — a false
+    `FAIL`, not a real integrity problem.** Found via real hardware/CI
+    evidence review, before any firmware installation was considered.
+    **Fixed** in the Pre-Flash Canonical Blob Integrity Fix phase:
+    the decision is now made entirely from canonical Git object content
+    — `git rev-parse HEAD:<path>` to resolve the blob ID, and
+    `git cat-file blob <id>` (captured via a raw, binary-safe process
+    stream, never a text pipeline) to read the exact canonical bytes and
+    hash them — plus a `git status --porcelain` check that the path has
+    no genuine uncommitted local edit. The working-tree SHA256 is now
+    computed only for diagnostic display text and never influences the
+    result. Confirmed resolved only after this was regression-tested:
+    `tools/pre_flash_safeguard_gate.tests.ps1`'s new Blob Test B sets
+    `core.autocrlf=true` for real and re-checks out the file, producing
+    genuine CRLF working-tree bytes with a different hash, and confirms
+    the check still `PASS`es because it is blob-based — this is a real
+    exercise of Git's own checkout/smudge logic, not a hand-rolled
+    mock. All 30 regression assertions in that file passed when run for
+    real via `pwsh` in this session, including 12 other new canonical-
+    blob-integrity scenarios (altered content, config drift, dirty
+    unstaged/staged edits, an unrelated workflow file, a missing path,
+    baseline-not-ancestor, a docs/tools-only PASS path, an
+    `applications_user/` change, and a canonical-extraction failure that
+    fails closed rather than silently skipping). Full detail in
+    `docs/PRE_FLASH_CANONICAL_BLOB_INTEGRITY_FIX.md`. This defect was
+    never exploitable to falsely PASS anything — the failure mode was
+    always a false `FAIL` (fail-closed on valid content), never a false
+    `PASS`, so no real repository state was ever incorrectly accepted by
+    it.
