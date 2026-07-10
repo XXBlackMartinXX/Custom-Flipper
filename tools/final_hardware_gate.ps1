@@ -23,6 +23,26 @@
     mode, attempts safe, read-only detection of a connected Flipper Zero
     and installed official flashing tooling (qFlipper).
 
+    DEVICE IDENTITY HARDENING (this revision): the "Flipper Zero detection"
+    check previously matched a connected device using
+    `$_.FriendlyName -match $Config.deviceDetection.expectedFriendlyNameSubstring
+    -or $_.InstanceId -match ...` - the FriendlyName-OR clause meant any
+    device whose Windows-assigned friendly name merely contained "Flipper"
+    could satisfy the match. Identity is now determined SOLELY by an exact
+    InstanceId substring match against VID_0483&PID_5740 (normal mode) -
+    FriendlyName is displayed in the report for information only and never
+    determines PASS/BLOCKED. A parallel VID_0483&PID_DF11 (DFU/recovery
+    mode) identity function is also defined for testability and consistency
+    with tools/pre_flash_safeguard_gate.ps1 (which does perform live
+    DFU-mode detection); this script's own live modes still only ever
+    detect normal-mode identity - no new mode, no new hardware capability,
+    and no new live DFU-detection code path was added here. Device
+    enumeration (the only function touching the real Get-PnpDevice cmdlet)
+    is separated from identity evaluation (pure functions operating only on
+    the strings/objects they are given), so identity logic is unit-testable
+    with synthetic device fixtures and no real hardware - see
+    tools/final_hardware_gate.tests.ps1.
+
     It also confirms, as automated Preflight-level checks, that:
       - applications_user/image_viewer/example_images/ remains absent from
         the repository - this directory (3 bundled .bm demo images,
@@ -73,12 +93,25 @@
     hex suffix (yyyyMMdd_HHmmss_fff_XXXX), which is collision-resistant even
     for rapid repeated invocations.
 
+    Testability: this file can be dot-sourced
+    (`. .\tools\final_hardware_gate.ps1`) to load only its function
+    definitions, without running the main gate body or touching any
+    hardware API - detected via `$MyInvocation.InvocationName -eq '.'`.
+    This is how tools/final_hardware_gate.tests.ps1 exercises the identity
+    logic with synthetic fixtures, with no real device required.
+
+    PowerShell 5.1 compatibility: deliberately avoids PowerShell-7-only
+    syntax (ternary `?:`, null-coalescing `??`/`??=`, pipeline chain
+    operators `&&`/`||`) so this script runs unchanged on Windows
+    PowerShell 5.1 as well as PowerShell 7+.
+
 .PARAMETER Mode
     Preflight (default) - repo/config checks only, no hardware, no artifact
                            directory required.
     DetectDevice        - Preflight checks, plus safe PnP-based detection of
-                           a connected Flipper Zero and installed qFlipper.
-                           Read-only; no serial communication with the device.
+                           a connected Flipper Zero (exact VID_0483&PID_5740
+                           match) and installed qFlipper. Read-only; no
+                           serial communication with the device.
     HashVerify          - Preflight checks, plus verifying a downloaded
                            artifact directory's firmware.dfu and updater .tgz
                            against the accepted baseline's real SHA-256
@@ -146,6 +179,200 @@ param(
     [string]$RepoRoot = ''
 )
 
+# ---------------------------------------------------------------------------
+# Exact Flipper Zero USB identities. Normal (application-firmware) mode
+# enumerates as a USB CDC-ACM serial device under ST Microelectronics's VID
+# and a Flipper-specific PID. DFU/recovery (bootloader) mode enumerates
+# under ST Microelectronics's generic DFU bootloader VID:PID - a generic
+# STM32 DFU identity shared by many unrelated devices in FriendlyName terms,
+# which is exactly why FriendlyName must never be used to determine
+# identity here.
+# ---------------------------------------------------------------------------
+
+$NormalModeVidPid = 'VID_0483&PID_5740'
+$DfuModeVidPid = 'VID_0483&PID_DF11'
+
+# ---------------------------------------------------------------------------
+# Pure / testable functions - identity evaluation. Never call Get-PnpDevice
+# or any other hardware API; operate only on the InstanceId string given, so
+# tools/final_hardware_gate.tests.ps1 can call these directly with synthetic
+# fixtures, with no real device and no Windows required. FriendlyName is
+# accepted as a display-only field on device objects elsewhere in this
+# script - it is never inspected by these functions and never determines a
+# PASS or BLOCKED result.
+# ---------------------------------------------------------------------------
+
+function Test-FlipperNormalModeIdentity {
+    [CmdletBinding()]
+    param(
+        [AllowNull()][AllowEmptyString()][string]$InstanceId
+    )
+    if ([string]::IsNullOrEmpty($InstanceId)) { return $false }
+    return $InstanceId.ToUpperInvariant().Contains($NormalModeVidPid)
+}
+
+function Test-FlipperDfuIdentity {
+    [CmdletBinding()]
+    param(
+        [AllowNull()][AllowEmptyString()][string]$InstanceId
+    )
+    if ([string]::IsNullOrEmpty($InstanceId)) { return $false }
+    return $InstanceId.ToUpperInvariant().Contains($DfuModeVidPid)
+}
+
+# ---------------------------------------------------------------------------
+# Pure / testable functions - detection-result classification. Each takes an
+# "enumeration result" object (see Get-PresentPnpDevices below) rather than
+# calling Get-PnpDevice itself, so these can be unit tested with a synthetic
+# enumeration result too.
+# ---------------------------------------------------------------------------
+
+function Get-NormalModeDetectionResult {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][object]$EnumerationResult
+    )
+    if (-not $EnumerationResult.Success) {
+        if ($EnumerationResult.ErrorType -eq 'ApiUnavailable') {
+            return [ordered]@{
+                Status = 'BLOCKED - WINDOWS DEVICE API UNAVAILABLE'
+                Detail = "Get-PnpDevice is unavailable: $($EnumerationResult.ErrorMessage) - this cmdlet requires Windows."
+            }
+        }
+        return [ordered]@{
+            Status = 'NEEDS_REVIEW'
+            Detail = "Get-PnpDevice query failed: $($EnumerationResult.ErrorMessage)"
+        }
+    }
+
+    $exactMatches = @($EnumerationResult.Devices | Where-Object { Test-FlipperNormalModeIdentity -InstanceId $_.InstanceId })
+    if ($exactMatches.Count -gt 0) {
+        $first = $exactMatches | Select-Object -First 1
+        return [ordered]@{
+            Status = 'PASS'
+            Detail = "Exact Flipper normal-mode identity $NormalModeVidPid detected: InstanceId=$($first.InstanceId), FriendlyName='$($first.FriendlyName)' (FriendlyName shown for information only - it did not determine this PASS)."
+        }
+    }
+    return [ordered]@{
+        Status = 'BLOCKED - FLIPPER NORMAL MODE NOT DETECTED'
+        Detail = "No device matching the exact Flipper normal-mode identity $NormalModeVidPid is present. Connect the device in normal (not DFU) mode and re-run if you want to proceed with hardware-assisted checks."
+    }
+}
+
+function Get-DfuDetectionResult {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][object]$EnumerationResult
+    )
+    if (-not $EnumerationResult.Success) {
+        if ($EnumerationResult.ErrorType -eq 'ApiUnavailable') {
+            return [ordered]@{
+                Status = 'BLOCKED - WINDOWS DEVICE API UNAVAILABLE'
+                Detail = "Get-PnpDevice is unavailable: $($EnumerationResult.ErrorMessage) - this cmdlet requires Windows."
+            }
+        }
+        return [ordered]@{
+            Status = 'NEEDS_REVIEW'
+            Detail = "Get-PnpDevice query failed: $($EnumerationResult.ErrorMessage)"
+        }
+    }
+
+    $exactMatches = @($EnumerationResult.Devices | Where-Object { Test-FlipperDfuIdentity -InstanceId $_.InstanceId })
+    if ($exactMatches.Count -gt 0) {
+        $first = $exactMatches | Select-Object -First 1
+        return [ordered]@{
+            Status = 'PASS'
+            Detail = "Exact Flipper DFU identity $DfuModeVidPid detected: InstanceId=$($first.InstanceId), FriendlyName='$($first.FriendlyName)' (FriendlyName shown for information only - it did not determine this PASS; no generic 'DFU'/'STM'/'Bootloader'/'Camera' string match is ever sufficient)."
+        }
+    }
+
+    $genericDfuLike = @($EnumerationResult.Devices | Where-Object {
+        ($_.InstanceId -match '(?i)DF11') -or ($_.FriendlyName -match '(?i)dfu|bootloader')
+    })
+    if ($genericDfuLike.Count -gt 0) {
+        $names = ($genericDfuLike | ForEach-Object { "$($_.FriendlyName) ($($_.InstanceId))" }) -join '; '
+        return [ordered]@{
+            Status = 'BLOCKED - EXACT FLIPPER DFU ID NOT DETECTED'
+            Detail = "Generic or unrelated DFU-like device(s) present but none matched the exact Flipper identity $DfuModeVidPid : $names. FriendlyName and generic DFU-related strings (DFU, STM, Bootloader, Camera, etc.) never determine a PASS - only an exact InstanceId match against $DfuModeVidPid does."
+        }
+    }
+    return [ordered]@{
+        Status = 'BLOCKED - EXACT FLIPPER DFU ID NOT DETECTED'
+        Detail = "No device matching the exact Flipper DFU identity $DfuModeVidPid is present. This is expected if the device has not been deliberately put into DFU mode."
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Enumeration function - the ONLY function in this file that touches a real
+# hardware/OS API (Get-PnpDevice). Kept deliberately separate from the pure
+# evaluation functions above so tests never need to call this.
+# ---------------------------------------------------------------------------
+
+function Get-PresentPnpDevices {
+    [CmdletBinding()]
+    param()
+    try {
+        $devices = @(Get-PnpDevice -PresentOnly -ErrorAction Stop)
+        return [ordered]@{ Success = $true; Devices = $devices; ErrorType = $null; ErrorMessage = $null }
+    }
+    catch [System.Management.Automation.CommandNotFoundException] {
+        return [ordered]@{ Success = $false; Devices = @(); ErrorType = 'ApiUnavailable'; ErrorMessage = $_.Exception.Message }
+    }
+    catch {
+        return [ordered]@{ Success = $false; Devices = @(); ErrorType = 'QueryError'; ErrorMessage = $_.Exception.Message }
+    }
+}
+
+function Get-LineSha256 {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Path)
+    return (Get-FileHash -Path $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+}
+
+function Add-Result {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Category,
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Status,
+        [string]$Detail = '',
+        [object]$Evidence = $null
+    )
+    $entry = [ordered]@{
+        Category = $Category
+        Name     = $Name
+        Status   = $Status
+        Detail   = $Detail
+        Evidence = $Evidence
+    }
+    $script:Results.Add($entry) | Out-Null
+
+    $color = 'Gray'
+    if ($Status -like 'PASS*') { $color = 'Green' }
+    elseif ($Status -like 'FAIL*') { $color = 'Red' }
+    elseif ($Status -like 'BLOCKED*') { $color = 'Yellow' }
+    elseif ($Status -like 'NEEDS_REVIEW*') { $color = 'Yellow' }
+    elseif ($Status -eq 'REQUIRES_HUMAN_OBSERVATION') { $color = 'Cyan' }
+
+    Write-Host ("[{0,-28}] [{1,-45}] {2}" -f $Category, $Status, $Name) -ForegroundColor $color
+    if ($Detail) {
+        Write-Host ("{0}{1}" -f (' ' * 4), $Detail) -ForegroundColor DarkGray
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Dot-source guard: everything above this line is safe to load with no
+# hardware, no network, and no strict-mode/error-preference side effects on
+# the caller. Everything below only runs when this file is executed
+# directly (not dot-sourced), so tools/final_hardware_gate.tests.ps1 can
+# `. .\tools\final_hardware_gate.ps1` to get the functions above without
+# triggering a real gate run.
+# ---------------------------------------------------------------------------
+
+$script:IsDotSourced = ($MyInvocation.InvocationName -eq '.')
+
+if (-not $script:IsDotSourced) {
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
@@ -180,42 +407,6 @@ $RandomSuffix = -join ((1..4) | ForEach-Object { '{0:x}' -f (Get-Random -Maximum
 $RunTimestampForFilename = "$((Get-Date).ToUniversalTime().ToString('yyyyMMdd_HHmmss_fff'))_$RandomSuffix"
 
 $script:Results = New-Object System.Collections.Generic.List[object]
-
-function Add-Result {
-    param(
-        [Parameter(Mandatory)][string]$Category,
-        [Parameter(Mandatory)][string]$Name,
-        [Parameter(Mandatory)][ValidateSet('PASS', 'FAIL', 'BLOCKED', 'NOT_RUN', 'NEEDS_REVIEW', 'REQUIRES_HUMAN_OBSERVATION')][string]$Status,
-        [string]$Detail = '',
-        [object]$Evidence = $null
-    )
-    $entry = [ordered]@{
-        Category = $Category
-        Name     = $Name
-        Status   = $Status
-        Detail   = $Detail
-        Evidence = $Evidence
-    }
-    $script:Results.Add($entry) | Out-Null
-
-    $color = switch ($Status) {
-        'PASS'                       { 'Green' }
-        'FAIL'                       { 'Red' }
-        'BLOCKED'                    { 'Yellow' }
-        'NEEDS_REVIEW'               { 'Yellow' }
-        'REQUIRES_HUMAN_OBSERVATION' { 'Cyan' }
-        default                      { 'Gray' }
-    }
-    Write-Host ("[{0,-28}] [{1,-12}] {2}" -f $Category, $Status, $Name) -ForegroundColor $color
-    if ($Detail) {
-        Write-Host ("{0}{1}" -f (' ' * 46), $Detail) -ForegroundColor DarkGray
-    }
-}
-
-function Get-LineSha256 {
-    param([Parameter(Mandatory)][string]$Path)
-    return (Get-FileHash -Path $Path -Algorithm SHA256).Hash.ToLowerInvariant()
-}
 
 Write-Host ''
 Write-Host '=== Final 20-App Hardware-Assisted Validation Gate ===' -ForegroundColor Cyan
@@ -392,6 +583,15 @@ else {
 
 # ---------------------------------------------------------------------------
 # Category: Hardware-connected checks - device + tooling detection
+#
+# Device identity is now decided EXCLUSIVELY by Test-FlipperNormalModeIdentity
+# (exact InstanceId match against VID_0483&PID_5740) via the enumeration/
+# evaluation split defined above - FriendlyName is shown in the Detail text
+# once a real match is found, purely for human readability, and never
+# influences the PASS/BLOCKED outcome. This mode does not perform
+# DFU-mode detection (no new hardware capability was added here); that
+# remains the scope of tools/pre_flash_safeguard_gate.ps1's own
+# -Mode RecoveryReadiness.
 # ---------------------------------------------------------------------------
 
 $deviceDetectionApplicable = ($Mode -eq 'DetectDevice' -or $Mode -eq 'HardwareAssisted')
@@ -404,21 +604,10 @@ if (-not $deviceDetectionApplicable) {
     Add-Result -Category 'HardwareConnected' -Name 'Official flashing tooling detection (qFlipper)' -Status 'NOT_RUN' -Detail "Mode is $Mode - tooling detection was not requested."
 }
 else {
-    try {
-        $pnp = Get-PnpDevice -PresentOnly -ErrorAction Stop |
-            Where-Object { $_.FriendlyName -match $Config.deviceDetection.expectedFriendlyNameSubstring -or $_.InstanceId -match [regex]::Escape($Config.deviceDetection.expectedVidPid) }
-        if ($pnp) {
-            $deviceDetected = $true
-            $first = $pnp | Select-Object -First 1
-            Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection' -Status 'PASS' -Detail "Detected: $($first.FriendlyName) ($($first.InstanceId))"
-        }
-        else {
-            Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection' -Status 'NOT_RUN' -Detail 'No connected Flipper Zero detected via Windows PnP enumeration (Get-PnpDevice). Connect the device in normal (not DFU) mode and re-run if you want to proceed with hardware-assisted checks.'
-        }
-    }
-    catch {
-        Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection' -Status 'BLOCKED' -Detail "Get-PnpDevice failed or is unavailable ($($_.Exception.Message)) - this cmdlet requires Windows. Use a Windows machine for this mode."
-    }
+    $enumeration = Get-PresentPnpDevices
+    $normalResult = Get-NormalModeDetectionResult -EnumerationResult $enumeration
+    if ($normalResult.Status -eq 'PASS') { $deviceDetected = $true }
+    Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection' -Status $normalResult.Status -Detail $normalResult.Detail
 
     $qFlipperFound = $null
     try {
@@ -456,7 +645,7 @@ else {
         Add-Result -Category 'HardwareConnected' -Name 'Official flashing tooling detection (qFlipper)' -Status 'PASS' -Detail "Detected: $qFlipperFound"
     }
     else {
-        Add-Result -Category 'HardwareConnected' -Name 'Official flashing tooling detection (qFlipper)' -Status 'BLOCKED' -Detail 'qFlipper not found via PATH, common install directories, or the Windows uninstall registry. This is best-effort detection - it may still be installed under a nonstandard path. Flashing is classified BLOCKED / TOOLING NOT AVAILABLE unless and until this is confirmed, per this script''s design (never improvise a flash path).'
+        Add-Result -Category 'HardwareConnected' -Name 'Official flashing tooling detection (qFlipper)' -Status 'BLOCKED - QFLIPPER NOT DETECTED' -Detail 'qFlipper not found via PATH, common install directories, or the Windows uninstall registry. This is best-effort detection - it may still be installed under a nonstandard path. Flashing is classified BLOCKED / TOOLING NOT AVAILABLE unless and until this is confirmed, per this script''s design (never improvise a flash path).'
     }
 }
 
@@ -552,9 +741,9 @@ else {
 Write-Host ''
 Write-Host '=== Classification ===' -ForegroundColor Cyan
 
-$hasFail = @($script:Results | Where-Object { $_.Status -eq 'FAIL' }).Count -gt 0
-$hasBlocked = @($script:Results | Where-Object { $_.Status -eq 'BLOCKED' }).Count -gt 0
-$hasNeedsReview = @($script:Results | Where-Object { $_.Status -eq 'NEEDS_REVIEW' }).Count -gt 0
+$hasFail = @($script:Results | Where-Object { $_.Status -like 'FAIL*' }).Count -gt 0
+$hasBlocked = @($script:Results | Where-Object { $_.Status -like 'BLOCKED*' }).Count -gt 0
+$hasNeedsReview = @($script:Results | Where-Object { $_.Status -like 'NEEDS_REVIEW*' }).Count -gt 0
 $hasHumanObs = @($script:Results | Where-Object { $_.Status -eq 'REQUIRES_HUMAN_OBSERVATION' }).Count -gt 0
 $deviceWasDetected = @($script:Results | Where-Object { $_.Name -eq 'Flipper Zero detection' -and $_.Status -eq 'PASS' }).Count -gt 0
 
@@ -662,3 +851,5 @@ Write-Host "Markdown report: $mdPath"
 if ($hasFail) { exit 1 }
 elseif ($hasBlocked -or $hasNeedsReview) { exit 2 }
 else { exit 0 }
+
+} # end: if (-not $script:IsDotSourced)

@@ -206,3 +206,80 @@ Release status remains **TEST-READY ONLY / NOT RELEASE-READY**. The
 repository's diff from its accepted baseline under the corrected,
 stricter check — it is surfaced honestly for the project owner's
 decision, not silently resolved by this patch.
+
+---
+
+## Pre-Flash Safeguard Hardening phase re-run (real results, this phase)
+
+This section records **tooling-test results only** for the current
+Pre-Flash Safeguard Hardening phase. **The final real Windows/hardware
+rerun has not occurred as of this writing** — nothing below should be read
+as claiming it has. This environment remains the same Linux cloud sandbox
+as every prior phase: no Windows, no physical Flipper Zero, no qFlipper.
+
+This phase resolved the one open item from the correctness-patch re-run
+above: `.github/workflows/fcc-id-lookup-finalize-baseline.yml` is now
+covered by a narrow, individually-reviewed, pinned-SHA256 exception (see
+`docs/PRE_FLASH_WORKFLOW_EXCEPTION_REVIEW.md`), instead of forcing a
+`FAIL` on every run against this repository's real HEAD.
+
+`tools/pre_flash_safeguard_gate.ps1 -Mode Preflight` was re-run for real
+in this sandbox after the pinned-exception fix:
+
+- "Baseline ancestry and diff-scope verification" now reports
+  `PASS - ACCEPTED BASELINE WITH REVIEWED TOOLING/DOCS DESCENDANT AND
+  PINNED FINALIZATION WORKFLOW`, with Detail confirming the real changed-
+  file count, that the rest are confined to `docs/`/`tools/`, and that
+  exactly one pinned, hash-verified exception file
+  (`.github/workflows/fcc-id-lookup-finalize-baseline.yml`) was matched.
+- The overall run classification was `NEEDS_REVIEW`, not `PASS` or
+  `FAILED` — driven entirely by the same benign, expected
+  uncommitted-working-tree condition described earlier in this document
+  (this phase's own new files were not yet committed at the moment of the
+  test run), not by any hardware or artifact check. This is expected and
+  clears once this phase's commit lands.
+- Device-detection checks are unchanged from the correctness-patch re-run
+  above: `BLOCKED - WINDOWS DEVICE API UNAVAILABLE` for both normal-mode
+  and DFU-mode, confirmed via the real `Get-PnpDevice`-not-recognized
+  error in this sandbox.
+
+**Regression tests**: `tools/pre_flash_safeguard_gate.tests.ps1` was
+extended with the required Ancestry Tests A–F (docs/tools-only PASS;
+docs/tools plus the exact pinned workflow with a matching hash PASS; the
+exact pinned path with altered content/hash FAIL; a different, non-pinned
+workflow file FAIL; an `applications_user/` change FAIL; baseline not an
+ancestor of HEAD FAIL/BLOCKED) plus a real-repo assertion that this
+repository's actual accepted baseline and actual HEAD classify as `PASS`
+via the pinned exception. All 13 assertions in that file passed when run
+for real via `pwsh` in this session. Full detail in
+`docs/PRE_FLASH_WORKFLOW_EXCEPTION_REVIEW.md`.
+
+**`tools/final_hardware_gate.ps1`** was hardened in this same phase to use
+exact-`InstanceId`-only device identity (see
+`docs/DEVICE_IDENTITY_HARDENING.md`) and re-run for real in this sandbox:
+
+- `-Mode Preflight`: all prior checks unchanged and still `PASS`
+  (branch, excluded-asset, barcode_gen fix, fcc_id_lookup LICENSE, FCC
+  database); "Commit verification" and "Git status" remain `NEEDS_REVIEW`
+  for the same benign, expected reasons as always (later commit than
+  baseline; uncommitted phase files at test time). Overall:
+  `NEEDS REVIEW`.
+- `-Mode DetectDevice`: "Flipper Zero detection" now reports
+  `BLOCKED - WINDOWS DEVICE API UNAVAILABLE` (previously a generic
+  `BLOCKED`), confirmed via the real `Get-PnpDevice`-not-recognized error.
+  Overall: `HARDWARE VALIDATION BLOCKED - DEVICE NOT AVAILABLE`.
+- **Regression tests**: `tools/final_hardware_gate.tests.ps1` (new in this
+  phase) exercises Tests G–M (exact normal-mode PASS; exact DFU/recovery
+  PASS; camera DFU BLOCKED; generic DFU name with unrelated InstanceId
+  BLOCKED; normal-mode identity rejected by the DFU-specific check;
+  camera DFU plus exact Flipper DFU PASS on the exact entry only;
+  FriendlyName "Flipper" with wrong USB IDs BLOCKED for both checks). All
+  8 assertions passed when run for real via `pwsh` in this session.
+
+**No flash was performed in this phase. No hardware validation pass is
+claimed. The final real Windows/hardware no-flash rerun described in
+`docs/DEVICE_IDENTITY_HARDENING.md` and
+`docs/PRE_FLASH_WORKFLOW_EXCEPTION_REVIEW.md` has not yet happened** —
+only the corrected tooling has been exercised, here, in this sandbox, with
+real command execution and real (not fabricated) output. Release status
+remains **TEST-READY ONLY / NOT RELEASE-READY**.

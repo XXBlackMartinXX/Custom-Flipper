@@ -197,8 +197,29 @@ $DfuModeVidPid = 'VID_0483&PID_DF11'
 # accepted baseline commit and HEAD. Anything NOT under one of these
 # prefixes - applications/, applications_user/, core firmware source,
 # .github/workflows/, build/, dist/, toolchain/, or any other path - is
-# treated as a forbidden difference.
+# treated as a forbidden difference, UNLESS it exactly matches one of the
+# pinned exceptions below.
 $AllowedPostBaselinePathPrefixes = @('docs/', 'tools/')
+
+# Narrow, individually-reviewed exception: exactly one post-baseline
+# .github/workflows/ file is permitted, and only if its current content
+# still hashes to this exact pinned value. This does NOT permit the
+# .github/workflows/ directory in general - any other workflow file, or
+# any change to this one file's content, remains forbidden. See
+# docs/PRE_FLASH_WORKFLOW_EXCEPTION_REVIEW.md for the full audit that
+# justified this exception (confirmed: no firmware/app source
+# modification, no build replacement, no flash/device operation, no
+# artifact-content mutation, no release publication - only artifact
+# download, hashing, documentation update, and baseline-tag operations).
+# The pinned hash below was computed directly from the file as committed
+# at 22167ac ("fcc: baseline acceptance record and finalization
+# workflow") and has not changed since.
+$PinnedWorkflowExceptions = @(
+    [ordered]@{
+        Path           = '.github/workflows/fcc-id-lookup-finalize-baseline.yml'
+        ExpectedSha256 = '3350d94037d2eaef38fc354d931ae25c9ce83fb837a71bfc5372e64515e7ecc5'
+    }
+)
 
 $ReleaseStatusWording = 'TEST-READY ONLY / NOT RELEASE-READY'
 
@@ -354,7 +375,15 @@ function Get-BaselineAncestryDiffResult {
     param(
         [Parameter(Mandatory)][string]$RepoRoot,
         [Parameter(Mandatory)][string]$AcceptedBaselineCommit,
-        [string[]]$AllowedPathPrefixes = @('docs/', 'tools/')
+        [string[]]$AllowedPathPrefixes = @('docs/', 'tools/'),
+        # Each entry: @{ Path = '<exact repo-relative path, forward slashes>'; ExpectedSha256 = '<lowercase hex>' }.
+        # A file outside $AllowedPathPrefixes is permitted ONLY if its path
+        # matches one of these EXACTLY (no wildcards, no directory-level
+        # exceptions - the whole .github/workflows/ directory stays
+        # forbidden except for this exact, individually-reviewed path) AND
+        # its current byte content hashes to the pinned ExpectedSha256.
+        # Fail-closed: missing file or hash mismatch is still forbidden.
+        [object[]]$PinnedFileExceptions = @()
     )
 
     if (-not (Test-Path (Join-Path $RepoRoot '.git'))) {
@@ -405,18 +434,45 @@ function Get-BaselineAncestryDiffResult {
         $changedFiles = @($diffOutputRaw -split "`n" | Where-Object { $_ -and $_.Trim() -ne '' })
 
         $forbidden = New-Object System.Collections.Generic.List[string]
+        $pinnedMatched = New-Object System.Collections.Generic.List[string]
         foreach ($file in $changedFiles) {
-            $isAllowed = $false
+            $isAllowedByPrefix = $false
             foreach ($prefix in $AllowedPathPrefixes) {
-                if ($file -like "$prefix*") { $isAllowed = $true; break }
+                if ($file -like "$prefix*") { $isAllowedByPrefix = $true; break }
             }
-            if (-not $isAllowed) { $forbidden.Add($file) | Out-Null }
+            if ($isAllowedByPrefix) { continue }
+
+            # Not covered by the docs/tools allow-list - check for an exact,
+            # individually-reviewed, pinned-hash exception before treating it
+            # as forbidden. This never widens to the whole directory the
+            # file lives in (e.g. .github/workflows/) - only this literal
+            # path, and only if its current bytes still match the pinned
+            # hash exactly.
+            $pinnedException = $PinnedFileExceptions | Where-Object { $_.Path -eq $file } | Select-Object -First 1
+            if ($pinnedException) {
+                $exceptionFullPath = Join-Path $RepoRoot $file
+                if (-not (Test-Path $exceptionFullPath)) {
+                    $forbidden.Add("$file (PINNED EXCEPTION FAILED - file missing at HEAD, expected sha256 $($pinnedException.ExpectedSha256))") | Out-Null
+                    continue
+                }
+                $exceptionActualHash = Get-LineSha256 -Path $exceptionFullPath
+                if ($exceptionActualHash -eq $pinnedException.ExpectedSha256) {
+                    $pinnedMatched.Add($file) | Out-Null
+                    continue
+                }
+                else {
+                    $forbidden.Add("$file (PINNED EXCEPTION FAILED - hash mismatch: expected sha256 $($pinnedException.ExpectedSha256), found $exceptionActualHash. Any modification to this pinned file requires a new review and a new pinned hash.)") | Out-Null
+                    continue
+                }
+            }
+
+            $forbidden.Add($file) | Out-Null
         }
 
         if ($forbidden.Count -gt 0) {
             return [ordered]@{
                 Status = 'FAIL - FORBIDDEN PATH CHANGES BETWEEN ACCEPTED BASELINE AND HEAD'
-                Detail = "HEAD ($headCommit) descends from the accepted baseline ($AcceptedBaselineCommit) but changes files outside the permitted $($AllowedPathPrefixes -join '/') scope: $($forbidden -join ', '). Do not treat this HEAD as validating the accepted firmware artifacts."
+                Detail = "HEAD ($headCommit) descends from the accepted baseline ($AcceptedBaselineCommit) but changes files outside the permitted $($AllowedPathPrefixes -join '/') scope (and outside any pinned exception, or a pinned exception's integrity check failed): $($forbidden -join ', '). Do not treat this HEAD as validating the accepted firmware artifacts."
                 ForbiddenFiles = @($forbidden)
             }
         }
@@ -425,6 +481,14 @@ function Get-BaselineAncestryDiffResult {
             return [ordered]@{
                 Status = 'PASS - HEAD IS THE ACCEPTED BASELINE COMMIT EXACTLY'
                 Detail = "No file differences found between $AcceptedBaselineCommit and HEAD ($headCommit) despite differing commit hashes (e.g. an empty/no-op commit)."
+                ForbiddenFiles = @()
+            }
+        }
+
+        if ($pinnedMatched.Count -gt 0) {
+            return [ordered]@{
+                Status = 'PASS - ACCEPTED BASELINE WITH REVIEWED TOOLING/DOCS DESCENDANT AND PINNED FINALIZATION WORKFLOW'
+                Detail = "HEAD ($headCommit) descends from the accepted baseline commit ($AcceptedBaselineCommit) with $($changedFiles.Count) changed file(s): the rest confined to $($AllowedPathPrefixes -join ' / '), plus $($pinnedMatched.Count) exact, individually-reviewed, pinned-hash-verified exception file(s): $($pinnedMatched -join ', '). The accepted firmware artifacts (firmware.dfu / updater .tgz) were built from the accepted baseline commit itself, NOT from current HEAD - this classification does not rebind them to HEAD. The pinned finalization workflow only downloaded, hashed, documented, and tagged the already-built accepted artifacts; it did not and could not alter their bytes. Any future modification to a pinned file's content requires a new review and a new pinned hash before it will be accepted again."
                 ForbiddenFiles = @()
             }
         }
@@ -601,7 +665,7 @@ else {
         Add-Result -Category 'Automated' -Name 'Branch verification' -Status 'NEEDS_REVIEW' -Detail "Expected '$AcceptedBranch', found '$currentBranch'."
     }
 
-    $ancestryResult = Get-BaselineAncestryDiffResult -RepoRoot $RepoRoot -AcceptedBaselineCommit $AcceptedCommit -AllowedPathPrefixes $AllowedPostBaselinePathPrefixes
+    $ancestryResult = Get-BaselineAncestryDiffResult -RepoRoot $RepoRoot -AcceptedBaselineCommit $AcceptedCommit -AllowedPathPrefixes $AllowedPostBaselinePathPrefixes -PinnedFileExceptions $PinnedWorkflowExceptions
     Add-Result -Category 'Automated' -Name 'Baseline ancestry and diff-scope verification' -Status $ancestryResult.Status -Detail $ancestryResult.Detail -Evidence $ancestryResult.ForbiddenFiles
 
     if ($gitStatus.Trim() -eq '') {

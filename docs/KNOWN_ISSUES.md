@@ -446,13 +446,54 @@
    never exercised against a real device before being fixed — no real
    device was ever falsely reported as detected; this was a real
    logic defect found and fixed via code review, not an incident.
-   **Scope note, not itself fixed by this item**:
-   `tools/pre_flash_safeguard_gate.ps1` is the only script in this
-   project that performs DFU/recovery-mode detection at all, so this
-   exact repro (a DFU-named unrelated device) is specific to it.
-   However, `tools/final_hardware_gate.ps1`'s own normal-mode device
-   detection uses the same general pattern this fix moved away from
+   **Scope note update — now closed out**: at the time this item was
+   originally written, `tools/final_hardware_gate.ps1`'s own normal-mode
+   device detection used the same generic `FriendlyName`-based pattern
+   this fix moved away from
    (`$_.FriendlyName -match $Config.deviceDetection.expectedFriendlyNameSubstring
-   -or $_.InstanceId -match ...`) and was **not** patched by this narrow
-   phase — it remains a real, open, lower-priority correctness
-   consideration for a future phase, not claimed resolved here.
+   -or $_.InstanceId -match ...`), and was explicitly disclosed as *not*
+   patched by that narrow phase. **This has since been resolved** — see
+   item 9 below.
+
+9. **RESOLVED — `tools/final_hardware_gate.ps1`'s "Flipper Zero
+   detection" check shared the same generic-`FriendlyName`-matching risk
+   as item 8 above (disclosed but explicitly not fixed at the time item 8
+   was written).** Fixed in the Pre-Flash Safeguard Hardening phase:
+   identity is now determined solely by exact `InstanceId` substring
+   matches (`VID_0483&PID_5740` normal mode, `VID_0483&PID_DF11` DFU),
+   mirroring the exact pattern already proven in
+   `tools/pre_flash_safeguard_gate.ps1` — enumeration
+   (`Get-PresentPnpDevices`) separated from pure identity evaluation
+   (`Test-FlipperNormalModeIdentity`, `Test-FlipperDfuIdentity`,
+   `Get-NormalModeDetectionResult`, `Get-DfuDetectionResult`), with
+   `FriendlyName` shown in Detail text for readability only, never
+   determining a PASS or BLOCKED result. No new mode, live DFU-detection
+   code path, or hardware capability was added — `Get-DfuDetectionResult`
+   exists solely so the identity logic is regression-tested. Confirmed
+   resolved only after its regression tests actually passed: all 8
+   assertions in the new `tools/final_hardware_gate.tests.ps1` (Tests
+   G–M, including the exact "Camera DFU Device" fixture and a
+   FriendlyName-says-"Flipper"-but-wrong-IDs fixture, both correctly
+   `BLOCKED`) passed when run for real via `pwsh` in this session. Full
+   detail in `docs/DEVICE_IDENTITY_HARDENING.md`.
+
+10. **Reviewed condition, not an unresolved defect — pinned finalization-
+    workflow exception.** `tools/pre_flash_safeguard_gate.ps1`'s baseline
+    ancestry/diff-scope check (added by the Pre-Flash Safeguard
+    Correctness Patch) is fail-closed: any file outside `docs/`/`tools/`
+    changed between the accepted baseline commit and HEAD forces `FAIL`.
+    That correctly caught a real, legitimate difference:
+    `.github/workflows/fcc-id-lookup-finalize-baseline.yml`, added after
+    the accepted baseline as part of this project's own
+    already-completed baseline-finalization process (it only downloads,
+    hashes, documents, and tags already-built accepted artifacts — never
+    rebuilds, flashes, or modifies them). Rather than weakening the
+    check or ignoring the finding, this exact one file was individually
+    audited against 7 required safety claims (all confirmed true — see
+    `docs/PRE_FLASH_WORKFLOW_EXCEPTION_REVIEW.md`) and is now permitted
+    via a narrow, pinned-SHA256 exception: only this exact path, only
+    while its live content hashes to the exact reviewed value, never the
+    `.github/workflows/` directory in general. Any future edit to this
+    one file invalidates the pin and fails closed again until re-
+    reviewed. This is a deliberate, reviewed, documented condition of
+    this repository's real history — not an open defect awaiting a fix.

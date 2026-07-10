@@ -2332,6 +2332,95 @@ patch's own classification.
 
 ---
 
+## Pre-Flash Safeguard Hardening — both open items from the correctness patch resolved
+
+A narrow, tooling/docs-only hardening phase closing out the two items
+disclosed at the end of the Pre-Flash Safeguard Correctness Patch phase
+above, before the real no-flash pre-flash gate is re-run. No app
+import, no firmware/app source modification, no `.github/workflows/`
+directory-wide permission, no hardware flashing.
+
+**Part 1 — narrow finalization-workflow exception.**
+`tools/pre_flash_safeguard_gate.ps1`'s fail-closed baseline
+ancestry/diff-scope check correctly flagged
+`.github/workflows/fcc-id-lookup-finalize-baseline.yml` as a forbidden
+post-baseline difference, because it is one — added at commit `22167ac`,
+after the accepted baseline, as part of this project's own
+already-completed baseline-finalization tooling. Rather than loosening
+the check for `.github/workflows/` broadly, the workflow's full text was
+audited line-by-line against 7 required safety claims (no firmware/app
+source modification; no build replacement; no flash/device operation;
+no artifact-content mutation; no release publication; `git add` scoped
+to exactly 3 doc files; a hard `exit 1` refusal if any other path is
+ever staged) — all confirmed true. A narrow, individually-pinned
+exception was added: exactly this one file path, permitted only while
+its live SHA256
+(`3350d94037d2eaef38fc354d931ae25c9ce83fb837a71bfc5372e64515e7ecc5`)
+matches the value pinned in the script — any other `.github/workflows/`
+file, or any future edit to this one file's content, still fails
+closed. New classification:
+`PASS - ACCEPTED BASELINE WITH REVIEWED TOOLING/DOCS DESCENDANT AND
+PINNED FINALIZATION WORKFLOW`. Full audit and mechanism detail in
+`docs/PRE_FLASH_WORKFLOW_EXCEPTION_REVIEW.md`.
+
+**Part 2 — final hardware gate device-identity hardening.**
+`tools/final_hardware_gate.ps1`'s "Flipper Zero detection" check
+previously matched on
+`$_.FriendlyName -match $Config.deviceDetection.expectedFriendlyNameSubstring
+-or $_.InstanceId -match ...` — the same generic-name risk fixed in
+`tools/pre_flash_safeguard_gate.ps1` during the correctness patch, and
+explicitly disclosed but left unpatched at the time. Fixed in this
+phase using the identical pattern: exact-`InstanceId`-only identity
+(`VID_0483&PID_5740` normal mode, `VID_0483&PID_DF11` DFU), enumeration
+separated from pure evaluation, `FriendlyName` shown for information
+only and never deciding PASS/BLOCKED. No new mode, no new hardware
+capability, and no new live DFU-detection code path was added — the
+DFU-identity function exists solely so this logic is regression-tested.
+Full detail in `docs/DEVICE_IDENTITY_HARDENING.md`.
+
+**Regression tests, both files, all passing (real `pwsh` execution in
+this session):**
+
+- `tools/pre_flash_safeguard_gate.tests.ps1` — 13 assertions: Ancestry
+  Tests A–F (docs/tools-only PASS; docs/tools plus the exact pinned
+  workflow with a matching hash PASS; the exact pinned path with
+  altered content/hash FAIL; a different non-pinned workflow file FAIL;
+  an `applications_user/` change FAIL; baseline not an ancestor of HEAD
+  FAIL/BLOCKED) plus the original 6 device-identity tests and a
+  real-repo assertion that this repository's actual accepted baseline
+  and actual HEAD now classify `PASS` via the pinned exception. **13/13
+  passed.**
+- `tools/final_hardware_gate.tests.ps1` (new) — Tests G–M: exact
+  normal-mode identity PASS; exact DFU identity PASS (recovery); camera
+  DFU device (`VID_04F2&PID_B83E`, "Camera DFU Device") BLOCKED;
+  generic DFU-sounding name with an unrelated InstanceId BLOCKED;
+  normal-mode identity rejected by the DFU-specific check; camera DFU
+  plus exact Flipper DFU PASS on the exact entry only; FriendlyName
+  "Flipper" with wrong USB IDs BLOCKED for both the normal-mode and DFU
+  checks. **8/8 passed.**
+
+Real execution against this repository's actual current HEAD in this
+sandbox: `tools/pre_flash_safeguard_gate.ps1 -Mode Preflight` now shows
+the "Baseline ancestry and diff-scope verification" check as
+`PASS - ACCEPTED BASELINE WITH REVIEWED TOOLING/DOCS DESCENDANT AND
+PINNED FINALIZATION WORKFLOW` (overall run: `NEEDS_REVIEW`, driven only
+by the same benign uncommitted-working-tree condition documented since
+this gate's first run — not by any hardware or artifact check).
+`tools/final_hardware_gate.ps1 -Mode DetectDevice` continues to report
+`BLOCKED - WINDOWS DEVICE API UNAVAILABLE` honestly, matching every
+prior hardware-gate result in this project — no Windows, no physical
+Flipper Zero, and no qFlipper exist in this sandbox.
+
+**Final classification: PRE-FLASH SAFEGUARD HARDENING PASS.** No app
+import, no firmware/app source modification, no `.github/workflows/`
+directory-wide change, no CI workflow modification, and no hardware
+flashing occurred in this phase. Hardware testing: **NOT PERFORMED**.
+Release status remains **TEST-READY ONLY / NOT RELEASE-READY**. The
+real no-flash pre-flash gate rerun on real Windows/hardware, requested
+next, has not occurred in this phase and is not claimed.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is

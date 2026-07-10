@@ -21,16 +21,30 @@
              check (it is not a DFU device).
     Test E - among multiple devices (an unrelated camera DFU plus the exact
              Flipper DFU), only the exact entry determines a PASS.
-    Test F - the real repository's actual baseline ancestry/diff logic,
-             run against this repo's real accepted baseline commit and
-             real HEAD, is confirmed to classify correctly (this project's
-             own HEAD is expected to be a docs/tools-only descendant of
-             the accepted baseline at the time this test is written).
-    Test G - a disposable scratch git repository (created under the OS
-             temp directory, entirely outside this repository, and deleted
-             after the test) proves that a change under applications_user/
-             between the accepted baseline and HEAD is correctly rejected.
-             This never touches this repository's own applications_user/.
+    Ancestry Test A - docs/tools-only descendant (scratch repo) -> PASS.
+    Ancestry Test B - docs/tools + the exact pinned finalization workflow
+             file, hash matching -> PASS via the pinned-exception path.
+    Ancestry Test C - the exact pinned workflow path present, but its
+             content (and therefore its hash) altered after the pin was
+             recorded -> FAIL, never silently accepted.
+    Ancestry Test D - a different, non-pinned .github/workflows/ file
+             changed -> FAIL (the exception is for exactly one named file,
+             never the directory).
+    Ancestry Test E - a disposable scratch git repository (created under
+             the OS temp directory, entirely outside this repository, and
+             deleted after the test) proves that a change under
+             applications_user/ between the accepted baseline and HEAD is
+             correctly rejected. This never touches this repository's own
+             applications_user/.
+    Ancestry Test F - the accepted baseline commit is not an ancestor of
+             HEAD (two unrelated histories) -> FAIL/BLOCKED, never PASS.
+    Real-repo assertion - this repository's own real accepted baseline
+             commit and real HEAD are confirmed to classify as
+             'PASS - ACCEPTED BASELINE WITH REVIEWED TOOLING/DOCS
+             DESCENDANT AND PINNED FINALIZATION WORKFLOW', i.e. the
+             pinned exception for
+             .github/workflows/fcc-id-lookup-finalize-baseline.yml is
+             exercised for real, not just diagnosed.
 
     This file performs no flashing, no device interaction, and no writes
     to this repository - it is read-only against the real repo (Test F)
@@ -132,120 +146,240 @@ $eIsPass = $resultE.Status -like 'PASS*'
 $eMentionsFlipperSerial = $resultE.Detail -like '*2059388C4831*'
 Assert-TestResult -TestName 'Test E - multiple devices, only exact entry matches' -Condition ($eIsPass -and $eMentionsFlipperSerial) -Detail "Status: $($resultE.Status); Detail mentions exact InstanceId: $eMentionsFlipperSerial"
 
-# ---------------------------------------------------------------------------
-# Test F - docs/tools-only descendant is accepted.
-#
-# IMPORTANT, discovered while writing this test: the REAL repository's HEAD
-# is NOT currently a pure docs/tools-only descendant of the accepted
-# baseline commit under this check's strict allow-list, because
-# .github/workflows/fcc-id-lookup-finalize-baseline.yml was added at commit
-# 22167ac - AFTER the accepted baseline commit - as part of this project's
-# own (already-completed, already-reviewed) baseline-finalization process.
-# That is a real, legitimate, historical fact about this repository, not a
-# defect in this check: per this patch's own explicit specification,
-# .github/workflows/ changes are always forbidden, with no exception carved
-# out for that file. Running Get-BaselineAncestryDiffResult against the
-# real repo therefore correctly returns a FAIL, not a PASS - see the
-# separate real-repo diagnostic below, which reports this honestly rather
-# than asserting a result that does not hold. Test F itself proves the
-# PASS path works, using a disposable scratch repository (the same
-# technique as Test G) whose diff genuinely is confined to docs/ and
-# tools/, since the real repository cannot currently be used to
-# demonstrate this scenario.
-# ---------------------------------------------------------------------------
-$scratchDirF = Join-Path ([System.IO.Path]::GetTempPath()) "preflash_safeguard_test_scratch_f_$([guid]::NewGuid().ToString('N'))"
-$resultF = $null
-try {
-    New-Item -ItemType Directory -Path $scratchDirF -Force | Out-Null
-    Push-Location $scratchDirF
+function New-ScratchGitRepo {
+    param([string]$Prefix)
+    $dir = Join-Path ([System.IO.Path]::GetTempPath()) "preflash_safeguard_test_$Prefix`_$([guid]::NewGuid().ToString('N'))"
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    Push-Location $dir
     try {
         & git init -q 2>&1 | Out-Null
         & git config user.email 'test@example.com' 2>&1 | Out-Null
         & git config user.name 'Pre-Flash Safeguard Test' 2>&1 | Out-Null
+    }
+    finally {
+        Pop-Location
+    }
+    return $dir
+}
 
-        New-Item -ItemType Directory -Path (Join-Path $scratchDirF 'applications_user') -Force | Out-Null
-        Set-Content -Path (Join-Path $scratchDirF 'applications_user\existing_app.c') -Value '// pre-existing, unrelated to this diff' -Encoding UTF8
+function Get-ScratchFileSha256 {
+    param([string]$Path)
+    return (Get-FileHash -Path $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+}
+
+# ---------------------------------------------------------------------------
+# Ancestry Test A - docs/tools-only descendant -> PASS
+# ---------------------------------------------------------------------------
+$scratchDirA = New-ScratchGitRepo -Prefix 'ancestry_a'
+$resultAncestryA = $null
+try {
+    Push-Location $scratchDirA
+    try {
+        New-Item -ItemType Directory -Path (Join-Path $scratchDirA 'applications_user') -Force | Out-Null
+        Set-Content -Path (Join-Path $scratchDirA 'applications_user\existing_app.c') -Value '// pre-existing, unrelated to this diff' -Encoding UTF8
         & git add applications_user/existing_app.c 2>&1 | Out-Null
         & git commit -q -m 'baseline commit' 2>&1 | Out-Null
-        $scratchBaselineShaF = "$(& git rev-parse HEAD 2>&1)".Trim()
+        $scratchBaselineShaA = "$(& git rev-parse HEAD 2>&1)".Trim()
 
-        New-Item -ItemType Directory -Path (Join-Path $scratchDirF 'docs') -Force | Out-Null
-        Set-Content -Path (Join-Path $scratchDirF 'docs\finalize_notes.md') -Value 'docs-only descendant change' -Encoding UTF8
-        New-Item -ItemType Directory -Path (Join-Path $scratchDirF 'tools') -Force | Out-Null
-        Set-Content -Path (Join-Path $scratchDirF 'tools\finalize_gate.ps1') -Value '# tools-only descendant change' -Encoding UTF8
+        New-Item -ItemType Directory -Path (Join-Path $scratchDirA 'docs') -Force | Out-Null
+        Set-Content -Path (Join-Path $scratchDirA 'docs\finalize_notes.md') -Value 'docs-only descendant change' -Encoding UTF8
+        New-Item -ItemType Directory -Path (Join-Path $scratchDirA 'tools') -Force | Out-Null
+        Set-Content -Path (Join-Path $scratchDirA 'tools\finalize_gate.ps1') -Value '# tools-only descendant change' -Encoding UTF8
         & git add docs/finalize_notes.md tools/finalize_gate.ps1 2>&1 | Out-Null
         & git commit -q -m 'docs/tools-only descendant commit' 2>&1 | Out-Null
     }
     finally {
         Pop-Location
     }
-
-    $resultF = Get-BaselineAncestryDiffResult -RepoRoot $scratchDirF -AcceptedBaselineCommit $scratchBaselineShaF -AllowedPathPrefixes @('docs/', 'tools/')
+    $resultAncestryA = Get-BaselineAncestryDiffResult -RepoRoot $scratchDirA -AcceptedBaselineCommit $scratchBaselineShaA -AllowedPathPrefixes @('docs/', 'tools/')
 }
 finally {
-    if (Test-Path $scratchDirF) {
-        Remove-Item -Path $scratchDirF -Recurse -Force -ErrorAction SilentlyContinue
-    }
+    if (Test-Path $scratchDirA) { Remove-Item -Path $scratchDirA -Recurse -Force -ErrorAction SilentlyContinue }
 }
-
-$fIsPass = $resultF.Status -like 'PASS - ACCEPTED BASELINE WITH TOOLING/DOCS-ONLY DESCENDANT*'
-Assert-TestResult -TestName 'Test F - docs/tools-only descendant accepted (scratch repo)' -Condition $fIsPass -Detail "Status: $($resultF.Status)"
-
-# ---------------------------------------------------------------------------
-# Real-repo diagnostic (informational, not one of the 7 required pass/fail
-# tests) - reports the ACTUAL current result of running this check against
-# this repository's real accepted baseline commit and real HEAD, honestly,
-# whatever it is.
-# ---------------------------------------------------------------------------
-$AcceptedCommitForRealRepo = '86265727b5b8cfce5086eb88f8bb93d0169ab9a9'
-$resultRealRepo = Get-BaselineAncestryDiffResult -RepoRoot $TestRepoRoot -AcceptedBaselineCommit $AcceptedCommitForRealRepo -AllowedPathPrefixes @('docs/', 'tools/')
-Write-Host ''
-Write-Host '[INFO ] Real-repo diagnostic (not a pass/fail assertion - reported as-is)' -ForegroundColor Cyan
-Write-Host "        Status: $($resultRealRepo.Status)" -ForegroundColor DarkGray
-Write-Host "        Detail: $($resultRealRepo.Detail)" -ForegroundColor DarkGray
-if ($resultRealRepo.ForbiddenFiles -and $resultRealRepo.ForbiddenFiles.Count -gt 0) {
-    Write-Host "        Forbidden files: $($resultRealRepo.ForbiddenFiles -join ', ')" -ForegroundColor DarkGray
-}
+$ancestryAIsPass = $resultAncestryA.Status -like 'PASS - ACCEPTED BASELINE WITH TOOLING/DOCS-ONLY DESCENDANT*'
+Assert-TestResult -TestName 'Ancestry Test A - docs/tools-only descendant accepted (scratch repo)' -Condition $ancestryAIsPass -Detail "Status: $($resultAncestryA.Status)"
 
 # ---------------------------------------------------------------------------
-# Test G - app-source descendant in a disposable scratch repository
+# Ancestry Test B - docs/tools + the exact pinned finalization workflow file,
+# hash matching -> PASS via the pinned-exception path
 # ---------------------------------------------------------------------------
-$scratchDir = Join-Path ([System.IO.Path]::GetTempPath()) "preflash_safeguard_test_scratch_$([guid]::NewGuid().ToString('N'))"
-$resultG = $null
+$scratchDirB = New-ScratchGitRepo -Prefix 'ancestry_b'
+$resultAncestryB = $null
 try {
-    New-Item -ItemType Directory -Path $scratchDir -Force | Out-Null
-    Push-Location $scratchDir
+    Push-Location $scratchDirB
     try {
-        & git init -q 2>&1 | Out-Null
-        & git config user.email 'test@example.com' 2>&1 | Out-Null
-        & git config user.name 'Pre-Flash Safeguard Test' 2>&1 | Out-Null
-
-        New-Item -ItemType Directory -Path (Join-Path $scratchDir 'docs') -Force | Out-Null
-        Set-Content -Path (Join-Path $scratchDir 'docs\baseline.md') -Value 'baseline' -Encoding UTF8
+        New-Item -ItemType Directory -Path (Join-Path $scratchDirB 'docs') -Force | Out-Null
+        Set-Content -Path (Join-Path $scratchDirB 'docs\baseline.md') -Value 'baseline' -Encoding UTF8
         & git add docs/baseline.md 2>&1 | Out-Null
         & git commit -q -m 'baseline commit' 2>&1 | Out-Null
-        $scratchBaselineSha = "$(& git rev-parse HEAD 2>&1)".Trim()
+        $scratchBaselineShaB = "$(& git rev-parse HEAD 2>&1)".Trim()
 
-        New-Item -ItemType Directory -Path (Join-Path $scratchDir 'applications_user') -Force | Out-Null
-        Set-Content -Path (Join-Path $scratchDir 'applications_user\synthetic_change.c') -Value '// synthetic forbidden-path change for Test G' -Encoding UTF8
+        Set-Content -Path (Join-Path $scratchDirB 'docs\baseline.md') -Value 'baseline plus docs update' -Encoding UTF8
+        New-Item -ItemType Directory -Path (Join-Path $scratchDirB 'tools') -Force | Out-Null
+        Set-Content -Path (Join-Path $scratchDirB 'tools\finalize_gate.ps1') -Value '# tools-only descendant change' -Encoding UTF8
+        New-Item -ItemType Directory -Path (Join-Path $scratchDirB '.github\workflows') -Force | Out-Null
+        $pinnedWorkflowContentB = "name: finalize-baseline`non: workflow_dispatch`n"
+        Set-Content -Path (Join-Path $scratchDirB '.github\workflows\finalize-baseline.yml') -Value $pinnedWorkflowContentB -Encoding UTF8 -NoNewline
+        & git add docs/baseline.md tools/finalize_gate.ps1 .github/workflows/finalize-baseline.yml 2>&1 | Out-Null
+        & git commit -q -m 'docs/tools plus pinned finalization workflow' 2>&1 | Out-Null
+
+        $pinnedHashB = Get-ScratchFileSha256 -Path (Join-Path $scratchDirB '.github\workflows\finalize-baseline.yml')
+    }
+    finally {
+        Pop-Location
+    }
+    $pinnedExceptionsB = @([ordered]@{ Path = '.github/workflows/finalize-baseline.yml'; ExpectedSha256 = $pinnedHashB })
+    $resultAncestryB = Get-BaselineAncestryDiffResult -RepoRoot $scratchDirB -AcceptedBaselineCommit $scratchBaselineShaB -AllowedPathPrefixes @('docs/', 'tools/') -PinnedFileExceptions $pinnedExceptionsB
+}
+finally {
+    if (Test-Path $scratchDirB) { Remove-Item -Path $scratchDirB -Recurse -Force -ErrorAction SilentlyContinue }
+}
+$ancestryBIsPass = $resultAncestryB.Status -like 'PASS - ACCEPTED BASELINE WITH REVIEWED TOOLING/DOCS DESCENDANT AND PINNED FINALIZATION WORKFLOW*'
+Assert-TestResult -TestName 'Ancestry Test B - docs/tools + exact pinned workflow (matching hash) accepted' -Condition $ancestryBIsPass -Detail "Status: $($resultAncestryB.Status)"
+
+# ---------------------------------------------------------------------------
+# Ancestry Test C - exact pinned workflow path present, but content (and
+# therefore hash) altered after the pin was recorded -> FAIL
+# ---------------------------------------------------------------------------
+$scratchDirC = New-ScratchGitRepo -Prefix 'ancestry_c'
+$resultAncestryC = $null
+try {
+    Push-Location $scratchDirC
+    try {
+        New-Item -ItemType Directory -Path (Join-Path $scratchDirC 'docs') -Force | Out-Null
+        Set-Content -Path (Join-Path $scratchDirC 'docs\baseline.md') -Value 'baseline' -Encoding UTF8
+        & git add docs/baseline.md 2>&1 | Out-Null
+        & git commit -q -m 'baseline commit' 2>&1 | Out-Null
+        $scratchBaselineShaC = "$(& git rev-parse HEAD 2>&1)".Trim()
+
+        New-Item -ItemType Directory -Path (Join-Path $scratchDirC '.github\workflows') -Force | Out-Null
+        Set-Content -Path (Join-Path $scratchDirC '.github\workflows\finalize-baseline.yml') -Value 'name: finalize-baseline (ALTERED)' -Encoding UTF8 -NoNewline
+        & git add .github/workflows/finalize-baseline.yml 2>&1 | Out-Null
+        & git commit -q -m 'workflow content differs from the pinned hash' 2>&1 | Out-Null
+    }
+    finally {
+        Pop-Location
+    }
+    # Deliberately WRONG expected hash - simulates the pinned file's content
+    # having changed since the hash was recorded.
+    $pinnedExceptionsC = @([ordered]@{ Path = '.github/workflows/finalize-baseline.yml'; ExpectedSha256 = ('0' * 64) })
+    $resultAncestryC = Get-BaselineAncestryDiffResult -RepoRoot $scratchDirC -AcceptedBaselineCommit $scratchBaselineShaC -AllowedPathPrefixes @('docs/', 'tools/') -PinnedFileExceptions $pinnedExceptionsC
+}
+finally {
+    if (Test-Path $scratchDirC) { Remove-Item -Path $scratchDirC -Recurse -Force -ErrorAction SilentlyContinue }
+}
+$ancestryCIsFail = $resultAncestryC.Status -like 'FAIL*'
+$ancestryCMentionsFile = @($resultAncestryC.ForbiddenFiles | Where-Object { $_ -like '.github/workflows/finalize-baseline.yml*' }).Count -gt 0
+Assert-TestResult -TestName 'Ancestry Test C - pinned workflow with altered content/hash rejected' -Condition ($ancestryCIsFail -and $ancestryCMentionsFile) -Detail "Status: $($resultAncestryC.Status); ForbiddenFiles: $($resultAncestryC.ForbiddenFiles -join ', ')"
+
+# ---------------------------------------------------------------------------
+# Ancestry Test D - a different, non-pinned .github/workflows/ file changed
+# -> FAIL (the exception is for exactly one named file, never the directory)
+# ---------------------------------------------------------------------------
+$scratchDirD = New-ScratchGitRepo -Prefix 'ancestry_d'
+$resultAncestryD = $null
+try {
+    Push-Location $scratchDirD
+    try {
+        New-Item -ItemType Directory -Path (Join-Path $scratchDirD 'docs') -Force | Out-Null
+        Set-Content -Path (Join-Path $scratchDirD 'docs\baseline.md') -Value 'baseline' -Encoding UTF8
+        & git add docs/baseline.md 2>&1 | Out-Null
+        & git commit -q -m 'baseline commit' 2>&1 | Out-Null
+        $scratchBaselineShaD = "$(& git rev-parse HEAD 2>&1)".Trim()
+
+        New-Item -ItemType Directory -Path (Join-Path $scratchDirD '.github\workflows') -Force | Out-Null
+        Set-Content -Path (Join-Path $scratchDirD '.github\workflows\some-other-workflow.yml') -Value 'name: some-other-workflow' -Encoding UTF8
+        & git add .github/workflows/some-other-workflow.yml 2>&1 | Out-Null
+        & git commit -q -m 'unrelated workflow file added' 2>&1 | Out-Null
+    }
+    finally {
+        Pop-Location
+    }
+    # Pinned exception is for a DIFFERENT file name - must not cover this one.
+    $pinnedExceptionsD = @([ordered]@{ Path = '.github/workflows/finalize-baseline.yml'; ExpectedSha256 = ('0' * 64) })
+    $resultAncestryD = Get-BaselineAncestryDiffResult -RepoRoot $scratchDirD -AcceptedBaselineCommit $scratchBaselineShaD -AllowedPathPrefixes @('docs/', 'tools/') -PinnedFileExceptions $pinnedExceptionsD
+}
+finally {
+    if (Test-Path $scratchDirD) { Remove-Item -Path $scratchDirD -Recurse -Force -ErrorAction SilentlyContinue }
+}
+$ancestryDIsFail = $resultAncestryD.Status -like 'FAIL*'
+$ancestryDMentionsFile = $resultAncestryD.ForbiddenFiles -contains '.github/workflows/some-other-workflow.yml'
+Assert-TestResult -TestName 'Ancestry Test D - different non-pinned workflow file rejected' -Condition ($ancestryDIsFail -and $ancestryDMentionsFile) -Detail "Status: $($resultAncestryD.Status); ForbiddenFiles: $($resultAncestryD.ForbiddenFiles -join ', ')"
+
+# ---------------------------------------------------------------------------
+# Ancestry Test E - app-source descendant in a disposable scratch repository
+# -> FAIL
+# ---------------------------------------------------------------------------
+$scratchDirE = New-ScratchGitRepo -Prefix 'ancestry_e'
+$resultAncestryE = $null
+try {
+    Push-Location $scratchDirE
+    try {
+        New-Item -ItemType Directory -Path (Join-Path $scratchDirE 'docs') -Force | Out-Null
+        Set-Content -Path (Join-Path $scratchDirE 'docs\baseline.md') -Value 'baseline' -Encoding UTF8
+        & git add docs/baseline.md 2>&1 | Out-Null
+        & git commit -q -m 'baseline commit' 2>&1 | Out-Null
+        $scratchBaselineShaE = "$(& git rev-parse HEAD 2>&1)".Trim()
+
+        New-Item -ItemType Directory -Path (Join-Path $scratchDirE 'applications_user') -Force | Out-Null
+        Set-Content -Path (Join-Path $scratchDirE 'applications_user\synthetic_change.c') -Value '// synthetic forbidden-path change for Ancestry Test E' -Encoding UTF8
         & git add applications_user/synthetic_change.c 2>&1 | Out-Null
         & git commit -q -m 'descendant with forbidden applications_user/ change' 2>&1 | Out-Null
     }
     finally {
         Pop-Location
     }
-
-    $resultG = Get-BaselineAncestryDiffResult -RepoRoot $scratchDir -AcceptedBaselineCommit $scratchBaselineSha -AllowedPathPrefixes @('docs/', 'tools/')
+    $resultAncestryE = Get-BaselineAncestryDiffResult -RepoRoot $scratchDirE -AcceptedBaselineCommit $scratchBaselineShaE -AllowedPathPrefixes @('docs/', 'tools/')
 }
 finally {
-    if (Test-Path $scratchDir) {
-        Remove-Item -Path $scratchDir -Recurse -Force -ErrorAction SilentlyContinue
-    }
+    if (Test-Path $scratchDirE) { Remove-Item -Path $scratchDirE -Recurse -Force -ErrorAction SilentlyContinue }
 }
+$ancestryEIsBlockedOrFail = ($resultAncestryE.Status -like 'BLOCKED*') -or ($resultAncestryE.Status -like 'FAIL*')
+$ancestryEMentionsForbiddenFile = $resultAncestryE.ForbiddenFiles -contains 'applications_user/synthetic_change.c'
+Assert-TestResult -TestName 'Ancestry Test E - app-source descendant rejected (scratch repo)' -Condition ($ancestryEIsBlockedOrFail -and $ancestryEMentionsForbiddenFile) -Detail "Status: $($resultAncestryE.Status); ForbiddenFiles: $($resultAncestryE.ForbiddenFiles -join ', ')"
 
-$gIsBlockedOrFail = ($resultG.Status -like 'BLOCKED*') -or ($resultG.Status -like 'FAIL*')
-$gMentionsForbiddenFile = $resultG.ForbiddenFiles -contains 'applications_user/synthetic_change.c'
-Assert-TestResult -TestName 'Test G - app-source descendant rejected (scratch repo)' -Condition ($gIsBlockedOrFail -and $gMentionsForbiddenFile) -Detail "Status: $($resultG.Status); ForbiddenFiles: $($resultG.ForbiddenFiles -join ', ')"
+# ---------------------------------------------------------------------------
+# Ancestry Test F - accepted baseline commit is NOT an ancestor of HEAD
+# (two unrelated histories) -> FAIL/BLOCKED, never PASS
+# ---------------------------------------------------------------------------
+$scratchDirF = New-ScratchGitRepo -Prefix 'ancestry_f'
+$resultAncestryF = $null
+try {
+    Push-Location $scratchDirF
+    try {
+        New-Item -ItemType Directory -Path (Join-Path $scratchDirF 'docs') -Force | Out-Null
+        Set-Content -Path (Join-Path $scratchDirF 'docs\baseline.md') -Value 'baseline' -Encoding UTF8
+        & git add docs/baseline.md 2>&1 | Out-Null
+        & git commit -q -m 'unrelated baseline commit' 2>&1 | Out-Null
+        $scratchUnrelatedBaselineSha = "$(& git rev-parse HEAD 2>&1)".Trim()
+
+        & git checkout -q --orphan other-history 2>&1 | Out-Null
+        & git rm -rf -q . 2>&1 | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $scratchDirF 'docs') -Force | Out-Null
+        Set-Content -Path (Join-Path $scratchDirF 'docs\unrelated.md') -Value 'a completely separate history' -Encoding UTF8
+        & git add docs/unrelated.md 2>&1 | Out-Null
+        & git commit -q -m 'root commit of an unrelated history' 2>&1 | Out-Null
+    }
+    finally {
+        Pop-Location
+    }
+    $resultAncestryF = Get-BaselineAncestryDiffResult -RepoRoot $scratchDirF -AcceptedBaselineCommit $scratchUnrelatedBaselineSha -AllowedPathPrefixes @('docs/', 'tools/')
+}
+finally {
+    if (Test-Path $scratchDirF) { Remove-Item -Path $scratchDirF -Recurse -Force -ErrorAction SilentlyContinue }
+}
+$ancestryFIsBlockedOrFail = ($resultAncestryF.Status -like 'BLOCKED*') -or ($resultAncestryF.Status -like 'FAIL*')
+$ancestryFNeverPass = $resultAncestryF.Status -notlike 'PASS*'
+Assert-TestResult -TestName 'Ancestry Test F - baseline not an ancestor of HEAD rejected' -Condition ($ancestryFIsBlockedOrFail -and $ancestryFNeverPass) -Detail "Status: $($resultAncestryF.Status)"
+
+# ---------------------------------------------------------------------------
+# Real-repo assertion - this repository's own real accepted baseline commit
+# and real HEAD must classify as PASS via the pinned finalization-workflow
+# exception (not a diagnostic - this is now a required, asserted result).
+# ---------------------------------------------------------------------------
+$resultRealRepo = Get-BaselineAncestryDiffResult -RepoRoot $TestRepoRoot -AcceptedBaselineCommit $AcceptedCommit -AllowedPathPrefixes $AllowedPostBaselinePathPrefixes -PinnedFileExceptions $PinnedWorkflowExceptions
+$realRepoIsPass = $resultRealRepo.Status -like 'PASS - ACCEPTED BASELINE WITH REVIEWED TOOLING/DOCS DESCENDANT AND PINNED FINALIZATION WORKFLOW*'
+Assert-TestResult -TestName 'Real-repo - current HEAD passes only through the pinned finalization-workflow exception' -Condition $realRepoIsPass -Detail "Status: $($resultRealRepo.Status)"
 
 # ---------------------------------------------------------------------------
 # Summary
