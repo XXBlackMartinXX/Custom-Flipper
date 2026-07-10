@@ -2102,6 +2102,81 @@ the 8 documents listed above.
 
 ---
 
+## Final 20-app hardware-assisted validation gate pack — HARDWARE VALIDATION BLOCKED / DEVICE NOT AVAILABLE
+
+Created and, where possible, actually executed the final hardware-
+assisted validation gate pack for the 20-app accepted baseline (commit
+`86265727b5b8cfce5086eb88f8bb93d0169ab9a9`, CI run
+[`29068148596`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/29068148596),
+finalization run
+[`29096377711`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/29096377711)).
+This is a hardware-gate tooling/docs phase only — no app was imported,
+no firmware/app source was modified, and no hardware was flashed.
+
+Added `tools/final_hardware_gate_config.json` and
+`tools/final_hardware_gate.ps1`, modeled directly on
+`tools/phase2f_hardware_gate.ps1` (which remains untouched), extended to
+all 20 apps with two new Preflight-level checks beyond the Phase 2F
+gate: an `fcc_id_lookup` LICENSE preservation check (confirms the
+upstream MIT license text added at import time remains present with its
+expected copyright line) and an FCC database (`*.bin`) accidental-
+presence check (confirms the optional ~8.9MB frequency/applicant
+database, never bundled by this project, has not been accidentally
+added). The script contains no code path for any RF/Sub-GHz/NFC/RFID/
+iButton/BadUSB/BLE/GPIO/IR test or any cloning/brute-force/jamming/
+bypass/credential test, for any app, under any mode or flag — confirmed
+by grep before commit, not merely asserted. It never flashes a device
+automatically under any circumstance, including `-Mode
+HardwareAssisted -AllowFlashPrompt`, which only records an operator's
+typed confirmation that a manual flash may proceed afterward, outside
+the script.
+
+**Real execution in this session** (`pwsh` is available in this cloud
+sandbox, so the script itself ran for real): `Preflight`, `ReportOnly`,
+and `DetectDevice` modes all executed successfully. All 4 Preflight-
+level preservation checks passed:
+`applications_user/image_viewer/example_images/` confirmed absent,
+`applications_user/barcode_gen/views/create_view.c` confirmed free of
+`text_input_show_illegal_symbols`, `applications_user/fcc_id_lookup/LICENSE`
+confirmed present with its expected copyright line, and no `*.bin` file
+confirmed present anywhere under `applications_user/fcc_id_lookup/`.
+`DetectDevice` correctly and honestly reported `Get-PnpDevice`
+unavailable (this sandbox is Linux, not Windows) rather than fabricating
+a device-found result. Real GitHub Actions artifacts could not be
+downloaded (the same confirmed Azure Blob Storage egress block as every
+prior phase), so a synthetic exact-size, wrong-hash artifact pair was
+generated (via `os.urandom`, outside the repository, deleted after the
+test) and run through `-Mode HashVerify` — correctly produced `FAIL` for
+both files, proving the comparison logic rejects a wrong file even when
+the size matches exactly. This was clearly labeled a synthetic logic
+test, not real artifact verification. A 5-way concurrent invocation
+test produced 10 distinct, collision-free report filenames, confirming
+the millisecond-precision-plus-random-suffix report-naming scheme
+(carried forward from Phase 2C.4 onward) still works correctly.
+
+Added `docs/FINAL_HARDWARE_ASSISTED_VALIDATION.md` (what the gate checks
+and does not check, how to interpret each classification),
+`docs/FINAL_HARDWARE_ASSISTED_RESULTS.md` (the honest run record
+described above), `docs/FINAL_HARDWARE_SMOKE_TEST_CHECKLIST.md` (a
+complete, standalone human smoke-test checklist for all 20 apps — 19
+sections reproduced unchanged from `docs/PHASE2F_HARDWARE_SMOKE_TEST_CHECKLIST.md`
+plus one new `fcc_id_lookup` section, with no unsafe hardware/radio/
+security test anywhere), and `docs/FINAL_NEXT_GATE.md` (the decision
+tree for BLOCKED/FAILED/PASS outcomes, restating that release-ready
+remains blocked until real hardware validation, GUI smoke testing,
+rollback verification, and license/safety/known-issue review are all
+explicitly complete).
+
+**Final classification: HARDWARE VALIDATION BLOCKED / DEVICE NOT
+AVAILABLE.** No physical Flipper Zero and no Windows machine exist in
+this project's environment — a real, structural blocker, not a defect.
+No app import, no firmware/app source modification, no workflow change,
+and no hardware flashing occurred in this phase. Hardware testing:
+**NOT PERFORMED**. Release status remains **TEST-READY ONLY / NOT
+RELEASE-READY**. This phase does not start a release-readiness audit.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
