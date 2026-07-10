@@ -130,6 +130,29 @@
    database accidental-presence check all passed in every run this
    phase. Still open for the same underlying device/Windows-machine
    reason; nothing new introduced by this update.
+   **Pre-Flash Anti-Brick Safeguard Gate update**:
+   `tools/pre_flash_safeguard_gate.ps1` adds `-Mode DeviceDetect` and a
+   new `-Mode RecoveryReadiness` (separately detecting normal-mode
+   `VID_0483&PID_5740` and DFU/recovery-mode `VID_0483&PID_DF11`
+   Flipper Zero identities); both exercised for real in this same cloud
+   sandbox, same result (`Get-PnpDevice` unavailable, both modes
+   classified `PRE-FLASH SAFEGUARD BLOCKED - DEVICE NOT AVAILABLE`) for
+   the same reason — see `docs/PRE_FLASH_SAFEGUARD_RESULTS.md`. qFlipper
+   was also, correctly, not detected (no Windows install of any kind
+   exists in this sandbox). The real final-baseline CI artifacts (run
+   `29068148596`) again could not be downloaded due to the same Azure
+   Blob Storage egress block tracked in item 5 below; a synthetic
+   hash-mismatch test was run instead (`-Mode ArtifactHashVerify`),
+   correctly producing `PRE-FLASH SAFEGUARD FAILED` with explicit
+   "DO NOT FLASH" warnings, clearly labeled as not real artifact
+   verification. A 5-way simultaneous invocation stress test produced
+   10 distinct report files with zero overwrites, confirming the
+   collision-resistant filename scheme carries forward correctly to
+   this new script. This update introduces no new issue class — device
+   unavailability, qFlipper unavailability, and inability to download
+   real artifacts are the same root causes already tracked here and in
+   item 5, now re-confirmed against this new, narrower pre-flash gate.
+   Still open for the same underlying device/Windows-machine reason.
 5. **RESOLVED — cloud sandbox cannot download GitHub Actions artifacts or push git
    tags.** Two separate, confirmed network/policy restrictions were hit during
    Phase 2A.10: (a) GitHub Actions artifact downloads always redirect to Azure Blob

@@ -2177,6 +2177,73 @@ RELEASE-READY**. This phase does not start a release-readiness audit.
 
 ---
 
+## Pre-Flash Anti-Brick Safeguard Gate — PRE-FLASH SAFEGUARD BLOCKED / DEVICE NOT AVAILABLE
+
+Created a dedicated pre-flash risk-reduction gate for the accepted
+final 20-app baseline (commit
+`86265727b5b8cfce5086eb88f8bb93d0169ab9a9`, CI run
+[`29068148596`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/29068148596),
+finalization run
+[`29096377711`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/29096377711)),
+to be walked through and passed **before** any real flash is attempted.
+This is a hardware-gate tooling/docs phase only — no app was imported,
+no firmware/app source was modified, and no hardware was flashed or
+even attempted.
+
+Added `tools/pre_flash_safeguard_gate.ps1` with `Preflight` (default),
+`ArtifactHashVerify`, `DeviceDetect`, `RecoveryReadiness`, and
+`ReportOnly` modes. Unlike `tools/final_hardware_gate.ps1` (which has a
+read-only flash-confirmation gate that only records an operator's
+intent), this new script contains **no flashing code path of any kind**
+under any mode or flag — confirmed by grep before commit, not merely
+asserted. It detects a connected Flipper Zero in normal mode
+(`VID_0483&PID_5740`) and, new for this gate, separately in
+DFU/recovery mode (`VID_0483&PID_DF11`, the STM32 bootloader's generic
+DFU identity) via `-Mode RecoveryReadiness` — letting a user safely
+confirm their device's recovery path is reachable before they might
+ever need it, without performing any recovery action itself. It also
+detects qFlipper installation and verifies real artifact hashes when
+supplied. By design, any failed required check forces a failing/blocked
+classification, never a looser one.
+
+Added five docs: `docs/PRE_FLASH_ANTI_BRICK_SAFEGUARD.md` (soft brick
+vs. hard brick, why risk cannot be zero, the required physical
+checklist, and the final rule "DO NOT FLASH CUSTOM FIRMWARE UNTIL THIS
+SAFEGUARD GATE PASSES"), `docs/FLASH_ROLLBACK_AND_RECOVERY_PLAN.md`
+(device-level qFlipper DFU/recovery procedures, distinct from
+`docs/PHASE2A_ROLLBACK_PLAN.md`'s source/repo-level rollback, plus
+explicit stop conditions and an evidence-to-save list),
+`docs/PRE_FLASH_PHYSICAL_CHECKLIST.md` (a 14-item human PASS/BLOCKED
+checklist), `docs/PRE_FLASH_SAFEGUARD_RESULTS.md` (this session's real
+run record), and `docs/SAFE_FLASH_DECISION_TREE.md` (a conservative,
+stop-on-any-"no" decision tree, explicitly stating that passing this
+gate means neither release-ready nor forced flashing).
+
+**Real execution in this session**: `Preflight`, `ReportOnly`,
+`DeviceDetect`, and `RecoveryReadiness` all executed for real via
+`pwsh`. `DeviceDetect` and `RecoveryReadiness` both correctly and
+honestly reported `Get-PnpDevice` unavailable (this sandbox is Linux,
+not Windows) for both normal-mode and DFU-mode detection, rather than
+fabricating a device-found result. Real CI artifacts could not be
+downloaded (the same confirmed Azure Blob Storage egress block as every
+prior phase), so a synthetic exact-size, wrong-hash artifact pair was
+generated (via `os.urandom`, outside the repository, deleted after the
+test) and run through `-Mode ArtifactHashVerify` — correctly produced
+`PRE-FLASH SAFEGUARD FAILED` with an explicit "DO NOT FLASH THIS
+ARTIFACT" warning for both files, clearly labeled as a synthetic logic
+test, not real artifact verification. A 5-way concurrent invocation
+test produced 10 distinct, collision-free report filenames.
+
+**Final classification: PRE-FLASH SAFEGUARD BLOCKED / DEVICE NOT
+AVAILABLE.** No physical Flipper Zero and no Windows machine exist in
+this project's environment. No app import, no firmware/app source
+modification, no workflow change, and no flashing occurred or was
+attempted in this phase. Hardware testing: **NOT PERFORMED**. Release
+status remains **TEST-READY ONLY / NOT RELEASE-READY**. This phase does
+not proceed to real hardware validation.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
