@@ -283,3 +283,69 @@ claimed. The final real Windows/hardware no-flash rerun described in
 only the corrected tooling has been exercised, here, in this sandbox, with
 real command execution and real (not fabricated) output. Release status
 remains **TEST-READY ONLY / NOT RELEASE-READY**.
+
+---
+
+## Pre-Flash Canonical Blob Integrity Fix (real results, this phase)
+
+This section records **tooling-test results only** for the Canonical
+Blob Integrity Fix phase. **The final real Windows/hardware rerun has
+not occurred as of this writing** — nothing below should be read as
+claiming it has. This environment remains the same Linux cloud sandbox
+as every prior phase: no Windows, no physical Flipper Zero, no qFlipper.
+
+This phase fixed a real defect reported from a real Windows session with
+`core.autocrlf=true`: the pinned finalization-workflow exception in
+`tools/pre_flash_safeguard_gate.ps1` hashed **working-tree** bytes for
+its integrity decision, which differ from the committed Git blob on any
+checkout where Git rewrites line endings — producing a false `FAIL`
+even though the repository's real, committed content was unchanged. Full
+root-cause and fix detail is in
+`docs/PRE_FLASH_CANONICAL_BLOB_INTEGRITY_FIX.md`.
+
+`tools/pre_flash_safeguard_gate.ps1 -Mode Preflight` was re-run for real
+in this sandbox after the fix:
+
+- "Baseline ancestry and diff-scope verification" continues to report
+  `PASS - ACCEPTED BASELINE WITH REVIEWED TOOLING/DOCS DESCENDANT AND
+  PINNED FINALIZATION WORKFLOW`, now decided entirely from the Git blob
+  ID (`094ed7bf30eecae5efe384568c5c0aa543260b2f`) and the canonical
+  SHA256 computed directly from that blob's bytes
+  (`3350d94037d2eaef38fc354d931ae25c9ce83fb837a71bfc5372e64515e7ecc5`),
+  never from a working-tree file hash.
+- The overall run classification remains `NEEDS_REVIEW`, driven by the
+  same benign, expected uncommitted-working-tree condition described
+  earlier in this document (this phase's own new files were not yet
+  committed at the moment of the test run) — not by any hardware,
+  artifact, or workflow-integrity check.
+
+**Regression tests**: `tools/pre_flash_safeguard_gate.tests.ps1` was
+extended with the Canonical Git Blob Integrity Fix test block — a
+byte-capture sanity check plus Blob Tests A–M, covering: a canonical LF
+blob match (PASS); a **real** `core.autocrlf=true` reproduction (Git
+config set for real, file re-checked out, genuine CRLF working-tree
+bytes with a different SHA256, still `PASS` because the decision is
+blob-based); committed content modification (FAIL); a deliberately wrong
+pinned SHA256 with a matching blob ID, i.e. simulated config drift
+(FAIL); a dirty unstaged edit (FAIL); a dirty staged-but-uncommitted
+edit (FAIL); an unrelated workflow file (FAIL); a missing workflow path
+(FAIL); baseline not an ancestor of HEAD (BLOCKED); a docs/tools-only
+descendant with the exact pinned blob (PASS); an `applications_user/`
+change (FAIL); a canonical-extraction failure via a removed loose Git
+object, confirmed to `FAIL` through a `catch` branch rather than an
+uncaught exception or a silent skip; and a re-confirmation that the
+existing USB-identity regressions (exact normal-mode ID, exact DFU ID,
+camera DFU rejection) remain intact. **All 30 assertions in the file
+passed** when run for real via `pwsh` in this session, including the
+pre-existing Ancestry Tests A–F (updated to carry the new
+`ExpectedBlobId` field) and the real-repo assertion. Full detail in
+`docs/PRE_FLASH_CANONICAL_BLOB_INTEGRITY_FIX.md`.
+
+**No flash was performed in this phase. No hardware validation pass is
+claimed.** The `core.autocrlf=true` reproduction in Blob Test B is a real
+exercise of Git's own checkout/smudge logic (not gated by host OS), but
+this remains a Linux sandbox — no actual Windows machine ran this fix in
+this session. The evidence quoted in this phase's mission (the observed
+Windows working-tree SHA256 and the manual diagnostic) was supplied by
+the project owner from their own real Windows session. Release status
+remains **TEST-READY ONLY / NOT RELEASE-READY**.

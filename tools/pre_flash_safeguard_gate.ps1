@@ -214,9 +214,18 @@ $AllowedPostBaselinePathPrefixes = @('docs/', 'tools/')
 # The pinned hash below was computed directly from the file as committed
 # at 22167ac ("fcc: baseline acceptance record and finalization
 # workflow") and has not changed since.
+# ExpectedBlobId is the Git blob object ID for this exact reviewed content -
+# this is what the integrity decision is actually keyed on (canonical
+# repository content, immune to core.autocrlf / smudge-clean / any other
+# checkout-time transformation on any platform). ExpectedSha256 is a
+# defense-in-depth cross-check computed over the same canonical bytes, read
+# directly from the Git object database via `git cat-file blob <id>` -
+# never from a working-tree checkout - so it agrees with ExpectedBlobId on
+# every platform, including Windows with core.autocrlf=true.
 $PinnedWorkflowExceptions = @(
     [ordered]@{
         Path           = '.github/workflows/fcc-id-lookup-finalize-baseline.yml'
+        ExpectedBlobId = '094ed7bf30eecae5efe384568c5c0aa543260b2f'
         ExpectedSha256 = '3350d94037d2eaef38fc354d931ae25c9ce83fb837a71bfc5372e64515e7ecc5'
     }
 )
@@ -361,6 +370,188 @@ function Get-PresentPnpDevices {
 }
 
 # ---------------------------------------------------------------------------
+# Canonical Git blob integrity - the pinned finalization-workflow exception
+# MUST be verified against canonical repository object content, never
+# platform-specific working-tree bytes. A Windows checkout with
+# core.autocrlf=true rewrites LF to CRLF for text files at checkout time;
+# Get-FileHash (or any hash over the checked-out file) on such a working
+# tree therefore produces a DIFFERENT hash than the same file's canonical
+# Git blob, even though the underlying Git object - what was actually
+# reviewed and pinned - is byte-identical. Hashing working-tree bytes for
+# this decision is what caused a false FAIL on Windows; the fix is to
+# always decide identity from `git rev-parse HEAD:<path>` (the blob ID)
+# and `git cat-file blob <id>` (the exact canonical bytes), and to treat
+# the working-tree hash as diagnostic-only display text.
+# ---------------------------------------------------------------------------
+
+function Get-CanonicalGitBlobBytes {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$RepoRoot,
+        [Parameter(Mandatory)][string]$BlobId
+    )
+    # Captures the child process's raw StandardOutput.BaseStream rather than
+    # reading through its StreamReader (which decodes/re-encodes text) - so
+    # no newline translation or character-encoding conversion is ever
+    # applied to the returned bytes, on Windows PowerShell 5.1 or pwsh 7,
+    # Windows or Linux. $BlobId is a plain hex SHA - no argument quoting is
+    # needed for it; $RepoRoot is passed via WorkingDirectory instead of
+    # being interpolated into the argument string, so a path containing
+    # spaces is handled correctly without manual quoting.
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = 'git'
+    $psi.Arguments = "cat-file blob $BlobId"
+    $psi.WorkingDirectory = $RepoRoot
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.UseShellExecute = $false
+    $psi.CreateNoWindow = $true
+
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = $psi
+    $memoryStream = New-Object System.IO.MemoryStream
+    try {
+        [void]$process.Start()
+        $process.StandardOutput.BaseStream.CopyTo($memoryStream)
+        $stderrText = $process.StandardError.ReadToEnd()
+        $process.WaitForExit()
+        if ($process.ExitCode -ne 0) {
+            throw "git cat-file blob $BlobId failed (exit $($process.ExitCode)): $stderrText"
+        }
+        return $memoryStream.ToArray()
+    }
+    finally {
+        $memoryStream.Dispose()
+        $process.Dispose()
+    }
+}
+
+function Get-Sha256OfBytes {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][AllowEmptyCollection()][byte[]]$Bytes
+    )
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $hashBytes = $sha256.ComputeHash($Bytes)
+        return [System.BitConverter]::ToString($hashBytes).Replace('-', '').ToLowerInvariant()
+    }
+    finally {
+        $sha256.Dispose()
+    }
+}
+
+function Get-PinnedWorkflowExceptionResult {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$RepoRoot,
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$ExpectedBlobId,
+        [Parameter(Mandatory)][string]$ExpectedSha256
+    )
+
+    # Step: resolve the exact Git blob ID for this path AT HEAD - canonical
+    # repository content, never a working-tree checkout. A missing path (or
+    # any git error) fails closed.
+    $blobIdRaw = & git -C $RepoRoot rev-parse "HEAD:$Path" 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        return [ordered]@{
+            Status            = 'FAIL'
+            Detail            = "path missing or unresolvable at HEAD (git rev-parse HEAD:$Path failed: $blobIdRaw)"
+            BlobId            = $null
+            CanonicalSha256   = $null
+            WorkingTreeSha256 = $null
+        }
+    }
+    $blobId = "$blobIdRaw".Trim()
+
+    if ($blobId -ne $ExpectedBlobId) {
+        return [ordered]@{
+            Status            = 'FAIL'
+            Detail            = "blob ID mismatch: HEAD resolves this path to $blobId, expected exactly $ExpectedBlobId. The committed content has changed since this file was reviewed and pinned; any modification requires a new review and a new pinned blob ID/hash."
+            BlobId            = $blobId
+            CanonicalSha256   = $null
+            WorkingTreeSha256 = $null
+        }
+    }
+
+    # Step: read the exact canonical bytes of this blob from the Git object
+    # database (never the working-tree checkout) and hash them - a defense-
+    # in-depth cross-check independent of the blob-ID match above.
+    try {
+        $canonicalBytes = Get-CanonicalGitBlobBytes -RepoRoot $RepoRoot -BlobId $blobId
+    }
+    catch {
+        return [ordered]@{
+            Status            = 'FAIL'
+            Detail            = "canonical blob extraction failed for $blobId : $($_.Exception.Message). Treated as a failed integrity check, never silently skipped."
+            BlobId            = $blobId
+            CanonicalSha256   = $null
+            WorkingTreeSha256 = $null
+        }
+    }
+    $canonicalSha256 = Get-Sha256OfBytes -Bytes $canonicalBytes
+
+    # Working-tree SHA256 is computed only for diagnostic display - it is
+    # NEVER compared against anything to decide PASS/FAIL. This is exactly
+    # the value that would legitimately differ on a Windows checkout with
+    # core.autocrlf=true, and that difference must not affect this result.
+    $workingTreeFullPath = Join-Path $RepoRoot $Path
+    $workingTreeSha256 = $null
+    if (Test-Path $workingTreeFullPath) {
+        $workingTreeSha256 = (Get-FileHash -Path $workingTreeFullPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    }
+
+    if ($canonicalSha256 -ne $ExpectedSha256) {
+        return [ordered]@{
+            Status            = 'FAIL'
+            Detail            = "blob $blobId matched the expected blob ID, but its canonical SHA256 ($canonicalSha256) does not match the recorded pinned value ($ExpectedSha256) - treated as a failed integrity check rather than trusting the blob ID alone."
+            BlobId            = $blobId
+            CanonicalSha256   = $canonicalSha256
+            WorkingTreeSha256 = $workingTreeSha256
+        }
+    }
+
+    # Step: the working tree must be clean at this exact path. A real,
+    # uncommitted local modification (staged or unstaged) is a genuine
+    # safety concern even though it would never appear in a commit-to-
+    # commit diff between the accepted baseline and HEAD.
+    $statusRaw = & git -C $RepoRoot status --porcelain -- $Path 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        return [ordered]@{
+            Status            = 'FAIL'
+            Detail            = "git status --porcelain -- $Path failed: $statusRaw. Treated as a failed integrity check, never silently skipped."
+            BlobId            = $blobId
+            CanonicalSha256   = $canonicalSha256
+            WorkingTreeSha256 = $workingTreeSha256
+        }
+    }
+    $statusText = "$statusRaw".Trim()
+    if ($statusText -ne '') {
+        return [ordered]@{
+            Status            = 'FAIL'
+            Detail            = "blob $blobId matches the reviewed content at HEAD, but the working tree is not clean at this path (git status --porcelain: '$statusText'). A local, possibly uncommitted modification is present - refusing to trust it even though the committed Git object is unchanged."
+            BlobId            = $blobId
+            CanonicalSha256   = $canonicalSha256
+            WorkingTreeSha256 = $workingTreeSha256
+        }
+    }
+
+    $crlfNote = ''
+    if ($workingTreeSha256 -and $workingTreeSha256 -ne $canonicalSha256) {
+        $crlfNote = " Working-tree SHA256 ($workingTreeSha256) differs from the canonical Git blob SHA256 ($canonicalSha256) - this is expected and harmless on platforms with checkout-time line-ending conversion (e.g. Windows core.autocrlf=true); shown for diagnostic awareness only and never affects this PASS."
+    }
+
+    return [ordered]@{
+        Status            = 'PASS'
+        Detail            = "path '$Path' resolved to the exact reviewed Git blob $blobId, whose canonical SHA256 ($canonicalSha256) matches the pinned value exactly, and the working tree is clean at this path.$crlfNote"
+        BlobId            = $blobId
+        CanonicalSha256   = $canonicalSha256
+        WorkingTreeSha256 = $workingTreeSha256
+    }
+}
+
+# ---------------------------------------------------------------------------
 # Pure-ish function - baseline ancestry and forbidden-diff evaluation.
 # Shells out to git (so it needs a real or scratch repository to run
 # against), but takes RepoRoot/AcceptedBaselineCommit/AllowedPathPrefixes as
@@ -443,25 +634,22 @@ function Get-BaselineAncestryDiffResult {
             if ($isAllowedByPrefix) { continue }
 
             # Not covered by the docs/tools allow-list - check for an exact,
-            # individually-reviewed, pinned-hash exception before treating it
-            # as forbidden. This never widens to the whole directory the
-            # file lives in (e.g. .github/workflows/) - only this literal
-            # path, and only if its current bytes still match the pinned
-            # hash exactly.
+            # individually-reviewed, pinned exception before treating it as
+            # forbidden. This never widens to the whole directory the file
+            # lives in (e.g. .github/workflows/) - only this literal path,
+            # and only if its canonical Git blob content still matches the
+            # pinned blob ID / hash exactly. This is a canonical-object
+            # check, never a working-tree byte check - see
+            # Get-PinnedWorkflowExceptionResult below for why.
             $pinnedException = $PinnedFileExceptions | Where-Object { $_.Path -eq $file } | Select-Object -First 1
             if ($pinnedException) {
-                $exceptionFullPath = Join-Path $RepoRoot $file
-                if (-not (Test-Path $exceptionFullPath)) {
-                    $forbidden.Add("$file (PINNED EXCEPTION FAILED - file missing at HEAD, expected sha256 $($pinnedException.ExpectedSha256))") | Out-Null
-                    continue
-                }
-                $exceptionActualHash = Get-LineSha256 -Path $exceptionFullPath
-                if ($exceptionActualHash -eq $pinnedException.ExpectedSha256) {
+                $exceptionResult = Get-PinnedWorkflowExceptionResult -RepoRoot $RepoRoot -Path $pinnedException.Path -ExpectedBlobId $pinnedException.ExpectedBlobId -ExpectedSha256 $pinnedException.ExpectedSha256
+                if ($exceptionResult.Status -eq 'PASS') {
                     $pinnedMatched.Add($file) | Out-Null
                     continue
                 }
                 else {
-                    $forbidden.Add("$file (PINNED EXCEPTION FAILED - hash mismatch: expected sha256 $($pinnedException.ExpectedSha256), found $exceptionActualHash. Any modification to this pinned file requires a new review and a new pinned hash.)") | Out-Null
+                    $forbidden.Add("$file (PINNED EXCEPTION FAILED - $($exceptionResult.Detail))") | Out-Null
                     continue
                 }
             }
