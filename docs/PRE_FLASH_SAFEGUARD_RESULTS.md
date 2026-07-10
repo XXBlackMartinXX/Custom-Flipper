@@ -152,3 +152,57 @@ optimistic classification chosen after the fact.
 
 **Hardware flashing/testing: NOT PERFORMED. Release status: TEST-READY
 ONLY / NOT RELEASE-READY.**
+
+---
+
+## Correctness patch re-run (real results, corrected script)
+
+The runs above used the pre-patch script. After the Pre-Flash Safeguard
+Correctness Patch (see `docs/PRE_FLASH_SAFEGUARD_CORRECTNESS_PATCH.md`
+for the full defect/fix writeup), the corrected
+`tools/pre_flash_safeguard_gate.ps1` was re-run for real in this same
+Linux sandbox — the environment limitations above (no Windows, no
+device, no qFlipper, no real artifact download) are unchanged and still
+apply.
+
+| # | Command | Classification |
+|---|---|---|
+| 1 | `-Mode Preflight` | `PRE-FLASH SAFEGUARD FAILED` |
+| 2 | `-Mode DeviceDetect` | `PRE-FLASH SAFEGUARD FAILED` |
+| 3 | `-Mode RecoveryReadiness` | `PRE-FLASH SAFEGUARD FAILED` |
+| 4 | `-Mode ArtifactHashVerify -ArtifactDir <synthetic mismatched files>` | `PRE-FLASH SAFEGUARD FAILED` (synthetic mismatch, proves comparison logic) |
+
+**Important change from the pre-patch runs**: every mode now shows
+`FAILED` rather than the pre-patch `NEEDS REVIEW`/`BLOCKED`. This is
+not a regression — it is the corrected "Baseline ancestry and
+diff-scope verification" check working exactly as specified,
+correctly detecting a real forbidden-path difference between the
+accepted baseline commit and HEAD:
+`.github/workflows/fcc-id-lookup-finalize-baseline.yml`, added after
+the accepted baseline as part of this project's own already-completed
+baseline-finalization tooling. Full detail, including why this is a
+real historical fact and not a defect in the check, is in
+`docs/PRE_FLASH_SAFEGUARD_CORRECTNESS_PATCH.md`'s "Important real
+finding from this patch" section. **This finding does not affect
+artifact hash verification**, which remains an independent, direct
+byte-level comparison unaffected by source-tree diff scope.
+
+The device-detection checks (`DeviceDetect`, `RecoveryReadiness`) now
+report the more specific `BLOCKED - WINDOWS DEVICE API UNAVAILABLE` for
+both normal-mode and DFU-mode detection (previously a generic
+`BLOCKED`), confirmed via the real `Get-PnpDevice`-not-recognized error
+in this sandbox, same underlying cause as before.
+
+**Regression tests**: `tools/pre_flash_safeguard_gate.tests.ps1` was
+run for real in this session and all 8 assertions (Tests A–G plus one
+sanity check) passed, including Test B (the exact "Camera DFU Device"
+false-positive fixture from the defect report) correctly rejected, and
+Test A (exact Flipper DFU identity) correctly accepted. Full detail in
+`docs/PRE_FLASH_SAFEGUARD_CORRECTNESS_PATCH.md`.
+
+**No flash was performed. No hardware validation pass is claimed.**
+Release status remains **TEST-READY ONLY / NOT RELEASE-READY**. The
+`FAILED` classification above reflects the real, current state of this
+repository's diff from its accepted baseline under the corrected,
+stricter check — it is surfaced honestly for the project owner's
+decision, not silently resolved by this patch.

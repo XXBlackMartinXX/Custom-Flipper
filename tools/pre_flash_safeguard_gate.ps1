@@ -19,12 +19,47 @@
     docs/SAFE_FLASH_DECISION_TREE.md have all been worked through
     honestly.
 
-    It validates the accepted final baseline (branch, commit, and the
-    real, GitHub-Actions-generated artifact hashes from
-    docs/FCC_ID_LOOKUP_ARTIFACT_HASHES.md), and, only when specifically
+    It validates the accepted final baseline via a strict ancestry and
+    forbidden-diff check (not a fragile exact-HEAD-equality check — a
+    later, docs/tools-only commit is expected and permitted, but any
+    difference outside docs/ or tools/ is not), and the real,
+    GitHub-Actions-generated artifact hashes from
+    docs/FCC_ID_LOOKUP_ARTIFACT_HASHES.md, and, only when specifically
     requested, attempts safe, read-only detection of a connected Flipper
     Zero in either normal (Windows Serial/CDC-ACM) mode or DFU/recovery
     (STM32 bootloader) mode, and detection of installed qFlipper.
+
+    CORRECTNESS PATCH (this revision): fixes two defects found via real
+    hardware evidence review.
+      1. FALSE DFU POSITIVE: the prior RecoveryReadiness implementation
+         matched on FriendlyName substrings ("STM32 BOOTLOADER", "DFU")
+         OR a loosely-escaped VID:PID substring, which could accept an
+         unrelated device (e.g. "Camera DFU Device",
+         USB\VID_04F2&PID_B83E...) as if it were the Flipper Zero's
+         bootloader. FriendlyName is now NEVER used to determine a
+         PASS/BLOCKED identity result - identity is determined solely by
+         an exact InstanceId substring match against VID_0483&PID_DF11
+         (Flipper's DFU identity) or VID_0483&PID_5740 (Flipper's normal
+         identity), each checked independently. Device enumeration
+         (touches real hardware APIs) is now separated from identity
+         evaluation (pure functions, unit-testable with synthetic device
+         fixtures, no hardware required) - see
+         tools/pre_flash_safeguard_gate.tests.ps1.
+      2. BASELINE COMMIT RELATIONSHIP: the prior "Commit verification"
+         check required HEAD to equal the accepted baseline commit
+         exactly, which fails (as NEEDS_REVIEW) for every legitimate
+         docs/tools-only commit added after baseline acceptance -
+         including this gate's own tooling commits. Replaced with a
+         strict ancestry check (`git merge-base --is-ancestor`) plus a
+         forbidden-diff check: the accepted baseline commit must exist
+         locally and be an ancestor of HEAD, and every file that differs
+         between the baseline and HEAD must fall under docs/ or tools/ -
+         any other path (applications/, applications_user/, core
+         firmware source, .github/workflows/, build/, dist/, toolchain/,
+         or anything else) forces a FAIL. This never implies that HEAD
+         itself produced the accepted firmware artifacts - those remain
+         bound to the accepted baseline commit, CI run, sizes, and
+         hashes, which are unchanged by this patch.
 
     This script contains NO code path for Sub-GHz/RF, NFC/RFID/iButton,
     BadUSB/HID injection, BLE, GPIO, or IR interaction, and no code path
@@ -39,8 +74,21 @@
     the same scheme used by tools/final_hardware_gate.ps1 and every
     tools/phaseX_hardware_gate.ps1 script since Phase 2C.4.
 
+    Testability: this file can be dot-sourced (`. .\tools\pre_flash_safeguard_gate.ps1`)
+    to load only its function definitions, without running the main gate
+    body or touching any hardware API - detected via
+    `$MyInvocation.InvocationName -eq '.'`. This is how
+    tools/pre_flash_safeguard_gate.tests.ps1 exercises the identity and
+    ancestry/diff logic with synthetic fixtures, with no real device and
+    no network access required.
+
+    PowerShell 5.1 compatibility: deliberately avoids PowerShell-7-only
+    syntax (ternary `?:`, null-coalescing `??`/`??=`, pipeline chain
+    operators `&&`/`||`) so this script runs unchanged on Windows
+    PowerShell 5.1 as well as PowerShell 7+.
+
 .PARAMETER Mode
-    Preflight (default)  - repo/branch/commit checks and environment
+    Preflight (default)  - repo/branch/ancestry checks and environment
                             checks only, no hardware, no artifact
                             directory required.
     ArtifactHashVerify    - Preflight checks, plus verifying a downloaded
@@ -49,16 +97,18 @@
                             SHA-256 hashes. Requires -ArtifactDir.
     DeviceDetect          - Preflight checks, plus safe PnP-based
                             detection of a connected Flipper Zero in
-                            normal mode and installed qFlipper. Read-only;
-                            no serial communication with the device.
+                            normal mode (exact VID_0483&PID_5740 match)
+                            and installed qFlipper. Read-only; no serial
+                            communication with the device.
     RecoveryReadiness     - Preflight checks, plus safe PnP-based
                             detection of a connected Flipper Zero in
                             EITHER normal mode OR DFU/recovery
-                            (bootloader) mode, so a user can safely
-                            confirm their device is reachable in
-                            recovery mode before they might ever need it
-                            for real - without performing any recovery
-                            action itself. Read-only.
+                            (bootloader) mode (exact VID_0483&PID_DF11
+                            match only - never FriendlyName-based), so a
+                            user can safely confirm their device is
+                            reachable in recovery mode before they might
+                            ever need it for real - without performing
+                            any recovery action itself. Read-only.
     ReportOnly            - Regenerates a report from repo/environment
                             state only, without attempting device
                             detection or artifact hashing even if
@@ -106,9 +156,6 @@ param(
     [string]$RepoRoot = ''
 )
 
-Set-StrictMode -Version Latest
-$ErrorActionPreference = 'Stop'
-
 # ---------------------------------------------------------------------------
 # Embedded accepted-baseline constants (no separate config file for this
 # narrow, single-purpose gate - matches this task's own requested deliverable
@@ -132,20 +179,318 @@ $ExpectedUpdater = [ordered]@{
 }
 
 # Flipper Zero in normal (application firmware) mode enumerates as a USB
-# CDC-ACM serial device with ST Microelectronics's VID and a Flipper-specific
-# PID.
-$NormalModeFriendlyNameSubstring = 'Flipper'
+# CDC-ACM serial device under ST Microelectronics's VID and a
+# Flipper-specific PID. Flipper Zero's STM32 bootloader, when the device is
+# held into DFU/recovery mode, enumerates under ST Microelectronics's
+# GENERIC DFU bootloader VID:PID (0483:DF11) - the same generic identity
+# shared by many other STM32-based devices (this is the exact false-positive
+# risk this patch fixes: FriendlyName strings like "DFU", "STM", or
+# "Bootloader" are shared across unrelated devices; only the exact
+# VID_0483&PID_DF11 InstanceId is Flipper-specific enough, and even that is
+# a generic STM32 DFU identity, not literally unique to Flipper - but it is
+# the correct, documented identity for this device in DFU mode, per
+# Flipper's own hardware).
 $NormalModeVidPid = 'VID_0483&PID_5740'
-
-# Flipper Zero's STM32 bootloader, when the device is held into DFU/recovery
-# mode, enumerates under ST Microelectronics's generic DFU bootloader VID:PID
-# (0483:DF11) rather than the normal-mode Flipper-specific PID - this is a
-# standard STM32 DFU identity, not something specific to this project's
-# firmware. Detecting it does not itself perform any recovery action.
-$DfuModeFriendlyNameSubstring = 'STM32 BOOTLOADER|DFU'
 $DfuModeVidPid = 'VID_0483&PID_DF11'
 
+# Allow-list (fail-closed) of path prefixes permitted to differ between the
+# accepted baseline commit and HEAD. Anything NOT under one of these
+# prefixes - applications/, applications_user/, core firmware source,
+# .github/workflows/, build/, dist/, toolchain/, or any other path - is
+# treated as a forbidden difference.
+$AllowedPostBaselinePathPrefixes = @('docs/', 'tools/')
+
 $ReleaseStatusWording = 'TEST-READY ONLY / NOT RELEASE-READY'
+
+# ---------------------------------------------------------------------------
+# Pure / testable functions - identity evaluation
+#
+# These never call Get-PnpDevice or any other hardware API themselves; they
+# operate only on the InstanceId/FriendlyName strings they are given, so
+# tools/pre_flash_safeguard_gate.tests.ps1 can call them directly with
+# synthetic fixture objects, with no real device and no Windows required.
+# FriendlyName is accepted as a parameter for display purposes only in the
+# calling code below - it is never inspected here and never determines a
+# PASS or BLOCKED result.
+# ---------------------------------------------------------------------------
+
+function Test-FlipperDfuIdentity {
+    [CmdletBinding()]
+    param(
+        [AllowNull()][AllowEmptyString()][string]$InstanceId
+    )
+    if ([string]::IsNullOrEmpty($InstanceId)) { return $false }
+    return $InstanceId.ToUpperInvariant().Contains($DfuModeVidPid)
+}
+
+function Test-FlipperNormalModeIdentity {
+    [CmdletBinding()]
+    param(
+        [AllowNull()][AllowEmptyString()][string]$InstanceId
+    )
+    if ([string]::IsNullOrEmpty($InstanceId)) { return $false }
+    return $InstanceId.ToUpperInvariant().Contains($NormalModeVidPid)
+}
+
+# ---------------------------------------------------------------------------
+# Pure / testable functions - detection-result classification
+#
+# Each takes an "enumeration result" object (see Get-PresentPnpDevices
+# below) rather than calling Get-PnpDevice itself, so these can be unit
+# tested with a synthetic enumeration result too.
+# ---------------------------------------------------------------------------
+
+function Get-NormalModeDetectionResult {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][object]$EnumerationResult
+    )
+    if (-not $EnumerationResult.Success) {
+        if ($EnumerationResult.ErrorType -eq 'ApiUnavailable') {
+            return [ordered]@{
+                Status = 'BLOCKED - WINDOWS DEVICE API UNAVAILABLE'
+                Detail = "Get-PnpDevice is unavailable: $($EnumerationResult.ErrorMessage) - this cmdlet requires Windows."
+            }
+        }
+        return [ordered]@{
+            Status = 'NEEDS_REVIEW'
+            Detail = "Get-PnpDevice query failed: $($EnumerationResult.ErrorMessage)"
+        }
+    }
+
+    $matches = @($EnumerationResult.Devices | Where-Object { Test-FlipperNormalModeIdentity -InstanceId $_.InstanceId })
+    if ($matches.Count -gt 0) {
+        $first = $matches | Select-Object -First 1
+        return [ordered]@{
+            Status = 'PASS'
+            Detail = "Exact Flipper normal-mode identity $NormalModeVidPid detected: InstanceId=$($first.InstanceId), FriendlyName='$($first.FriendlyName)' (FriendlyName shown for information only - it did not determine this PASS)."
+        }
+    }
+    return [ordered]@{
+        Status = 'BLOCKED - FLIPPER NORMAL MODE NOT DETECTED'
+        Detail = "No device matching the exact Flipper normal-mode identity $NormalModeVidPid is present. Connect the device in normal (not DFU) mode and re-run."
+    }
+}
+
+function Get-DfuDetectionResult {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][object]$EnumerationResult
+    )
+    if (-not $EnumerationResult.Success) {
+        if ($EnumerationResult.ErrorType -eq 'ApiUnavailable') {
+            return [ordered]@{
+                Status = 'BLOCKED - WINDOWS DEVICE API UNAVAILABLE'
+                Detail = "Get-PnpDevice is unavailable: $($EnumerationResult.ErrorMessage) - this cmdlet requires Windows."
+            }
+        }
+        return [ordered]@{
+            Status = 'NEEDS_REVIEW'
+            Detail = "Get-PnpDevice query failed: $($EnumerationResult.ErrorMessage)"
+        }
+    }
+
+    $exactMatches = @($EnumerationResult.Devices | Where-Object { Test-FlipperDfuIdentity -InstanceId $_.InstanceId })
+    if ($exactMatches.Count -gt 0) {
+        $first = $exactMatches | Select-Object -First 1
+        return [ordered]@{
+            Status = 'PASS'
+            Detail = "Exact Flipper DFU identity $DfuModeVidPid detected: InstanceId=$($first.InstanceId), FriendlyName='$($first.FriendlyName)' (FriendlyName shown for information only - it did not determine this PASS; no generic 'DFU'/'STM'/'Bootloader'/'Camera' string match is ever sufficient)."
+        }
+    }
+
+    # Report any DFU-shaped-but-non-matching devices purely for operator
+    # awareness (e.g. "your webcam's DFU mode is not your Flipper") - this
+    # broader, FriendlyName-based lookup NEVER contributes to a PASS.
+    $genericDfuLike = @($EnumerationResult.Devices | Where-Object {
+        ($_.InstanceId -match '(?i)DF11') -or ($_.FriendlyName -match '(?i)dfu|bootloader')
+    })
+    if ($genericDfuLike.Count -gt 0) {
+        $names = ($genericDfuLike | ForEach-Object { "$($_.FriendlyName) ($($_.InstanceId))" }) -join '; '
+        return [ordered]@{
+            Status = 'BLOCKED - EXACT FLIPPER DFU ID NOT DETECTED'
+            Detail = "Generic or unrelated DFU-like device(s) present but none matched the exact Flipper identity $DfuModeVidPid : $names. FriendlyName and generic DFU-related strings (DFU, STM, Bootloader, Camera, etc.) never determine a PASS - only an exact InstanceId match against $DfuModeVidPid does."
+        }
+    }
+    return [ordered]@{
+        Status = 'BLOCKED - EXACT FLIPPER DFU ID NOT DETECTED'
+        Detail = "No device matching the exact Flipper DFU identity $DfuModeVidPid is present. This is expected if you have not deliberately put the device into DFU mode (hold Back while connecting USB) - only do so if you specifically want to test recovery-mode reachability now, per docs/FLASH_ROLLBACK_AND_RECOVERY_PLAN.md."
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Enumeration function - the ONLY function in this file that touches a real
+# hardware/OS API (Get-PnpDevice). Kept deliberately separate from the pure
+# evaluation functions above so tests never need to call this.
+# ---------------------------------------------------------------------------
+
+function Get-PresentPnpDevices {
+    [CmdletBinding()]
+    param()
+    try {
+        $devices = @(Get-PnpDevice -PresentOnly -ErrorAction Stop)
+        return [ordered]@{ Success = $true; Devices = $devices; ErrorType = $null; ErrorMessage = $null }
+    }
+    catch [System.Management.Automation.CommandNotFoundException] {
+        return [ordered]@{ Success = $false; Devices = @(); ErrorType = 'ApiUnavailable'; ErrorMessage = $_.Exception.Message }
+    }
+    catch {
+        return [ordered]@{ Success = $false; Devices = @(); ErrorType = 'QueryError'; ErrorMessage = $_.Exception.Message }
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Pure-ish function - baseline ancestry and forbidden-diff evaluation.
+# Shells out to git (so it needs a real or scratch repository to run
+# against), but takes RepoRoot/AcceptedBaselineCommit/AllowedPathPrefixes as
+# parameters rather than reading script-level constants directly, so
+# tools/pre_flash_safeguard_gate.tests.ps1 can point it at a disposable
+# scratch repository to prove the forbidden-diff detection works, without
+# touching this repository's own applications_user/ or any other real path.
+# ---------------------------------------------------------------------------
+
+function Get-BaselineAncestryDiffResult {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$RepoRoot,
+        [Parameter(Mandatory)][string]$AcceptedBaselineCommit,
+        [string[]]$AllowedPathPrefixes = @('docs/', 'tools/')
+    )
+
+    if (-not (Test-Path (Join-Path $RepoRoot '.git'))) {
+        return [ordered]@{ Status = 'NOT_RUN'; Detail = "$RepoRoot does not look like a git repository root (.git not found)."; ForbiddenFiles = @() }
+    }
+
+    Push-Location $RepoRoot
+    try {
+        # Step 1: accepted baseline commit exists locally.
+        & git cat-file -e "$AcceptedBaselineCommit^{commit}" 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            return [ordered]@{
+                Status = 'BLOCKED - ACCEPTED BASELINE NOT FOUND LOCALLY'
+                Detail = "Accepted baseline commit $AcceptedBaselineCommit does not exist in this local repository. Fetch it (e.g. git fetch origin) before proceeding."
+                ForbiddenFiles = @()
+            }
+        }
+
+        $headCommit = (& git rev-parse HEAD 2>&1)
+        if ($LASTEXITCODE -ne 0) {
+            return [ordered]@{ Status = 'NEEDS_REVIEW'; Detail = "git rev-parse HEAD failed: $headCommit"; ForbiddenFiles = @() }
+        }
+        $headCommit = "$headCommit".Trim()
+
+        if ($headCommit -eq $AcceptedBaselineCommit) {
+            return [ordered]@{
+                Status = 'PASS - HEAD IS THE ACCEPTED BASELINE COMMIT EXACTLY'
+                Detail = "HEAD ($headCommit) is exactly the accepted baseline commit."
+                ForbiddenFiles = @()
+            }
+        }
+
+        # Step 2: ancestry.
+        & git merge-base --is-ancestor $AcceptedBaselineCommit HEAD 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            return [ordered]@{
+                Status = 'BLOCKED - ACCEPTED BASELINE NOT AN ANCESTOR OF HEAD'
+                Detail = "git merge-base --is-ancestor $AcceptedBaselineCommit HEAD did not confirm ancestry - HEAD ($headCommit) does not descend from the accepted baseline commit. This may indicate a rebase, a different branch, or a diverged checkout. Do not treat this HEAD as validating the accepted baseline."
+                ForbiddenFiles = @()
+            }
+        }
+
+        # Steps 3-5: diff scope, allow-list based (fail-closed).
+        $diffOutputRaw = (& git diff --name-only "$AcceptedBaselineCommit..HEAD" 2>&1)
+        if ($LASTEXITCODE -ne 0) {
+            return [ordered]@{ Status = 'NEEDS_REVIEW'; Detail = "git diff --name-only $AcceptedBaselineCommit..HEAD failed: $diffOutputRaw"; ForbiddenFiles = @() }
+        }
+        $changedFiles = @($diffOutputRaw -split "`n" | Where-Object { $_ -and $_.Trim() -ne '' })
+
+        $forbidden = New-Object System.Collections.Generic.List[string]
+        foreach ($file in $changedFiles) {
+            $isAllowed = $false
+            foreach ($prefix in $AllowedPathPrefixes) {
+                if ($file -like "$prefix*") { $isAllowed = $true; break }
+            }
+            if (-not $isAllowed) { $forbidden.Add($file) | Out-Null }
+        }
+
+        if ($forbidden.Count -gt 0) {
+            return [ordered]@{
+                Status = 'FAIL - FORBIDDEN PATH CHANGES BETWEEN ACCEPTED BASELINE AND HEAD'
+                Detail = "HEAD ($headCommit) descends from the accepted baseline ($AcceptedBaselineCommit) but changes files outside the permitted $($AllowedPathPrefixes -join '/') scope: $($forbidden -join ', '). Do not treat this HEAD as validating the accepted firmware artifacts."
+                ForbiddenFiles = @($forbidden)
+            }
+        }
+
+        if ($changedFiles.Count -eq 0) {
+            return [ordered]@{
+                Status = 'PASS - HEAD IS THE ACCEPTED BASELINE COMMIT EXACTLY'
+                Detail = "No file differences found between $AcceptedBaselineCommit and HEAD ($headCommit) despite differing commit hashes (e.g. an empty/no-op commit)."
+                ForbiddenFiles = @()
+            }
+        }
+
+        return [ordered]@{
+            Status = 'PASS - ACCEPTED BASELINE WITH TOOLING/DOCS-ONLY DESCENDANT'
+            Detail = "HEAD ($headCommit) descends from the accepted baseline commit ($AcceptedBaselineCommit) with $($changedFiles.Count) changed file(s) confined entirely to $($AllowedPathPrefixes -join ' / '): $($changedFiles -join ', '). This confirms HEAD is a documentation/tooling-only descendant - it does NOT imply HEAD itself produced the accepted firmware artifacts. Those remain bound to the accepted baseline commit, CI run $AcceptedCiRunId, and the hashes verified separately below."
+            ForbiddenFiles = @()
+        }
+    }
+    finally {
+        Pop-Location
+    }
+}
+
+function Get-LineSha256 {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Path)
+    return (Get-FileHash -Path $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+}
+
+function Add-Result {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Category,
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Status,
+        [string]$Detail = '',
+        [object]$Evidence = $null
+    )
+    $entry = [ordered]@{
+        Category = $Category
+        Name     = $Name
+        Status   = $Status
+        Detail   = $Detail
+        Evidence = $Evidence
+    }
+    $script:Results.Add($entry) | Out-Null
+
+    $color = 'Gray'
+    if ($Status -like 'PASS*') { $color = 'Green' }
+    elseif ($Status -like 'FAIL*') { $color = 'Red' }
+    elseif ($Status -like 'BLOCKED*') { $color = 'Yellow' }
+    elseif ($Status -like 'NEEDS_REVIEW*') { $color = 'Yellow' }
+
+    Write-Host ("[{0,-24}] [{1,-45}] {2}" -f $Category, $Status, $Name) -ForegroundColor $color
+    if ($Detail) {
+        Write-Host ("{0}{1}" -f (' ' * 4), $Detail) -ForegroundColor DarkGray
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Dot-source guard: everything above this line is safe to load with no
+# hardware, no network, and no strict-mode/error-preference side effects on
+# the caller. Everything below only runs when this file is executed
+# directly (not dot-sourced), so tools/pre_flash_safeguard_gate.tests.ps1
+# can `. .\tools\pre_flash_safeguard_gate.ps1` to get the functions above
+# without triggering a real gate run.
+# ---------------------------------------------------------------------------
+
+$script:IsDotSourced = ($MyInvocation.InvocationName -eq '.')
+
+if (-not $script:IsDotSourced) {
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
 # ---------------------------------------------------------------------------
 # Setup
@@ -169,41 +514,6 @@ $RandomSuffix = -join ((1..4) | ForEach-Object { '{0:x}' -f (Get-Random -Maximum
 $RunTimestampForFilename = "$((Get-Date).ToUniversalTime().ToString('yyyyMMdd_HHmmss_fff'))_$RandomSuffix"
 
 $script:Results = New-Object System.Collections.Generic.List[object]
-
-function Add-Result {
-    param(
-        [Parameter(Mandatory)][string]$Category,
-        [Parameter(Mandatory)][string]$Name,
-        [Parameter(Mandatory)][ValidateSet('PASS', 'FAIL', 'BLOCKED', 'NOT_RUN', 'NEEDS_REVIEW')][string]$Status,
-        [string]$Detail = '',
-        [object]$Evidence = $null
-    )
-    $entry = [ordered]@{
-        Category = $Category
-        Name     = $Name
-        Status   = $Status
-        Detail   = $Detail
-        Evidence = $Evidence
-    }
-    $script:Results.Add($entry) | Out-Null
-
-    $color = switch ($Status) {
-        'PASS'         { 'Green' }
-        'FAIL'         { 'Red' }
-        'BLOCKED'      { 'Yellow' }
-        'NEEDS_REVIEW' { 'Yellow' }
-        default        { 'Gray' }
-    }
-    Write-Host ("[{0,-24}] [{1,-12}] {2}" -f $Category, $Status, $Name) -ForegroundColor $color
-    if ($Detail) {
-        Write-Host ("{0}{1}" -f (' ' * 42), $Detail) -ForegroundColor DarkGray
-    }
-}
-
-function Get-LineSha256 {
-    param([Parameter(Mandatory)][string]$Path)
-    return (Get-FileHash -Path $Path -Algorithm SHA256).Hash.ToLowerInvariant()
-}
 
 Write-Host ''
 Write-Host '=== Pre-Flash Anti-Brick Safeguard Gate ===' -ForegroundColor Cyan
@@ -253,9 +563,10 @@ else {
 }
 
 # ---------------------------------------------------------------------------
-# Category: Automated checks - repo/branch/commit state (best-effort; this
-# gate is also meant to be usable from a plain artifact-download folder with
-# no repo present, so absence of a repo is NOT_RUN, not a failure)
+# Category: Automated checks - repo/branch state and baseline ancestry/diff
+# (best-effort; this gate is also meant to be usable from a plain
+# artifact-download folder with no repo present, so absence of a repo is
+# NOT_RUN, not a failure)
 # ---------------------------------------------------------------------------
 
 $gitAvailable = $false
@@ -266,18 +577,17 @@ try {
 catch { $gitAvailable = $false }
 
 if (-not $gitAvailable) {
-    Add-Result -Category 'Automated' -Name 'Branch verification' -Status 'NOT_RUN' -Detail 'git is not available in this environment - repo/branch/commit checks skipped. This gate can still be used from a plain artifact-download folder.'
-    Add-Result -Category 'Automated' -Name 'Commit verification (matches accepted baseline)' -Status 'NOT_RUN' -Detail 'git is not available in this environment.'
+    Add-Result -Category 'Automated' -Name 'Branch verification' -Status 'NOT_RUN' -Detail 'git is not available in this environment - repo/branch/ancestry checks skipped. This gate can still be used from a plain artifact-download folder.'
+    Add-Result -Category 'Automated' -Name 'Baseline ancestry and diff-scope verification' -Status 'NOT_RUN' -Detail 'git is not available in this environment.'
 }
 elseif (-not (Test-Path (Join-Path $RepoRoot '.git'))) {
-    Add-Result -Category 'Automated' -Name 'Branch verification' -Status 'NOT_RUN' -Detail "$RepoRoot does not look like a git repository root (.git not found) - repo/branch/commit checks skipped. Pass -RepoRoot explicitly if this repo lives elsewhere."
-    Add-Result -Category 'Automated' -Name 'Commit verification (matches accepted baseline)' -Status 'NOT_RUN' -Detail "$RepoRoot does not look like a git repository root."
+    Add-Result -Category 'Automated' -Name 'Branch verification' -Status 'NOT_RUN' -Detail "$RepoRoot does not look like a git repository root (.git not found) - repo/branch/ancestry checks skipped. Pass -RepoRoot explicitly if this repo lives elsewhere."
+    Add-Result -Category 'Automated' -Name 'Baseline ancestry and diff-scope verification' -Status 'NOT_RUN' -Detail "$RepoRoot does not look like a git repository root."
 }
 else {
     Push-Location $RepoRoot
     try {
         $currentBranch = (& git rev-parse --abbrev-ref HEAD 2>&1)
-        $currentCommit = (& git rev-parse HEAD 2>&1)
         $gitStatus = (& git status --short 2>&1) -join "`n"
     }
     finally {
@@ -291,12 +601,8 @@ else {
         Add-Result -Category 'Automated' -Name 'Branch verification' -Status 'NEEDS_REVIEW' -Detail "Expected '$AcceptedBranch', found '$currentBranch'."
     }
 
-    if ($currentCommit -eq $AcceptedCommit) {
-        Add-Result -Category 'Automated' -Name 'Commit verification (matches accepted baseline)' -Status 'PASS' -Detail "HEAD matches accepted baseline commit $currentCommit"
-    }
-    else {
-        Add-Result -Category 'Automated' -Name 'Commit verification (matches accepted baseline)' -Status 'NEEDS_REVIEW' -Detail "HEAD is $currentCommit, accepted baseline is $AcceptedCommit. This is expected NEEDS_REVIEW behavior when this gate is run from a later docs-only commit (e.g. after this gate's own tooling was added); confirm intentional before treating a flash of a different commit as validating the accepted baseline."
-    }
+    $ancestryResult = Get-BaselineAncestryDiffResult -RepoRoot $RepoRoot -AcceptedBaselineCommit $AcceptedCommit -AllowedPathPrefixes $AllowedPostBaselinePathPrefixes
+    Add-Result -Category 'Automated' -Name 'Baseline ancestry and diff-scope verification' -Status $ancestryResult.Status -Detail $ancestryResult.Detail -Evidence $ancestryResult.ForbiddenFiles
 
     if ($gitStatus.Trim() -eq '') {
         Add-Result -Category 'Automated' -Name 'Git status (clean working tree)' -Status 'PASS' -Detail 'No uncommitted changes'
@@ -306,7 +612,7 @@ else {
     }
 }
 
-Add-Result -Category 'Automated' -Name 'Accepted baseline reference' -Status 'PASS' -Detail "Branch $AcceptedBranch, commit $AcceptedCommit, CI validation run $AcceptedCiRunId, finalization run $AcceptedFinalizationRunId"
+Add-Result -Category 'Automated' -Name 'Accepted baseline reference' -Status 'PASS' -Detail "Branch $AcceptedBranch, commit $AcceptedCommit, CI validation run $AcceptedCiRunId, finalization run $AcceptedFinalizationRunId. Artifact verification below is always bound to these exact values, never to whatever commit HEAD happens to be."
 
 # ---------------------------------------------------------------------------
 # Category: Automated checks - artifact hash verification
@@ -365,10 +671,6 @@ else {
 
 $deviceCheckApplicable = ($Mode -eq 'DeviceDetect' -or $Mode -eq 'RecoveryReadiness')
 
-$normalModeDetected = $false
-$dfuModeDetected = $false
-$qFlipperDetected = $false
-
 if (-not $deviceCheckApplicable) {
     Add-Result -Category 'HardwareConnected' -Name 'Official flashing tooling detection (qFlipper)' -Status 'NOT_RUN' -Detail "Mode is $Mode - tooling detection was not requested."
 }
@@ -410,65 +712,36 @@ else {
     }
 
     if ($qFlipperFound) {
-        $qFlipperDetected = $true
         Add-Result -Category 'HardwareConnected' -Name 'Official flashing tooling detection (qFlipper)' -Status 'PASS' -Detail "Detected: $qFlipperFound"
     }
     else {
-        Add-Result -Category 'HardwareConnected' -Name 'Official flashing tooling detection (qFlipper)' -Status 'BLOCKED' -Detail 'qFlipper not found via PATH, common install directories, or the Windows uninstall registry. This is best-effort detection - it may still be installed under a nonstandard path. Per this gate''s design, do not proceed toward flashing until qFlipper is confirmed installed.'
+        Add-Result -Category 'HardwareConnected' -Name 'Official flashing tooling detection (qFlipper)' -Status 'BLOCKED - QFLIPPER NOT DETECTED' -Detail 'qFlipper not found via PATH, common install directories, or the Windows uninstall registry. This is best-effort detection - it may still be installed under a nonstandard path. Per this gate''s design, do not proceed toward flashing until qFlipper is confirmed installed.'
     }
 }
 
 # ---------------------------------------------------------------------------
-# Category: Hardware-connected checks - normal-mode device detection
-# (DeviceDetect and RecoveryReadiness modes)
+# Category: Hardware-connected checks - normal-mode and DFU/recovery-mode
+# device detection (single enumeration, evaluated by the pure functions
+# above - identity is decided by exact InstanceId match only, never by
+# FriendlyName).
 # ---------------------------------------------------------------------------
 
 if (-not $deviceCheckApplicable) {
     Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection (normal mode)' -Status 'NOT_RUN' -Detail "Mode is $Mode - device detection was not requested."
-}
-else {
-    try {
-        $pnp = Get-PnpDevice -PresentOnly -ErrorAction Stop |
-            Where-Object { $_.FriendlyName -match $NormalModeFriendlyNameSubstring -or $_.InstanceId -match [regex]::Escape($NormalModeVidPid) }
-        if ($pnp) {
-            $normalModeDetected = $true
-            $first = $pnp | Select-Object -First 1
-            Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection (normal mode)' -Status 'PASS' -Detail "Detected: $($first.FriendlyName) ($($first.InstanceId))"
-        }
-        else {
-            Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection (normal mode)' -Status 'NOT_RUN' -Detail 'No connected Flipper Zero detected in normal mode via Windows PnP enumeration (Get-PnpDevice). Connect the device in normal (not DFU) mode and re-run if you want to confirm normal-mode detection.'
-        }
-    }
-    catch {
-        Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection (normal mode)' -Status 'BLOCKED' -Detail "Get-PnpDevice failed or is unavailable ($($_.Exception.Message)) - this cmdlet requires Windows. Use a Windows machine for this mode."
-    }
-}
-
-# ---------------------------------------------------------------------------
-# Category: Hardware-connected checks - DFU/recovery-mode device detection
-# (RecoveryReadiness mode only - the whole point of this mode is to let a
-# user confirm their device is reachable in recovery mode WITHOUT performing
-# any recovery action, before they might ever need it for real)
-# ---------------------------------------------------------------------------
-
-if ($Mode -ne 'RecoveryReadiness') {
     Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection (DFU/recovery mode)' -Status 'NOT_RUN' -Detail "Mode is $Mode - DFU/recovery-mode detection is only attempted in -Mode RecoveryReadiness."
 }
 else {
-    try {
-        $pnpDfu = Get-PnpDevice -PresentOnly -ErrorAction Stop |
-            Where-Object { $_.FriendlyName -match $DfuModeFriendlyNameSubstring -or $_.InstanceId -match [regex]::Escape($DfuModeVidPid) }
-        if ($pnpDfu) {
-            $dfuModeDetected = $true
-            $firstDfu = $pnpDfu | Select-Object -First 1
-            Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection (DFU/recovery mode)' -Status 'PASS' -Detail "Detected: $($firstDfu.FriendlyName) ($($firstDfu.InstanceId)). This confirms the device's recovery path is reachable - no recovery action was performed by this check."
-        }
-        else {
-            Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection (DFU/recovery mode)' -Status 'NOT_RUN' -Detail "No device in DFU/recovery mode detected. This is expected if you have not deliberately put the device into DFU mode (hold Back while connecting USB) - only do so if you specifically want to test recovery-mode reachability now, per docs/FLASH_ROLLBACK_AND_RECOVERY_PLAN.md. This check performs no recovery action itself either way."
-        }
+    $enumeration = Get-PresentPnpDevices
+
+    $normalResult = Get-NormalModeDetectionResult -EnumerationResult $enumeration
+    Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection (normal mode)' -Status $normalResult.Status -Detail $normalResult.Detail
+
+    if ($Mode -ne 'RecoveryReadiness') {
+        Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection (DFU/recovery mode)' -Status 'NOT_RUN' -Detail "Mode is $Mode - DFU/recovery-mode detection is only attempted in -Mode RecoveryReadiness."
     }
-    catch {
-        Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection (DFU/recovery mode)' -Status 'BLOCKED' -Detail "Get-PnpDevice failed or is unavailable ($($_.Exception.Message)) - this cmdlet requires Windows. Use a Windows machine for this mode."
+    else {
+        $dfuResult = Get-DfuDetectionResult -EnumerationResult $enumeration
+        Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection (DFU/recovery mode)' -Status $dfuResult.Status -Detail $dfuResult.Detail
     }
 }
 
@@ -479,17 +752,15 @@ else {
 Write-Host ''
 Write-Host '=== Classification ===' -ForegroundColor Cyan
 
-$hasFail = @($script:Results | Where-Object { $_.Status -eq 'FAIL' }).Count -gt 0
-$hasBlocked = @($script:Results | Where-Object { $_.Status -eq 'BLOCKED' }).Count -gt 0
-$hasNeedsReview = @($script:Results | Where-Object { $_.Status -eq 'NEEDS_REVIEW' }).Count -gt 0
+$hasFail = @($script:Results | Where-Object { $_.Status -like 'FAIL*' }).Count -gt 0
+$hasBlocked = @($script:Results | Where-Object { $_.Status -like 'BLOCKED*' }).Count -gt 0
+$hasNeedsReview = @($script:Results | Where-Object { $_.Status -like 'NEEDS_REVIEW*' }).Count -gt 0
 
 # Per this gate's own design requirement: if ANY required pre-flash safety
-# check fails, final classification must be BLOCKED - never a looser result.
+# check fails, final classification must be BLOCKED/FAILED - never a looser
+# result.
 if ($hasFail) {
     $classification = 'PRE-FLASH SAFEGUARD FAILED'
-}
-elseif ($deviceCheckApplicable -and -not $normalModeDetected -and -not $dfuModeDetected) {
-    $classification = 'PRE-FLASH SAFEGUARD BLOCKED - DEVICE NOT AVAILABLE'
 }
 elseif ($hasBlocked) {
     $classification = 'PRE-FLASH SAFEGUARD BLOCKED'
@@ -501,7 +772,7 @@ elseif ($Mode -eq 'Preflight' -or $Mode -eq 'ReportOnly') {
     $classification = 'PREFLIGHT OK - HARDWARE NOT ATTEMPTED'
 }
 else {
-    $classification = 'PRE-FLASH SAFEGUARD CHECKS PASSED (see docs/PRE_FLASH_PHYSICAL_CHECKLIST.md for the full human checklist still required)'
+    $classification = 'PRE-FLASH SAFEGUARD PASS'
 }
 
 Write-Host "Classification: $classification" -ForegroundColor $(if ($classification -like '*FAILED*') { 'Red' } elseif ($classification -like '*BLOCKED*' -or $classification -like '*NEEDS REVIEW*') { 'Yellow' } else { 'Cyan' })
@@ -522,9 +793,9 @@ $reportObject = [ordered]@{
     repoRoot       = $RepoRoot
     artifactDir    = $ArtifactDir
     acceptedBaseline = [ordered]@{
-        branch                = $AcceptedBranch
-        commit                = $AcceptedCommit
-        ciValidationRunId     = $AcceptedCiRunId
+        branch                    = $AcceptedBranch
+        commit                    = $AcceptedCommit
+        ciValidationRunId         = $AcceptedCiRunId
         finalizationWorkflowRunId = $AcceptedFinalizationRunId
     }
     checks         = $script:Results
@@ -579,5 +850,7 @@ Write-Host "JSON report: $jsonPath"
 Write-Host "Markdown report: $mdPath"
 
 if ($hasFail) { exit 1 }
-elseif ($hasBlocked -or $hasNeedsReview -or ($deviceCheckApplicable -and -not $normalModeDetected -and -not $dfuModeDetected)) { exit 2 }
+elseif ($hasBlocked -or $hasNeedsReview) { exit 2 }
 else { exit 0 }
+
+} # end: if (-not $script:IsDotSourced)

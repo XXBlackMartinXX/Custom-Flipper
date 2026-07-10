@@ -415,3 +415,44 @@
    and `docs/PHASE2F_2_GO_NO_GO.md` (original 2 failed attempts preserved
    unmodified in both). **Phase 2F.2 now passes; Phase 2F.3 is now
    allowed.**
+
+## Tooling (resolved item)
+
+8. **RESOLVED — `tools/pre_flash_safeguard_gate.ps1`'s `-Mode
+   RecoveryReadiness` DFU/recovery-mode device detection had a false-
+   positive defect: it matched a connected device's Windows-assigned
+   `FriendlyName` against generic substrings ("DFU", "STM32
+   BOOTLOADER"), which any unrelated USB device (e.g. a webcam's own
+   DFU-capable firmware-update mode, "Camera DFU Device",
+   `USB\VID_04F2&PID_B83E...`) could satisfy — a user could see a
+   `PASS` for Flipper Zero recovery-mode detection with no Flipper
+   device connected at all.** Found via real hardware evidence review
+   during the Pre-Flash Safeguard Correctness Patch phase, before any
+   firmware installation was considered. **Fixed** in the same phase:
+   identity is now determined solely by an exact `InstanceId` substring
+   match against `VID_0483&PID_DF11` (Flipper's real DFU bootloader
+   identity) — `FriendlyName` is still shown in the report for human
+   readability but never determines a PASS or BLOCKED result. The same
+   discipline was applied to normal-mode detection
+   (`VID_0483&PID_5740`) for consistency. Device enumeration was
+   separated from identity evaluation so the fix could be verified with
+   synthetic device fixtures (`tools/pre_flash_safeguard_gate.tests.ps1`)
+   rather than requiring real hardware — Test B specifically reproduces
+   the exact "Camera DFU Device" fixture from this defect and confirms
+   it is now rejected, never accepted. Confirmed by running all 8
+   regression assertions for real via `pwsh` in this session: 8/8
+   passed. Full detail in
+   `docs/PRE_FLASH_SAFEGUARD_CORRECTNESS_PATCH.md`. This defect was
+   never exercised against a real device before being fixed — no real
+   device was ever falsely reported as detected; this was a real
+   logic defect found and fixed via code review, not an incident.
+   **Scope note, not itself fixed by this item**:
+   `tools/pre_flash_safeguard_gate.ps1` is the only script in this
+   project that performs DFU/recovery-mode detection at all, so this
+   exact repro (a DFU-named unrelated device) is specific to it.
+   However, `tools/final_hardware_gate.ps1`'s own normal-mode device
+   detection uses the same general pattern this fix moved away from
+   (`$_.FriendlyName -match $Config.deviceDetection.expectedFriendlyNameSubstring
+   -or $_.InstanceId -match ...`) and was **not** patched by this narrow
+   phase — it remains a real, open, lower-priority correctness
+   consideration for a future phase, not claimed resolved here.

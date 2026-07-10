@@ -2244,6 +2244,94 @@ not proceed to real hardware validation.
 
 ---
 
+## Pre-Flash Safeguard Correctness Patch — two defects fixed, one real finding surfaced
+
+A narrow tooling/docs correctness patch to
+`tools/pre_flash_safeguard_gate.ps1`, prompted by real hardware
+evidence review before any firmware installation is considered. This
+is a tooling/docs repair phase only — no app import, no firmware/app
+source modification, no hardware flashing.
+
+**Defect 1 — false DFU positive**: `-Mode RecoveryReadiness` previously
+matched a connected device's `FriendlyName` against generic strings
+("DFU", "STM32 BOOTLOADER"), so an unrelated device (e.g. a webcam's
+own "Camera DFU Device", `USB\VID_04F2&PID_B83E...`) could be accepted
+as if it were the Flipper Zero's bootloader. Fixed: identity is now
+determined solely by an exact `InstanceId` substring match against
+`VID_0483&PID_DF11` (DFU) or `VID_0483&PID_5740` (normal mode) —
+`FriendlyName` is shown for information only and never determines
+PASS/BLOCKED. Device enumeration (the only function touching
+`Get-PnpDevice`) is now separated from pure identity-evaluation
+functions, making the identity logic unit-testable with synthetic
+fixtures and no real hardware. New classifications:
+`BLOCKED - EXACT FLIPPER DFU ID NOT DETECTED`,
+`BLOCKED - WINDOWS DEVICE API UNAVAILABLE`, and `NEEDS_REVIEW` with the
+exact error text for genuine query errors.
+
+**Defect 2 — baseline commit relationship**: the prior exact-HEAD-
+equality check flagged every legitimate docs/tools-only commit after
+baseline acceptance as `NEEDS_REVIEW`, with no way to distinguish a
+harmless docs commit from a real firmware-source change. Fixed:
+`Get-BaselineAncestryDiffResult` now verifies the accepted baseline
+commit exists locally, is an ancestor of HEAD
+(`git merge-base --is-ancestor`), and that every file differing
+between them falls under an allow-list (`docs/`, `tools/`) — fail-
+closed, so `applications/`, `applications_user/`, `.github/workflows/`,
+`build/`, `dist/`, `toolchain/`, or anything else forces a `FAIL`
+naming the exact files. Classifies
+`PASS - ACCEPTED BASELINE WITH TOOLING/DOCS-ONLY DESCENDANT` only when
+both ancestry and diff-scope checks pass, and never implies HEAD
+produced the accepted firmware artifacts — artifact hash verification
+remains bound to the accepted baseline commit's own recorded hashes,
+independent of HEAD.
+
+Added `tools/pre_flash_safeguard_gate.tests.ps1`: dot-sources the gate
+script (which, when dot-sourced, loads only function definitions — a
+new guard added specifically for this testability requirement) and
+runs all 7 required regression scenarios (exact Flipper DFU accepted;
+camera DFU rejected; generic DFU name rejected; normal-mode Flipper
+rejected by the DFU-specific check; multiple devices matched only by
+the exact entry; a docs/tools-only descendant accepted via a
+disposable scratch repository; an `applications_user/` descendant
+rejected via a disposable scratch repository) plus one sanity check —
+all 8 assertions passed when run for real in this session.
+
+**Important real finding, documented not worked around**: running the
+corrected ancestry check against this repository's real accepted
+baseline and real HEAD shows `FAIL`, because
+`.github/workflows/fcc-id-lookup-finalize-baseline.yml` was added
+(commit `22167ac`) after the accepted baseline commit, as part of this
+project's own already-completed baseline-finalization tooling — the
+very workflow that computed the accepted baseline's own artifact
+hashes. This is a genuine historical fact, not a defect in the check:
+`.github/workflows/` is explicitly forbidden with no carve-out, per
+this patch's own specification. No exception was added unilaterally.
+This finding is documented in full in
+`docs/PRE_FLASH_SAFEGUARD_CORRECTNESS_PATCH.md` and
+`docs/PRE_FLASH_SAFEGUARD_RESULTS.md`, for the project owner's explicit
+decision on how to proceed. Artifact hash verification itself is
+confirmed unaffected — it remains an independent, direct byte-level
+comparison, unrelated to source-tree diff scope.
+
+Real execution in this session: `Preflight`, `DeviceDetect`,
+`RecoveryReadiness` all now classify `PRE-FLASH SAFEGUARD FAILED` on
+this repository's current HEAD (due to the finding above, not a script
+defect); a synthetic exact-size wrong-hash `ArtifactHashVerify` run
+correctly still produces `FAILED`; the regression suite's 8/8 pass
+confirmed via real `pwsh` execution, not asserted.
+
+**Final classification: PRE-FLASH SAFEGUARD PATCH PASS.** The patch
+itself — both defect fixes, the testability refactor, and the
+regression suite — is complete and verified. No app import, no
+firmware/app source modification, no CI workflow change, and no
+hardware flashing occurred in this phase. Hardware testing: **NOT
+PERFORMED**. Release status remains **TEST-READY ONLY / NOT
+RELEASE-READY**. The `.github/workflows/` finding above remains open
+for the project owner's decision and does not itself block this
+patch's own classification.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
