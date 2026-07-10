@@ -2,10 +2,10 @@
 
 Docs only. This is the closing acceptance document for the dedicated
 `fcc_id_lookup` one-app import CI baseline, mirroring the format of this
-project's `PHASEX_3_ACCEPTANCE_RECORD.md` documents. This document will
-be patched in place once
-`.github/workflows/fcc-id-lookup-finalize-baseline.yml` has actually run;
-the pre-finalization state is recorded honestly below.
+project's `PHASEX_3_ACCEPTANCE_RECORD.md` documents.
+`.github/workflows/fcc-id-lookup-finalize-baseline.yml` has now actually
+run — see "Finalization workflow result" below for the real, completed
+result.
 
 ## Baseline-selection check (performed before finalizing)
 
@@ -25,15 +25,15 @@ baseline instead of `29067243595`** — the earlier run's own evidence
 remains valid and preserved in `docs/FCC_ID_LOOKUP_BUILD_REPORT.md`, not
 erased, just superseded as the baseline reference.
 
-## Final classification: **PHASE PENDING — awaiting finalization workflow**
+## Final classification: **FCC_ID_LOOKUP ACCEPTED FOR NON-HARDWARE CI BASELINE ONLY**
 
-The CI Windows validation run (`29068148596`) has already succeeded,
-with conclusion verified via the GitHub API, not claimed on trust. This
-acceptance record is locked in against that real run, at the actual
-current branch HEAD. Artifact hash finalization and tag creation are
-handled by the new `fcc_id_lookup Finalize Baseline` workflow — see
-"Finalization workflow result" below for whether that workflow has
-actually run yet, and its real result if so.
+The CI Windows validation run (`29068148596`) succeeded, with conclusion
+verified via the GitHub API, not claimed on trust. This acceptance
+record is locked in against that real run, at the actual branch HEAD
+that was current when finalization was prepared. Artifact hash
+finalization and tag creation were handled by the
+`fcc_id_lookup Finalize Baseline` workflow — see "Finalization workflow
+result" below for the real, completed result.
 
 ## Branch
 
@@ -129,7 +129,54 @@ and the resulting next-gate determination.
 
 ## Finalization workflow result
 
-**Not yet run as of this document's initial write.** This section will
-be updated in place, honestly, once
-`.github/workflows/fcc-id-lookup-finalize-baseline.yml` actually
-executes — not before.
+**Run.** The `fcc_id_lookup Finalize Baseline` workflow
+([`29096377711`](https://github.com/XXBlackMartinXX/Custom-Flipper/actions/runs/29096377711))
+was dispatched against `target_branch=integration/fcc-id-lookup-one-app-import`
+with `source_run_id=29068148596`,
+`ci_baseline_sha=86265727b5b8cfce5086eb88f8bb93d0169ab9a9`,
+`acceptance_tag_name=fcc-id-lookup-acceptance-record-20260710`,
+`ci_tag_name=fcc-id-lookup-ci-baseline-20260710`, and completed with
+**all 13 steps `conclusion: success`**, independently confirmed via
+`list_workflow_jobs` and `get_job_logs` (not claimed on trust).
+
+**Artifacts downloaded and hashed** (real `Get-FileHash -Algorithm
+SHA256` on the GitHub-hosted Windows runner, from `source_run_id`
+`29068148596`'s own uploaded artifacts via `gh run download`):
+
+| File | Size (bytes) | SHA-256 |
+|---|---|---|
+| `firmware.dfu` | 862,833 | `e8c11b62429677e727a42682b2e7f2bf8eaf8e5a84e8887f2d3db6b137328f1d` |
+| `flipper-z-f7-update-local.tgz` | 2,891,859 | `eec5b148892a3d89c724006bd082f1ca083e05990aa7b8cad43868bf8347cc55` |
+| `fcc_id_lookup.fap` | 20,196 | `168025ddcffb01f94e1af8eefcead2ac80d69f6b7ad9856a603e1a7d30317658` |
+
+Full validation-report, build-log, and all-42-`.fap` hash tables are in
+`docs/FCC_ID_LOOKUP_ARTIFACT_HASHES.md`.
+
+**Docs commit.** The workflow committed the patched
+`docs/FCC_ID_LOOKUP_ARTIFACT_HASHES.md` and
+`docs/FCC_ID_LOOKUP_ARTIFACT_MANIFEST.md` (plus this document's own
+"Artifact hashes generated" line) as commit `1c0232b`
+("docs: finalize fcc_id_lookup artifact hashes from CI artifacts", 3
+files changed) under the `github-actions[bot]` identity, pushed to
+`integration/fcc-id-lookup-one-app-import`, and pulled into this local
+checkout — this closing section is the one manual edit made on top of
+that automated commit, since the workflow's sentinel-replacement step
+does not touch this section by design.
+
+**Tags created**, independently re-verified via a fresh `git ls-remote
+--tags origin` (not just trusted from the workflow's own log):
+
+| Tag | Target commit | Verified |
+|---|---|---|
+| `fcc-id-lookup-ci-baseline-20260710` | `86265727b5b8cfce5086eb88f8bb93d0169ab9a9` | ✅ dereferences correctly |
+| `fcc-id-lookup-acceptance-record-20260710` | `1c0232b4137c366c5b79f651136b3097abf69a69` | ✅ dereferences correctly |
+
+All 10 prior Phase 2A–2F tags (`phase2a-*` through `phase2f-*`)
+confirmed **unchanged** at their original target commits — zero
+regression to any prior phase's baseline.
+
+**Final classification: FCC_ID_LOOKUP ACCEPTED FOR NON-HARDWARE CI
+BASELINE ONLY.** No hardware testing performed. Not release-ready. Next
+allowed gate: hardware-assisted validation and/or a future broader
+import batch, each a separate, explicitly-requested step — neither
+started here.
