@@ -2583,6 +2583,71 @@ it was supplied by the project owner from their own real session.
 
 ---
 
+## Controlled Installation Planning Package — documentation only, no installation performed
+
+A documentation-only planning phase producing a complete, operator-ready
+procedure for a future controlled installation of the accepted 20-app
+firmware baseline (`86265727b5b8cfce5086eb88f8bb93d0169ab9a9`, CI run
+`29068148596`) onto one physical Flipper Zero. **No firmware was
+written, no qFlipper was invoked, and no hardware application testing
+occurred in this phase** — this session remains the same Linux cloud
+sandbox as every prior phase, with no Windows machine, no physical
+Flipper Zero, and no qFlipper installation available to it.
+
+Seven new documents were added:
+
+- `docs/CONTROLLED_INSTALLATION_PLAN.md` — the full step-by-step
+  procedure: scope and safety boundary (one device, one attempt, `.tgz`
+  as the only primary installer, `firmware.dfu` recovery-only, no
+  automatic DFU fallback); preconditions; backup procedure; just-in-time
+  `Preflight`/`ArtifactHashVerify`/`DeviceDetect` checks with exact
+  commands; a human authorization gate requiring an exact typed phrase
+  before the installer file is even opened; the qFlipper installation
+  procedure itself (manual "Install from file", exact filename/size/hash
+  verification, the final confirmation always a human click); stop
+  conditions; immediate post-install boot checks; safe core smoke
+  checks; low-risk app launch-only checks (`programmer_calc`,
+  `vin_decoder`, `quadratic_solver`, `sudoku`, `chess`, `2048`,
+  `minesweeper_redux`, `resistors`, `crypto_dictionary`,
+  `fap_boilerplate`); an explicit list of forbidden tests (all RF/NFC/
+  RFID/iButton/BadUSB/BLE/GPIO/IR, and all cloning/replay/brute-force/
+  bypass/jamming/deauth/HID-injection/credential/access-control/wallet-
+  seed-key testing); and a recovery decision tree requiring a second,
+  separate exact authorization phrase before any recovery action.
+- `docs/CONTROLLED_INSTALLATION_OPERATOR_CHECKLIST.md` — a printable
+  checklist mirroring the plan's sections, every item unchecked by
+  default.
+- `docs/CONTROLLED_INSTALLATION_EVIDENCE_TEMPLATE.md` — a blank
+  evidence-capture template, placeholders only, headed "TEMPLATE ONLY —
+  INSTALLATION NOT PERFORMED".
+- `docs/CONTROLLED_INSTALLATION_RESULTS.md`,
+  `docs/POST_INSTALL_CORE_BOOT_REPORT.md`, and
+  `docs/POST_INSTALL_LOW_RISK_SMOKE_REPORT.md` — status stubs, each
+  explicitly headed "NOT PERFORMED", with no field marked `PASS` and no
+  invented observation of any kind.
+- `docs/ROLLBACK_READINESS_AFTER_INSTALL.md` — a recovery-readiness
+  planning document (official/stable recovery path, exact DFU identity
+  `VID_0483&PID_DF11`, the separate recovery authorization phrase,
+  expected evidence fields, an internal-data-loss warning, and explicit
+  rollback success criteria), headed "POST-INSTALL ROLLBACK READINESS
+  EXECUTION: NOT PERFORMED".
+
+No existing tooling was touched in this phase:
+`tools/pre_flash_safeguard_gate.ps1` and
+`tools/pre_flash_safeguard_gate.tests.ps1` are unchanged, as are
+`applications/`, `applications_user/`, and every `.github/workflows/`
+file. No firmware binaries, updater packages, backups, or logs were
+committed.
+
+**Final classification: CONTROLLED INSTALLATION PLAN READY /
+INSTALLATION NOT PERFORMED.** Release status remains **TEST-READY
+ONLY / NOT RELEASE-READY**. The next required action is a human
+operator executing `docs/CONTROLLED_INSTALLATION_PLAN.md` on their own
+Windows PC with their own physical Flipper Zero, then reporting the real
+outcome so the result documents can be filled in honestly.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
