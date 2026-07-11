@@ -349,6 +349,65 @@ function Get-DfuDetectionResult {
 }
 
 # ---------------------------------------------------------------------------
+# Normal-mode and DFU-mode are SEQUENTIAL states of a single physical device,
+# never a simultaneous requirement:
+#
+#   NORMAL MODE (VID_0483&PID_5740)
+#         |  user explicitly enters firmware-upgrade/DFU mode
+#         v
+#   DFU MODE (VID_0483&PID_DF11)
+#
+# -Mode RecoveryReadiness's whole purpose is to confirm the device is
+# reachable in DFU mode - it must not also demand the normal-mode identity
+# still be present at the same instant, since a device already in DFU mode
+# is not expected to remain enumerated under its normal-mode identity. This
+# function turns the (already-computed) normal-mode result into a
+# RecoveryReadiness-appropriate advisory, so the raw "absent" status from
+# Get-NormalModeDetectionResult (correct and required for -Mode
+# DeviceDetect) never bleeds into RecoveryReadiness's own classification as
+# an unrelated BLOCKED.
+# ---------------------------------------------------------------------------
+
+function Get-RecoveryModeNormalIdentityAdvisory {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][object]$NormalModeResult,
+        [Parameter(Mandatory)][object]$DfuModeResult
+    )
+    $normalPresent = $NormalModeResult.Status -like 'PASS*'
+    $dfuPresent = $DfuModeResult.Status -like 'PASS*'
+
+    if ($normalPresent -and $dfuPresent) {
+        # Both exact identities present at the same time is not a normal
+        # single-device state - never silently accept it. Report both
+        # InstanceIds and require manual review rather than guessing
+        # whether this is a second device, stale enumeration, or something
+        # else on the host.
+        return [ordered]@{
+            Status = 'NEEDS_REVIEW - BOTH NORMAL AND DFU IDENTITIES PRESENT SIMULTANEOUSLY'
+            Detail = "Both the exact normal-mode identity ($NormalModeVidPid) and the exact DFU identity ($DfuModeVidPid) were detected at the same time. Normal mode and DFU mode are sequential states of a single device, never simultaneous - this may indicate multiple connected devices, stale/cached PnP enumeration, or an unusual host state. Normal-mode detail: $($NormalModeResult.Detail) DFU-mode detail: $($DfuModeResult.Detail) Manual review is required before proceeding; this is not automatically treated as a normal single-device state."
+        }
+    }
+    if ($dfuPresent -and -not $normalPresent) {
+        # The expected, healthy DFU-mode state: the device is confirmed in
+        # DFU mode and is correctly not also enumerated under its
+        # normal-mode identity.
+        return [ordered]@{
+            Status = 'EXPECTED ABSENT - DEVICE IS IN DFU MODE'
+            Detail = "The exact normal-mode identity ($NormalModeVidPid) is not present, which is expected: a device already confirmed in exact DFU/recovery mode ($DfuModeVidPid) is not expected to remain enumerated under its normal-mode identity at the same time. Normal-mode presence is never required by -Mode RecoveryReadiness; this is not treated as a failure."
+        }
+    }
+    # DFU is not (yet) confirmed present in this run - normal-mode presence
+    # or absence is purely informational here. -Mode RecoveryReadiness never
+    # requires the normal-mode identity; any failure in this run comes from
+    # the DFU-mode check itself, not from this advisory.
+    return [ordered]@{
+        Status = "INFORMATIONAL - $($NormalModeResult.Status)"
+        Detail = "Normal-mode identity is never required by -Mode RecoveryReadiness (shown for information only). $($NormalModeResult.Detail)"
+    }
+}
+
+# ---------------------------------------------------------------------------
 # Enumeration function - the ONLY function in this file that touches a real
 # hardware/OS API (Get-PnpDevice). Kept deliberately separate from the pure
 # evaluation functions above so tests never need to call this.
@@ -985,15 +1044,24 @@ if (-not $deviceCheckApplicable) {
 else {
     $enumeration = Get-PresentPnpDevices
 
-    $normalResult = Get-NormalModeDetectionResult -EnumerationResult $enumeration
-    Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection (normal mode)' -Status $normalResult.Status -Detail $normalResult.Detail
-
     if ($Mode -ne 'RecoveryReadiness') {
+        # -Mode DeviceDetect: the exact normal-mode identity IS required
+        # here - report it as a direct, unmodified requirement.
+        $normalResult = Get-NormalModeDetectionResult -EnumerationResult $enumeration
+        Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection (normal mode)' -Status $normalResult.Status -Detail $normalResult.Detail
         Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection (DFU/recovery mode)' -Status 'NOT_RUN' -Detail "Mode is $Mode - DFU/recovery-mode detection is only attempted in -Mode RecoveryReadiness."
     }
     else {
+        # -Mode RecoveryReadiness: the exact DFU identity IS required here;
+        # the normal-mode identity is NOT required simultaneously - normal
+        # mode and DFU mode are sequential states of the same device, never
+        # a simultaneous requirement. See Get-RecoveryModeNormalIdentityAdvisory.
+        $normalResult = Get-NormalModeDetectionResult -EnumerationResult $enumeration
         $dfuResult = Get-DfuDetectionResult -EnumerationResult $enumeration
         Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection (DFU/recovery mode)' -Status $dfuResult.Status -Detail $dfuResult.Detail
+
+        $normalAdvisory = Get-RecoveryModeNormalIdentityAdvisory -NormalModeResult $normalResult -DfuModeResult $dfuResult
+        Add-Result -Category 'HardwareConnected' -Name 'Flipper Zero detection (normal mode)' -Status $normalAdvisory.Status -Detail $normalAdvisory.Detail
     }
 }
 

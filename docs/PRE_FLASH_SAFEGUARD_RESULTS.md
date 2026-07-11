@@ -349,3 +349,73 @@ this session. The evidence quoted in this phase's mission (the observed
 Windows working-tree SHA256 and the manual diagnostic) was supplied by
 the project owner from their own real Windows session. Release status
 remains **TEST-READY ONLY / NOT RELEASE-READY**.
+
+---
+
+## Pre-Flash Device State-Machine Fix (real results, this phase)
+
+This section records **tooling-test results only** for the Device
+State-Machine Fix phase. **The final real Windows/hardware rerun has
+not occurred as of this writing** — nothing below should be read as
+claiming it has. This environment remains the same Linux cloud sandbox
+as every prior phase: no Windows, no physical Flipper Zero, no
+qFlipper.
+
+**Previous false BLOCK, reported from a real Windows session**: with
+Preflight PASS, ArtifactHashVerify PASS (firmware 862,833 bytes /
+`e8c11b62...328f1d`; updater 2,891,859 bytes / `eec5b148...347cc55`),
+qFlipper PASS, and `-Mode DeviceDetect` correctly reporting the exact
+normal-mode identity `VID_0483&PID_5740` as PASS, a subsequent
+`-Mode RecoveryReadiness` run correctly detected the exact DFU identity
+`USB\VID_0483&PID_DF11\2059388C4831`, but the overall run was
+classified `BLOCKED` anyway — because the normal-mode identity was (as
+expected, since the device had transitioned into DFU mode) no longer
+present, and the prior implementation treated that absence as an
+independent failure. This was a real, invalid simultaneous-state
+requirement — full root-cause detail is in
+`docs/PRE_FLASH_DEVICE_STATE_MACHINE_FIX.md`.
+
+`tools/pre_flash_safeguard_gate.ps1` was re-run for real in this
+sandbox after the fix:
+
+- `-Mode RecoveryReadiness`: "Flipper Zero detection (DFU/recovery
+  mode)" still correctly reports `BLOCKED - WINDOWS DEVICE API
+  UNAVAILABLE` (no real device or Windows exists here). "Flipper Zero
+  detection (normal mode)" now reports
+  `INFORMATIONAL - BLOCKED - WINDOWS DEVICE API UNAVAILABLE` — routed
+  through the new advisory rather than independently contributing a
+  second, redundant block to the classification.
+- `-Mode DeviceDetect`: unchanged behavior — the exact normal-mode
+  identity remains a direct, required check in this mode.
+
+**Regression tests**: `tools/pre_flash_safeguard_gate.tests.ps1` was
+extended with State Tests A–M, covering: exact normal-mode ID passes
+DeviceDetect (A); exact DFU present with normal mode absent passes
+RecoveryReadiness, with normal mode reported `EXPECTED ABSENT - DEVICE
+IS IN DFU MODE` rather than `BLOCKED` (B); normal-mode ID present with
+DFU absent still `BLOCKED` (C); camera DFU alone `BLOCKED` (D); generic
+DFU-sounding name with an unrelated InstanceId `BLOCKED` (E); exact DFU
+plus a camera DFU device still `PASS`es on the exact entry only (F);
+exact normal plus exact DFU present simultaneously classifies
+`NEEDS_REVIEW`, reporting both InstanceIds, never silently accepted (G);
+no devices present `BLOCKED` (H); a device-enumeration error `BLOCKED`
+with the exact error text (I); a function-level synthetic wrapper
+proving all four modes' PASS-path decision functions clear in sequence
+without any hardware in this sandbox (J); a dedicated re-confirmation
+that camera DFU devices never determine a PASS (K); confirmation that
+the full canonical Git-blob integrity suite (Blob Tests A–M) still
+passes with no regression (L); and a source-text grep confirming no
+flashing/install/repair command was added anywhere in the script (M).
+**All 43 assertions in the file passed** when run for real via `pwsh`
+in this session (6 pre-existing device-identity tests, 6 pre-existing
+Ancestry tests, 1 real-repo assertion, 14 Canonical Git Blob Integrity
+Fix tests, and 13 new State Tests). Full detail in
+`docs/PRE_FLASH_DEVICE_STATE_MACHINE_FIX.md`.
+
+**No flash was performed in this phase. No hardware validation pass is
+claimed, and the corrected script has not yet been rerun on a real
+Windows machine with a real device in this session** — only the
+corrected tooling has been exercised here, in this sandbox, with real
+command execution against both synthetic fixtures and this repository's
+real HEAD. Release status remains **TEST-READY ONLY / NOT
+RELEASE-READY**.

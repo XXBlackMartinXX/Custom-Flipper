@@ -2504,6 +2504,85 @@ supplied by the project owner from their own real session.
 
 ---
 
+## Pre-Flash Device State-Machine Fix — invalid simultaneous-state requirement corrected
+
+A narrow, tooling/docs-only correctness fix to `-Mode RecoveryReadiness`
+in `tools/pre_flash_safeguard_gate.ps1`, prompted by real evidence from
+a real Windows session. No app import, no firmware/app source
+modification, no workflow file modification, no hardware flashing.
+
+**Root cause**: `-Mode RecoveryReadiness` unconditionally reported both
+the normal-mode and DFU-mode identity checks as independent, equally-
+weighted requirements feeding the overall classification. On a real
+Windows run with Preflight PASS, ArtifactHashVerify PASS, qFlipper
+PASS, and `-Mode DeviceDetect` correctly PASSing on the exact
+normal-mode identity, a subsequent `-Mode RecoveryReadiness` run
+correctly detected the exact DFU identity
+(`USB\VID_0483&PID_DF11\2059388C4831`), but was classified `BLOCKED`
+anyway — because the normal-mode identity (`VID_0483&PID_5740`) was, as
+expected once a device transitions into DFU mode, no longer enumerated.
+This demanded an invalid simultaneous-state requirement: normal mode
+and DFU mode are sequential states of one physical device, never
+simultaneous, so no real, correctly-operating device in DFU mode could
+ever satisfy it.
+
+**The fix**: a new `Get-RecoveryModeNormalIdentityAdvisory` function
+converts the already-computed normal-mode result into a
+`-Mode RecoveryReadiness`-appropriate advisory instead of an
+independent requirement. Normal-mode absence while the exact DFU
+identity is present is now classified `EXPECTED ABSENT - DEVICE IS IN
+DFU MODE` and does not contribute to the overall classification. Exact
+normal-mode presence together with the exact DFU identity is classified
+`NEEDS_REVIEW - BOTH NORMAL AND DFU IDENTITIES PRESENT SIMULTANEOUSLY`,
+reporting both `InstanceId`s — never silently treated as a normal
+single-device state, since it may indicate multiple devices, stale
+enumeration, or an unusual host state. When the DFU identity is not
+present at all, the normal-mode result is purely informational in this
+mode; any failure comes from the DFU-mode check itself, which remains
+completely unmodified and fully fail-closed (camera DFU, generic "DFU"
+names, absent devices, and enumeration errors all still classify
+`BLOCKED`/`NEEDS_REVIEW` exactly as before). `-Mode DeviceDetect`'s own
+requirement for the exact normal-mode identity is unchanged.
+
+Extended `tools/pre_flash_safeguard_gate.tests.ps1` with State Tests
+A–M: exact normal-mode ID passes DeviceDetect (A); exact DFU present
+with normal mode absent passes RecoveryReadiness, normal mode reported
+`EXPECTED ABSENT` rather than `BLOCKED` (B); normal-mode ID present
+with DFU absent still `BLOCKED` (C); camera DFU alone `BLOCKED` (D);
+generic DFU-sounding name with an unrelated InstanceId `BLOCKED` (E);
+exact DFU plus a camera DFU device still `PASS`es on the exact entry
+only (F); exact normal plus exact DFU present simultaneously
+classifies `NEEDS_REVIEW`, both InstanceIds reported (G); no devices
+present `BLOCKED` (H); a device-enumeration error `BLOCKED` with the
+exact error text (I); a function-level synthetic wrapper proving all
+four modes' PASS-path decision functions clear in sequence, with no
+real hardware in this sandbox (J); a dedicated re-confirmation that
+camera DFU devices never determine a PASS (K); confirmation that the
+full canonical Git-blob integrity suite (Blob Tests A–M) still passes
+(L); and a source-text grep confirming no flashing/install/repair
+command was added (M). **All 43 assertions in the file passed** when
+run for real via `pwsh` in this session.
+
+Real execution against this repository's actual current HEAD in this
+sandbox: `-Mode RecoveryReadiness` still correctly reports
+`BLOCKED - WINDOWS DEVICE API UNAVAILABLE` for the DFU-mode check (no
+real device or Windows exists here); the normal-mode check now shows
+`INFORMATIONAL - BLOCKED - WINDOWS DEVICE API UNAVAILABLE` rather than
+independently contributing a second, redundant block.
+`-Mode DeviceDetect` is unchanged.
+
+**Final classification: PRE-FLASH DEVICE STATE-MACHINE PATCH PASS.** No
+app import, no firmware/app source modification, no workflow file
+modification, no CI workflow change, and no hardware flashing occurred
+in this phase. Hardware testing: **NOT PERFORMED**. Release status
+remains **TEST-READY ONLY / NOT RELEASE-READY**. This fix was verified
+with synthetic device fixtures and against this repository's real HEAD
+in this Linux sandbox — no actual Windows machine or physical Flipper
+Zero ran this fix in this session; the Windows evidence that prompted
+it was supplied by the project owner from their own real session.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is

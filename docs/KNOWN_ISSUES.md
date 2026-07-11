@@ -536,3 +536,39 @@
     always a false `FAIL` (fail-closed on valid content), never a false
     `PASS`, so no real repository state was ever incorrectly accepted by
     it.
+
+12. **RESOLVED — `-Mode RecoveryReadiness` incorrectly required the
+    normal-mode USB identity (`VID_0483&PID_5740`) to remain present at
+    the same time as the DFU identity (`VID_0483&PID_DF11`), an invalid
+    simultaneous-state requirement.** Found via a real Windows session:
+    Preflight PASS, ArtifactHashVerify PASS, qFlipper PASS, and
+    `-Mode DeviceDetect` correctly PASSing on the exact normal-mode
+    identity, but a subsequent `-Mode RecoveryReadiness` run — which
+    correctly detected the exact DFU identity
+    `USB\VID_0483&PID_DF11\2059388C4831` — was classified `BLOCKED`
+    anyway, purely because the normal-mode identity was, as expected
+    once the device transitions into DFU mode, no longer enumerated.
+    **Fixed** in the Pre-Flash Device State-Machine Fix phase: a new
+    `Get-RecoveryModeNormalIdentityAdvisory` function now recognizes
+    that normal mode and DFU mode are sequential states of one physical
+    device, never simultaneous. In `-Mode RecoveryReadiness`, normal-
+    mode absence while the exact DFU identity is present is now
+    classified `EXPECTED ABSENT - DEVICE IS IN DFU MODE` and does not
+    contribute to the overall classification; normal-mode presence
+    combined with the exact DFU identity also present is classified
+    `NEEDS_REVIEW - BOTH NORMAL AND DFU IDENTITIES PRESENT
+    SIMULTANEOUSLY` (never silently accepted, both InstanceIds
+    reported) rather than either being ignored or causing a false
+    block. `-Mode DeviceDetect`'s own requirement for the exact
+    normal-mode identity is unchanged, as is `-Mode RecoveryReadiness`'s
+    own fully fail-closed DFU-mode check (camera DFU, generic "DFU"
+    names, absent devices, and enumeration errors all remain
+    `BLOCKED`/`NEEDS_REVIEW` exactly as before). Confirmed resolved only
+    after regression-testing: `tools/pre_flash_safeguard_gate.tests.ps1`'s
+    new State Tests A–M (43 assertions total in the file, including the
+    pre-existing device-identity, ancestry, and canonical-blob-integrity
+    suites) all passed when run for real via `pwsh` in this session.
+    Full detail in `docs/PRE_FLASH_DEVICE_STATE_MACHINE_FIX.md`. This
+    defect could only ever produce a false `BLOCKED`/fail-closed result
+    on a genuinely healthy DFU-mode device — it was never exploitable to
+    falsely `PASS` anything.
