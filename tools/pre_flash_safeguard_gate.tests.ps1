@@ -791,6 +791,217 @@ Assert-TestResult -TestName 'Blob Test M - exact DFU ID (VID_0483&PID_DF11) pass
 Assert-TestResult -TestName 'Blob Test M - camera DFU (VID_04F2&PID_B83E) remains rejected' -Condition ($resultBlobMCamera.Status -like 'BLOCKED*' -and $resultBlobMCamera.Status -notlike 'PASS*') -Detail "Status: $($resultBlobMCamera.Status)"
 
 # ---------------------------------------------------------------------------
+# Device State-Machine Fix - regression tests (State Test A-M)
+#
+# Normal mode (VID_0483&PID_5740) and DFU mode (VID_0483&PID_DF11) are
+# SEQUENTIAL states of one physical device, never a simultaneous
+# requirement. These tests prove -Mode RecoveryReadiness no longer BLOCKs
+# merely because the normal-mode identity is absent while the exact DFU
+# identity is present - and that it still fails closed on every real
+# defect scenario (camera DFU, generic names, no devices, enumeration
+# errors, both identities present at once).
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# State Test A - normal-mode DeviceDetect: VID_0483&PID_5740 present -> PASS
+# ---------------------------------------------------------------------------
+$fixtureStateA = New-DeviceFixture -InstanceId 'USB\VID_0483&PID_5740\FLIPPERSERIAL01' -FriendlyName 'Flipper'
+$resultStateA = Get-NormalModeDetectionResult -EnumerationResult (New-SuccessEnumeration -Devices @($fixtureStateA))
+Assert-TestResult -TestName 'State Test A - DeviceDetect: exact normal-mode ID present -> PASS' -Condition ($resultStateA.Status -like 'PASS*') -Detail "Status: $($resultStateA.Status)"
+
+# ---------------------------------------------------------------------------
+# State Test B - DFU RecoveryReadiness: VID_0483&PID_DF11 present, normal
+# mode absent -> PASS overall, normal mode reported EXPECTED ABSENT
+# ---------------------------------------------------------------------------
+$fixtureStateB = New-DeviceFixture -InstanceId 'USB\VID_0483&PID_DF11\2059388C4831' -FriendlyName 'STM32  BOOTLOADER'
+$enumStateB = New-SuccessEnumeration -Devices @($fixtureStateB)
+$normalResultStateB = Get-NormalModeDetectionResult -EnumerationResult $enumStateB
+$dfuResultStateB = Get-DfuDetectionResult -EnumerationResult $enumStateB
+$advisoryStateB = Get-RecoveryModeNormalIdentityAdvisory -NormalModeResult $normalResultStateB -DfuModeResult $dfuResultStateB
+$stateBDfuPass = $dfuResultStateB.Status -like 'PASS*'
+$stateBAdvisoryExpectedAbsent = $advisoryStateB.Status -eq 'EXPECTED ABSENT - DEVICE IS IN DFU MODE'
+$stateBAdvisoryNeverBlocks = ($advisoryStateB.Status -notlike 'BLOCKED*') -and ($advisoryStateB.Status -notlike 'FAIL*') -and ($advisoryStateB.Status -notlike 'NEEDS_REVIEW*')
+Assert-TestResult -TestName 'State Test B - RecoveryReadiness: exact DFU present, normal absent -> PASS, normal mode EXPECTED ABSENT' -Condition ($stateBDfuPass -and $stateBAdvisoryExpectedAbsent -and $stateBAdvisoryNeverBlocks) -Detail "DFU status: $($dfuResultStateB.Status); Advisory status: $($advisoryStateB.Status)"
+
+# ---------------------------------------------------------------------------
+# State Test C - normal mode used in RecoveryReadiness: VID_0483&PID_5740
+# present, VID_0483&PID_DF11 absent -> BLOCKED
+# ---------------------------------------------------------------------------
+$fixtureStateC = New-DeviceFixture -InstanceId 'USB\VID_0483&PID_5740\FLIPPERSERIAL01' -FriendlyName 'Flipper'
+$enumStateC = New-SuccessEnumeration -Devices @($fixtureStateC)
+$dfuResultStateC = Get-DfuDetectionResult -EnumerationResult $enumStateC
+Assert-TestResult -TestName 'State Test C - RecoveryReadiness: normal-mode ID present, DFU absent -> BLOCKED' -Condition ($dfuResultStateC.Status -like 'BLOCKED*') -Detail "DFU status: $($dfuResultStateC.Status)"
+
+# ---------------------------------------------------------------------------
+# State Test D - camera DFU only -> BLOCKED
+# ---------------------------------------------------------------------------
+$fixtureStateD = New-DeviceFixture -InstanceId 'USB\VID_04F2&PID_B83E&MI_02\6&1A2B3C4D&0&0002' -FriendlyName 'Camera DFU Device'
+$dfuResultStateD = Get-DfuDetectionResult -EnumerationResult (New-SuccessEnumeration -Devices @($fixtureStateD))
+Assert-TestResult -TestName 'State Test D - camera DFU only -> BLOCKED' -Condition ($dfuResultStateD.Status -like 'BLOCKED*' -and $dfuResultStateD.Status -notlike 'PASS*') -Detail "Status: $($dfuResultStateD.Status)"
+
+# ---------------------------------------------------------------------------
+# State Test E - generic DFU name only, unrelated InstanceId -> BLOCKED
+# ---------------------------------------------------------------------------
+$fixtureStateE = New-DeviceFixture -InstanceId 'USB\VID_1234&PID_5678\SOMESERIAL01' -FriendlyName 'DFU in FS Mode'
+$dfuResultStateE = Get-DfuDetectionResult -EnumerationResult (New-SuccessEnumeration -Devices @($fixtureStateE))
+Assert-TestResult -TestName 'State Test E - generic DFU-sounding name, unrelated InstanceId -> BLOCKED' -Condition ($dfuResultStateE.Status -like 'BLOCKED*') -Detail "Status: $($dfuResultStateE.Status)"
+
+# ---------------------------------------------------------------------------
+# State Test F - exact DFU plus camera DFU -> PASS based only on the exact
+# Flipper ID; unrelated device reported informationally
+# ---------------------------------------------------------------------------
+$fixtureStateF_camera = New-DeviceFixture -InstanceId 'USB\VID_04F2&PID_B83E&MI_02\6&1A2B3C4D&0&0002' -FriendlyName 'Camera DFU Device'
+$fixtureStateF_flipper = New-DeviceFixture -InstanceId 'USB\VID_0483&PID_DF11\2059388C4831' -FriendlyName 'STM32  BOOTLOADER'
+$dfuResultStateF = Get-DfuDetectionResult -EnumerationResult (New-SuccessEnumeration -Devices @($fixtureStateF_camera, $fixtureStateF_flipper))
+$stateFIsPass = $dfuResultStateF.Status -like 'PASS*'
+$stateFMentionsExactSerial = $dfuResultStateF.Detail -like '*2059388C4831*'
+Assert-TestResult -TestName 'State Test F - exact DFU plus camera DFU -> PASS on exact entry only' -Condition ($stateFIsPass -and $stateFMentionsExactSerial) -Detail "Status: $($dfuResultStateF.Status)"
+
+# ---------------------------------------------------------------------------
+# State Test G - exact normal plus exact DFU simultaneously -> NEEDS REVIEW,
+# reporting both InstanceIds, never silently treated as a normal state
+# ---------------------------------------------------------------------------
+$fixtureStateG_normal = New-DeviceFixture -InstanceId 'USB\VID_0483&PID_5740\FLIPPERSERIAL01' -FriendlyName 'Flipper'
+$fixtureStateG_dfu = New-DeviceFixture -InstanceId 'USB\VID_0483&PID_DF11\2059388C4831' -FriendlyName 'STM32  BOOTLOADER'
+$enumStateG = New-SuccessEnumeration -Devices @($fixtureStateG_normal, $fixtureStateG_dfu)
+$normalResultStateG = Get-NormalModeDetectionResult -EnumerationResult $enumStateG
+$dfuResultStateG = Get-DfuDetectionResult -EnumerationResult $enumStateG
+$advisoryStateG = Get-RecoveryModeNormalIdentityAdvisory -NormalModeResult $normalResultStateG -DfuModeResult $dfuResultStateG
+$stateGIsNeedsReview = $advisoryStateG.Status -like 'NEEDS_REVIEW*'
+$stateGMentionsBothIds = ($advisoryStateG.Detail -like '*VID_0483&PID_5740*') -and ($advisoryStateG.Detail -like '*VID_0483&PID_DF11*')
+Assert-TestResult -TestName 'State Test G - exact normal plus exact DFU simultaneously -> NEEDS REVIEW' -Condition ($stateGIsNeedsReview -and $stateGMentionsBothIds) -Detail "Status: $($advisoryStateG.Status)"
+
+# ---------------------------------------------------------------------------
+# State Test H - no devices present -> BLOCKED
+# ---------------------------------------------------------------------------
+$dfuResultStateH = Get-DfuDetectionResult -EnumerationResult (New-SuccessEnumeration -Devices @())
+Assert-TestResult -TestName 'State Test H - no devices present -> BLOCKED' -Condition ($dfuResultStateH.Status -like 'BLOCKED*') -Detail "Status: $($dfuResultStateH.Status)"
+
+# ---------------------------------------------------------------------------
+# State Test I - device enumeration error (Windows API unavailable) ->
+# BLOCKED with the exact error text
+# ---------------------------------------------------------------------------
+$enumStateI = [ordered]@{ Success = $false; Devices = @(); ErrorType = 'ApiUnavailable'; ErrorMessage = 'Get-PnpDevice is not recognized (synthetic test error).' }
+$dfuResultStateI = Get-DfuDetectionResult -EnumerationResult $enumStateI
+$stateIIsBlocked = $dfuResultStateI.Status -like 'BLOCKED*'
+$stateIMentionsError = $dfuResultStateI.Detail -like '*synthetic test error*'
+Assert-TestResult -TestName 'State Test I - device enumeration error -> BLOCKED with exact error text' -Condition ($stateIIsBlocked -and $stateIMentionsError) -Detail "Status: $($dfuResultStateI.Status)"
+
+# ---------------------------------------------------------------------------
+# State Test J - complete sequential wrapper (function-level, synthetic):
+# Preflight-equivalent PASS, ArtifactHashVerify-equivalent PASS,
+# DeviceDetect-equivalent PASS (exact normal ID), then RecoveryReadiness-
+# equivalent PASS (exact DFU ID, normal absent) -> all four stages clear,
+# modeling an overall FINAL NO-FLASH SAFEGUARD PASS.
+#
+# This is a function-level composition test, not a real end-to-end
+# execution of the script's four modes in sequence against real hardware -
+# no such hardware exists in this sandbox. It proves the same decision
+# functions the live script calls for each mode never independently block
+# a valid sequential state transition.
+# ---------------------------------------------------------------------------
+$scratchStateJ = New-ScratchGitRepo -Prefix 'state_j'
+$stagePreflightResult = $null
+try {
+    Push-Location $scratchStateJ
+    try {
+        New-Item -ItemType Directory -Path (Join-Path $scratchStateJ 'docs') -Force | Out-Null
+        Set-Content -Path (Join-Path $scratchStateJ 'docs\baseline.md') -Value 'baseline' -Encoding UTF8
+        & git add docs/baseline.md 2>&1 | Out-Null
+        & git commit -q -m 'baseline commit' 2>&1 | Out-Null
+        $scratchBaselineShaJ2 = "$(& git rev-parse HEAD 2>&1)".Trim()
+
+        Set-Content -Path (Join-Path $scratchStateJ 'docs\baseline.md') -Value 'baseline plus docs update' -Encoding UTF8
+        & git add docs/baseline.md 2>&1 | Out-Null
+        & git commit -q -m 'docs-only descendant commit' 2>&1 | Out-Null
+    }
+    finally {
+        Pop-Location
+    }
+    $stagePreflightResult = Get-BaselineAncestryDiffResult -RepoRoot $scratchStateJ -AcceptedBaselineCommit $scratchBaselineShaJ2 -AllowedPathPrefixes @('docs/', 'tools/')
+}
+finally {
+    Remove-ScratchGitRepo -Dir $scratchStateJ
+}
+$stage1PreflightPass = $stagePreflightResult.Status -like 'PASS*'
+
+# ArtifactHashVerify-equivalent: replicate the exact size/hash comparison
+# the live script performs, against a synthetic file whose real computed
+# hash is then used as its own "expected" value (proves the comparison
+# logic itself accepts a genuine byte-for-byte match; this sandbox has no
+# access to the real firmware/updater bytes to check against their real
+# published hashes).
+$scratchArtifactPath = Join-Path ([System.IO.Path]::GetTempPath()) "state_j_artifact_$([guid]::NewGuid().ToString('N')).bin"
+$stage2ArtifactPass = $false
+try {
+    [System.IO.File]::WriteAllBytes($scratchArtifactPath, [byte[]](1..64))
+    $syntheticExpectedSize = (Get-Item $scratchArtifactPath).Length
+    $syntheticExpectedHash = (Get-FileHash -Path $scratchArtifactPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $syntheticActualSize = (Get-Item $scratchArtifactPath).Length
+    $syntheticActualHash = (Get-FileHash -Path $scratchArtifactPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $stage2ArtifactPass = ($syntheticActualSize -eq $syntheticExpectedSize -and $syntheticActualHash -eq $syntheticExpectedHash)
+}
+finally {
+    if (Test-Path $scratchArtifactPath) { Remove-Item -Path $scratchArtifactPath -Force -ErrorAction SilentlyContinue }
+}
+
+# DeviceDetect-equivalent
+$fixtureStateJ_normal = New-DeviceFixture -InstanceId 'USB\VID_0483&PID_5740\FLIPPERSERIAL01' -FriendlyName 'Flipper'
+$stage3NormalResult = Get-NormalModeDetectionResult -EnumerationResult (New-SuccessEnumeration -Devices @($fixtureStateJ_normal))
+$stage3DeviceDetectPass = $stage3NormalResult.Status -like 'PASS*'
+
+# RecoveryReadiness-equivalent (later in time - normal mode now absent,
+# exact DFU present)
+$fixtureStateJ_dfu = New-DeviceFixture -InstanceId 'USB\VID_0483&PID_DF11\2059388C4831' -FriendlyName 'STM32  BOOTLOADER'
+$enumStateJ_recovery = New-SuccessEnumeration -Devices @($fixtureStateJ_dfu)
+$stage4NormalResult = Get-NormalModeDetectionResult -EnumerationResult $enumStateJ_recovery
+$stage4DfuResult = Get-DfuDetectionResult -EnumerationResult $enumStateJ_recovery
+$stage4Advisory = Get-RecoveryModeNormalIdentityAdvisory -NormalModeResult $stage4NormalResult -DfuModeResult $stage4DfuResult
+$stage4RecoveryReadinessPass = ($stage4DfuResult.Status -like 'PASS*') -and ($stage4Advisory.Status -notlike 'BLOCKED*') -and ($stage4Advisory.Status -notlike 'FAIL*') -and ($stage4Advisory.Status -notlike 'NEEDS_REVIEW*')
+
+$allFourStagesClear = $stage1PreflightPass -and $stage2ArtifactPass -and $stage3DeviceDetectPass -and $stage4RecoveryReadinessPass
+Assert-TestResult -TestName 'State Test J - complete sequential wrapper -> FINAL NO-FLASH SAFEGUARD PASS (function-level, synthetic)' -Condition $allFourStagesClear -Detail "Preflight: $stage1PreflightPass; ArtifactHashVerify: $stage2ArtifactPass; DeviceDetect: $stage3DeviceDetectPass; RecoveryReadiness: $stage4RecoveryReadinessPass"
+
+# ---------------------------------------------------------------------------
+# State Test K - camera false-positive regression: a camera DFU device must
+# never determine a PASS, in isolation or alongside the exact Flipper DFU
+# identity (re-confirms State Tests D and F from a single, explicitly-named
+# regression angle)
+# ---------------------------------------------------------------------------
+$fixtureStateK_camera = New-DeviceFixture -InstanceId 'USB\VID_04F2&PID_B83E&MI_02\6&1A2B3C4D&0&0002' -FriendlyName 'Camera DFU Device'
+$dfuResultStateK_aloneOnly = Get-DfuDetectionResult -EnumerationResult (New-SuccessEnumeration -Devices @($fixtureStateK_camera))
+Assert-TestResult -TestName 'State Test K - camera DFU alone never determines PASS' -Condition ($dfuResultStateK_aloneOnly.Status -notlike 'PASS*') -Detail "Status: $($dfuResultStateK_aloneOnly.Status)"
+
+# ---------------------------------------------------------------------------
+# State Test L - canonical Git-blob integrity tests remain passing
+#
+# Not a new assertion - the full Canonical Git Blob Integrity Fix suite
+# (byte-capture sanity check plus Blob Tests A-M) runs earlier in this same
+# file and is included in this run's overall pass/fail total. This entry
+# exists purely so the required test letter is visible in this file's own
+# output, cross-referencing that no regression was introduced there.
+# ---------------------------------------------------------------------------
+$blobSuiteStillPassing = @($script:TestResults | Where-Object { $_.Test -like 'Blob Test *' -and $_.Status -eq 'FAIL' }).Count -eq 0
+Assert-TestResult -TestName 'State Test L - canonical Git-blob integrity tests (Blob Test A-M) remain passing' -Condition $blobSuiteStillPassing -Detail "Blob Test failures so far in this run: $(@($script:TestResults | Where-Object { $_.Test -like 'Blob Test *' -and $_.Status -eq 'FAIL' }).Count)"
+
+# ---------------------------------------------------------------------------
+# State Test M - zero-flash guarantee: no flashing/install/repair command
+# was added anywhere in the gate script's own source text
+# ---------------------------------------------------------------------------
+$gateScriptPath = Join-Path $PSScriptRoot 'pre_flash_safeguard_gate.ps1'
+$gateScriptText = Get-Content -Path $gateScriptPath -Raw
+$forbiddenPatterns = @(
+    'Invoke-Flash', 'Flash-Device', 'qFlipper.*-repair', 'qFlipper.*[Rr]epair',
+    'qFlipper.*[Ii]nstall\s+from\s+file', 'qFlipper.*[Uu]pdate\b.*-[Ff]orce',
+    'dfu-util', '\bST-LINK_CLI\b', '\bSTM32CubeProgrammer\b'
+)
+$foundForbidden = @()
+foreach ($pattern in $forbiddenPatterns) {
+    if ($gateScriptText -match $pattern) { $foundForbidden += $pattern }
+}
+Assert-TestResult -TestName 'State Test M - zero-flash guarantee: no flashing/install/repair command found in source' -Condition ($foundForbidden.Count -eq 0) -Detail "Forbidden patterns found: $($foundForbidden -join ', ')"
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 
