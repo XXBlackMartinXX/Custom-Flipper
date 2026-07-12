@@ -45,17 +45,21 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\hardware_app_tes
 Look at the final classification line. Full meanings are in
 `docs/GATE_A_WINDOWS_HARDWARE_EXECUTION.md`, but in short:
 
-| Classification | Meaning |
-|---|---|
-| `GATE A WINDOWS EXECUTION PACKAGE READY / REAL HARDWARE RUN NOT YET PERFORMED` | `-DryRun` only - everything except the device checked out fine. |
-| `GATE A WINDOWS EXECUTION PACKAGE BLOCKED` | Stopped before touching the device (bad repo/env/profiles). |
-| `GATE A HARDWARE PROOF BLOCKED` | Stopped at device discovery/port/handshake - no app was launched. |
-| `GATE A HARDWARE PROOF PARTIAL` | Gate A's 5 apps launched/closed cleanly; input/screen verification is not implemented yet, so this is not a full PASS. |
-| `GATE A HARDWARE PROOF FAILED / DEVICE STATE NEEDS REVIEW` | Something integrity-threatening happened - stop and inspect the device by hand. |
-| `GATE B SAFE-AUTOMATION QUALIFICATION PARTIAL` | You accepted the expansion prompt and the remaining apps also ran cleanly. |
+| Classification | Exit code | Meaning |
+|---|---|---|
+| `GATE A WINDOWS EXECUTION PACKAGE READY / REAL HARDWARE RUN NOT YET PERFORMED` | 0 | `-DryRun` only - everything except the device checked out fine. |
+| `GATE A WINDOWS EXECUTION PACKAGE BLOCKED` | 2 | Stopped before touching the device (bad repo/env/profiles). |
+| `GATE A HARDWARE PROOF BLOCKED` | 2 | Stopped at device discovery/port/handshake - no app was launched. |
+| `GATE A HARDWARE PROOF PARTIAL` | 0 | Gate A's 5 apps launched/closed cleanly; input/screen verification is not implemented yet, so this is not a full PASS. |
+| `GATE A HARDWARE PROOF FAILED / DEVICE STATE NEEDS REVIEW` | 3 | Something integrity-threatening happened - stop and inspect the device by hand. |
+| `GATE B SAFE-AUTOMATION QUALIFICATION PARTIAL` | 0 | You accepted the expansion prompt (or declined it) and nothing integrity-threatening happened. |
+| `GATE A WINDOWS EXECUTION PACKAGE INTERNAL ERROR` | 1 | Something went wrong inside the tooling itself, not an expected device/repo condition. |
 
 This tool never emits `GATE A HARDWARE PROOF PASS` - see the full
-document's "Honest capability ceiling" section for why.
+document's "Honest capability ceiling" section for why. If you're
+scripting around this tool, check the process exit code rather than
+parsing the printed text - see the full document's "Exit-code contract"
+table.
 
 ## Where to look afterward
 

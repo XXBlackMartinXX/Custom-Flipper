@@ -192,34 +192,58 @@ failure, and never silently marks a failed or skipped test as passing.
 ## Classification interpretation
 
 Exactly these strings may appear as the final classification, and no
-others:
+others. Each one carries a fixed process exit code - see "Exit-code
+contract" below - derived from a typed outcome, never guessed from the
+text of the classification itself:
 
-- `GATE A HARDWARE PROOF PARTIAL` - the 5-app Gate A run completed
-  without an integrity-threatening failure, but (see "Honest capability
-  ceiling") input/screen verification was not performed, so this is a
-  clean-launch/close/continuity result, not a full pass.
-- `GATE A HARDWARE PROOF BLOCKED` - the run could not proceed past a
-  precondition (repository state, environment, profiles, device
+- `GATE A HARDWARE PROOF PARTIAL` (exit 0) - the 5-app Gate A run
+  completed without an integrity-threatening failure, but (see "Honest
+  capability ceiling") input/screen verification was not performed, so
+  this is a clean-launch/close/continuity result, not a full pass.
+- `GATE A HARDWARE PROOF BLOCKED` (exit 2) - the run could not proceed
+  past a precondition (repository state, environment, profiles, device
   discovery, port contention, or handshake) and no application was
   launched.
-- `GATE A HARDWARE PROOF FAILED / DEVICE STATE NEEDS REVIEW` - a stop
-  condition fired during an app run; treat the physical device as
-  needing manual inspection before any further automated use.
-- `GATE B SAFE-AUTOMATION QUALIFICATION PARTIAL` - the Part I
+- `GATE A HARDWARE PROOF FAILED / DEVICE STATE NEEDS REVIEW` (exit 3) -
+  a stop condition fired during an app run; treat the physical device
+  as needing manual inspection before any further automated use.
+- `GATE B SAFE-AUTOMATION QUALIFICATION PARTIAL` (exit 0) - the Part I
   expansion to the remaining `SAFE_AUTOMATION` profiles was accepted
   and completed under the same rules as Gate A (same capability
-  ceiling, same "no PASS" rule).
+  ceiling, same "no PASS" rule), or was declined by the operator.
 - `GATE A WINDOWS EXECUTION PACKAGE READY / REAL HARDWARE RUN NOT YET
-  PERFORMED` - only ever emitted by `-DryRun`, meaning the non-hardware
-  phases succeeded and the package is ready to run against a real
-  device, but no device interaction has occurred yet.
-- `GATE A WINDOWS EXECUTION PACKAGE BLOCKED` - a non-hardware
+  PERFORMED` (exit 0) - only ever emitted by `-DryRun`, meaning the
+  non-hardware phases succeeded and the package is ready to run against
+  a real device, but no device interaction has occurred yet.
+- `GATE A WINDOWS EXECUTION PACKAGE BLOCKED` (exit 2) - a non-hardware
   precondition failed before device interaction was even attempted
   (bad repo state, unsupported Python, failing pytest suite, invalid
   profiles, etc).
+- `GATE A WINDOWS EXECUTION PACKAGE INTERNAL ERROR` (exit 1) - an
+  unhandled exception occurred inside the runner itself, distinct from
+  any expected blocking or device-integrity condition.
 
 **`GATE A HARDWARE PROOF PASS` will never be emitted by this version of
 the tool**, on any device, under any conditions - see the next section.
+
+## Exit-code contract
+
+The runner's process exit code is derived solely from a typed outcome
+value internal to the script, never independently supplied, so a
+BLOCKED or FAILED classification can never be paired with exit code 0:
+
+| Exit code | Meaning |
+|---|---|
+| `0` | DryRun completed successfully, or a real/Gate-B run reached PARTIAL or PASS with no blocking condition and no integrity failure. |
+| `1` | Internal tooling error - an unhandled exception inside the runner itself. |
+| `2` | An expected operational blocking condition (no device, DFU detected, multiple devices, ambiguous COM port, persistent port contention, missing required profile, bad repository/environment state). No application was launched. |
+| `3` | A device-integrity or test failure (unexpected reboot, uptime reset, USB disappearance, panic/fault, an app that would not close, loader state that could not be restored, or evidence the wrong application launched). |
+
+If you invoke this script from another automation layer (a CI runner,
+a wrapper script), check `$LASTEXITCODE` (or the process exit code, if
+invoked as a subprocess) rather than screen-scraping the printed
+classification text - the exit code is the authoritative, machine-
+checkable signal, and it is guaranteed to agree with the table above.
 
 ## Honest capability ceiling
 
