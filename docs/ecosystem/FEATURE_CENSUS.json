@@ -1,0 +1,115 @@
+{
+  "retrieval_date": "2026-07-12",
+  "features": [
+    {
+      "feature_id": "official/js_app",
+      "name": "On-device JavaScript runtime (JS Runner)",
+      "source_repository": "https://github.com/flipperdevices/flipperzero-firmware",
+      "source_commit": "7432d21a7e362d4a5f636e24d6209fbb2eedff1f",
+      "source_path": "applications/system/js_app",
+      "description": "A built-in scripting engine allowing user-authored JavaScript to control device functions.",
+      "differentiation_value": "high - distinctive capability, but high security-review burden",
+      "security_review_required": true,
+      "recommended_disposition": "EXPERIMENTAL"
+    },
+    {
+      "feature_id": "official/dolphin_passport",
+      "name": "Dolphin gamification system (XP/levels) + Passport profile screen",
+      "source_repository": "https://github.com/flipperdevices/flipperzero-firmware",
+      "source_commit": "7432d21a7e362d4a5f636e24d6209fbb2eedff1f",
+      "source_path": "applications/services/dolphin, applications/settings/passport",
+      "description": "Non-utilitarian usage-tracking/leveling system tied to app interactions.",
+      "differentiation_value": "already inherited via Unleashed base - not a new differentiator for this project specifically",
+      "security_review_required": false,
+      "recommended_disposition": "DEFER"
+    },
+    {
+      "feature_id": "official/expansion_protocol",
+      "name": "GPIO expansion-module protocol/service",
+      "source_repository": "https://github.com/flipperdevices/flipperzero-firmware",
+      "source_commit": "7432d21a7e362d4a5f636e24d6209fbb2eedff1f",
+      "source_path": "applications/services/expansion*, applications/settings/expansion_settings",
+      "description": "Formal, versioned protocol for external GPIO accessory modules to identify themselves and communicate with firmware, distinct from raw GPIO pin access.",
+      "differentiation_value": "foundational for RFC 4 (Hardware and Module Compatibility Hub)",
+      "security_review_required": false,
+      "recommended_disposition": "INCLUDE"
+    },
+    {
+      "feature_id": "official/ccid_flash_optimization",
+      "name": "CCID (smart-card USB) moved from firmware HAL to optional FAP",
+      "source_repository": "https://github.com/flipperdevices/flipperzero-firmware",
+      "source_commit": "7432d21a7e362d4a5f636e24d6209fbb2eedff1f",
+      "source_path": "applications/debug/ccid_test",
+      "description": "A real, recent (per this phase's census retrieval) upstream change relocating CCID USB support out of firmware core into a debug FAP specifically to reclaim ~1.7KB of flash, alongside an API version bump from 87.3 to 88.0 (breaking).",
+      "differentiation_value": "n/a - this is a real upstream engineering data point, not a feature to import; recorded as a concrete precedent for this project's own external-FAP-by-default resource discipline (see MODULAR_FIRMWARE_PROFILES.md)",
+      "security_review_required": false,
+      "recommended_disposition": "NOTED_FOR_RESOURCE_BUDGET_PRECEDENT"
+    },
+    {
+      "feature_id": "unleashed/mifare_plus_sl3",
+      "name": "Native MIFARE Plus SL3 support (AES auth, dictionary attack, full SL3 emulation)",
+      "source_repository": "https://github.com/DarkFlippers/unleashed-firmware",
+      "source_commit": "9bcabc0134a4503e341b804999dd73ec890466af",
+      "source_path": "(firmware-level NFC stack extension, not a single app path)",
+      "description": "Extended NFC card protocol support beyond official firmware.",
+      "differentiation_value": "n/a for this project - NFC emulation/attack features are explicitly out of this project's automation and forbidden-test scope",
+      "security_review_required": true,
+      "recommended_disposition": "REJECT_UNSAFE"
+    },
+    {
+      "feature_id": "unleashed/dangerous_settings",
+      "name": "\"Dangerous Settings\" extended/unlocked Sub-GHz frequency range",
+      "source_repository": "https://github.com/DarkFlippers/unleashed-firmware",
+      "source_commit": "9bcabc0134a4503e341b804999dd73ec890466af",
+      "source_path": "documentation/DangerousSettings.md",
+      "description": "A firmware setting that unlocks Sub-GHz transmission outside default-regulated frequency ranges.",
+      "differentiation_value": "n/a for this project - directly conflicts with this project's Sub-GHz transmission prohibition",
+      "security_review_required": true,
+      "recommended_disposition": "REJECT_UNSAFE"
+    },
+    {
+      "feature_id": "momentum/momentum_app_settings",
+      "name": "Custom unified Settings app replacing stock OFW settings",
+      "source_repository": "https://github.com/Next-Flip/Momentum-Firmware",
+      "source_commit": "8ed809fba8af7ac3f09b9495a597d8963f9178a8",
+      "source_path": "applications/main/momentum_app",
+      "description": "A consolidated, redesigned settings experience replacing the stock per-service settings apps.",
+      "differentiation_value": "moderate - directly relevant prior art for RFC 3 (Unified Search) and general UX differentiation, but a large, invasive change to port",
+      "security_review_required": false,
+      "recommended_disposition": "NEEDS_REVIEW"
+    },
+    {
+      "feature_id": "momentum/asset_packs_engine",
+      "name": "Asset Packs theming engine (custom animations/icons/fonts)",
+      "source_repository": "https://github.com/Next-Flip/Momentum-Firmware",
+      "source_commit": "8ed809fba8af7ac3f09b9495a597d8963f9178a8",
+      "source_path": "documentation/file_formats/AssetPacks.md",
+      "description": "A file-format-based system letting users install custom animation/icon/font packs without a firmware rebuild.",
+      "differentiation_value": "high - low-risk, cosmetic-only, genuinely differentiating, and philosophically aligned with this project's Smart App Packs (RFC 2) design",
+      "security_review_required": false,
+      "recommended_disposition": "INCLUDE_AFTER_PORT"
+    },
+    {
+      "feature_id": "momentum/extended_subghz_subdriving",
+      "name": "Extended Sub-GHz frequency ranges + GPS-tagged \"Subdriving\" capture",
+      "source_repository": "https://github.com/Next-Flip/Momentum-Firmware",
+      "source_commit": "8ed809fba8af7ac3f09b9495a597d8963f9178a8",
+      "source_path": "(firmware-level Sub-GHz extension, not a single app path)",
+      "description": "Extended Sub-GHz capability with location-tagged signal capture.",
+      "differentiation_value": "n/a for this project - Sub-GHz transmission/capture is explicitly out of this project's automation and forbidden-test scope",
+      "security_review_required": true,
+      "recommended_disposition": "REJECT_UNSAFE"
+    },
+    {
+      "feature_id": "momentum/disk_image_mounting",
+      "name": "Disk-image mounting / virtual mass storage",
+      "source_repository": "https://github.com/Next-Flip/Momentum-Firmware",
+      "source_commit": "8ed809fba8af7ac3f09b9495a597d8963f9178a8",
+      "source_path": "(firmware-level storage extension, not a single app path)",
+      "description": "Allows the device to present a mounted disk image as USB mass storage.",
+      "differentiation_value": "moderate - a genuinely useful capability, but storage/USB-mode changes need careful safety review given this project's non-destructive-storage discipline",
+      "security_review_required": true,
+      "recommended_disposition": "NEEDS_REVIEW"
+    }
+  ]
+}

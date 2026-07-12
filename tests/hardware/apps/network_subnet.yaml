@@ -1,0 +1,46 @@
+# Test profile for Network Subnet Calculator (network_subnet).
+# Real device launch appid: network_subnet (source: applications_user/network_subnet/application.fam)
+#
+# NOTE: May exercise UART-attached WiFi devboard functionality beyond pure local UI; requires the optional accessory to test meaningfully and safely.
+#
+# HONEST STATUS: this profile has been schema-validated only (tools/hardware_app_tester/tests/test_profile_schema.py). No part of it has been exercised against real Flipper Zero hardware in this development session - expected_initial_state and expected_state_transitions are placeholders pending a real, human-observed characterization run, per docs/CURRENT_20_APP_QUALIFICATION.md.
+app_id: network_subnet
+display_name: Network Subnet Calculator
+category: Tools
+source_path: applications_user/network_subnet
+launch_type: external-fap
+launch_target: network_subnet
+automation_class: FIXTURE_REQUIRED
+timeout_seconds: 10
+expected_initial_state: not_yet_characterized_on_real_hardware
+input_sequence: []
+expected_state_transitions: []
+exit_method: back
+maximum_heap_delta: 4096
+forbidden_operations:
+- subghz_transmit
+- infrared_transmit
+- nfc_write
+- nfc_emulate
+- rfid_write
+- ibutton_write
+- badusb_run
+- hid_inject
+- ble_control
+- gpio_output
+- factory_reset
+- format_sd
+- format_storage
+- firmware_update
+- recovery
+- repair
+required_fixture: Optional ESP32/WiFi devboard accessory - not present/verified in
+  this phase
+screenshot_masks: []
+known_nondeterministic_regions: []
+expected_log_patterns: []
+forbidden_log_patterns:
+- panic
+- hardfault
+- assert failed
+- fatal error
