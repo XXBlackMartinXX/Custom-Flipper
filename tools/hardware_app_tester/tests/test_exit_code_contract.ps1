@@ -212,7 +212,12 @@ try {
         Assert-True -Name 'B. Dirty working tree: no device access was attempted' -Condition ($dirtyTreeResult.Output -notmatch 'ACTION REQUIRED: connect one normally booted Flipper Zero')
     }
     finally {
-        Remove-Item -Path $sentinelFile -ErrorAction SilentlyContinue
+        # -Force is required here: PowerShell treats dotfiles as
+        # hidden on every platform (not just Windows), and refuses to
+        # remove a hidden item without it - confirmed directly, this
+        # sentinel file was otherwise silently left behind on disk
+        # even though this `finally` block executed.
+        Remove-Item -Path $sentinelFile -Force -ErrorAction SilentlyContinue
     }
 }
 finally {
