@@ -1,0 +1,46 @@
+# Test profile for FCC ID Lookup (fcc_id_lookup).
+# Real device launch appid: fcc_id_lookup (source: applications_user/fcc_id_lookup/application.fam)
+#
+# NOTE: Meaningful lookup testing requires the optional external database; without it the app is expected to show a degraded/prompt state only.
+#
+# HONEST STATUS: this profile has been schema-validated only (tools/hardware_app_tester/tests/test_profile_schema.py). No part of it has been exercised against real Flipper Zero hardware in this development session - expected_initial_state and expected_state_transitions are placeholders pending a real, human-observed characterization run, per docs/CURRENT_20_APP_QUALIFICATION.md.
+app_id: fcc_id_lookup
+display_name: FCC ID Lookup
+category: Tools
+source_path: applications_user/fcc_id_lookup
+launch_type: external-fap
+launch_target: fcc_id_lookup
+automation_class: FIXTURE_REQUIRED
+timeout_seconds: 10
+expected_initial_state: not_yet_characterized_on_real_hardware
+input_sequence: []
+expected_state_transitions: []
+exit_method: back
+maximum_heap_delta: 4096
+forbidden_operations:
+- subghz_transmit
+- infrared_transmit
+- nfc_write
+- nfc_emulate
+- rfid_write
+- ibutton_write
+- badusb_run
+- hid_inject
+- ble_control
+- gpio_output
+- factory_reset
+- format_sd
+- format_storage
+- firmware_update
+- recovery
+- repair
+required_fixture: Optional FCC frequency/applicant database file (not bundled, per
+  docs/PROJECT_BASELINE_AUDIT.md and related license findings)
+screenshot_masks: []
+known_nondeterministic_regions: []
+expected_log_patterns: []
+forbidden_log_patterns:
+- panic
+- hardfault
+- assert failed
+- fatal error

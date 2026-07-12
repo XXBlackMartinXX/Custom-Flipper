@@ -1,0 +1,49 @@
+# Test profile for Resistor Color Code Calculator (resistors).
+# Real device launch appid: resistance_calculator (source: applications_user/resistors/application.fam)
+#
+# NOTE: Local numeric calculator UI only - no radio, no file I/O, no external hardware.
+#
+# HONEST STATUS: this profile has been schema-validated only (tools/hardware_app_tester/tests/test_profile_schema.py). No part of it has been exercised against real Flipper Zero hardware in this development session - expected_initial_state and expected_state_transitions are placeholders pending a real, human-observed characterization run, per docs/CURRENT_20_APP_QUALIFICATION.md.
+app_id: resistors
+display_name: Resistor Color Code Calculator
+category: Tools
+source_path: applications_user/resistors
+launch_type: external-fap
+launch_target: resistance_calculator
+automation_class: SAFE_AUTOMATION
+timeout_seconds: 10
+expected_initial_state: not_yet_characterized_on_real_hardware
+input_sequence:
+- OK
+- BACK
+expected_state_transitions:
+- main_menu -> app_launched
+- app_launched -> main_menu (via exit_method)
+exit_method: back
+maximum_heap_delta: 4096
+forbidden_operations:
+- subghz_transmit
+- infrared_transmit
+- nfc_write
+- nfc_emulate
+- rfid_write
+- ibutton_write
+- badusb_run
+- hid_inject
+- ble_control
+- gpio_output
+- factory_reset
+- format_sd
+- format_storage
+- firmware_update
+- recovery
+- repair
+required_fixture: null
+screenshot_masks: []
+known_nondeterministic_regions: []
+expected_log_patterns: []
+forbidden_log_patterns:
+- panic
+- hardfault
+- assert failed
+- fatal error

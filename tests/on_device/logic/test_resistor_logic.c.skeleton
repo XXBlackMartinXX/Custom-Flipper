@@ -1,0 +1,33 @@
+/*
+ * SKELETON ONLY - not compiled, not registered with the firmware's
+ * unit_tests app, not executed on any device in this phase.
+ *
+ * Illustrates the intended pattern for a headless, on-device logic unit
+ * test against applications_user/resistors/src/resistor_logic.c's
+ * confirmed pure functions (see ../CANDIDATES.md for the source-read
+ * confirming these functions exist and are side-effect-free).
+ *
+ * A real implementation would follow the pattern used by the official
+ * firmware's own applications/debug/unit_tests/ suites (MU_TEST/MU_RUN_TEST
+ * or the project's chosen on-device test macros) and would need to be
+ * registered with that app's test list - both steps are out of scope for
+ * this foundation phase.
+ */
+
+#include <resistors/resistor_logic.h> /* path illustrative, not verified to exist as a header */
+
+/* Illustrative only - real test bodies must be written against the
+ * actual ResistorType/BandColour enum values once resistor_logic.h's
+ * real definitions are confirmed. */
+static void test_is_numeric_colour_rejects_tolerance_colours(void) {
+    /* e.g. assert(!is_numeric_colour(BandColourGold)); */
+}
+
+static void test_has_tolerance_true_for_five_and_six_band(void) {
+    /* e.g. assert(has_tolerance(ResistorTypeFiveBand)); */
+}
+
+/* A real suite would enumerate every BandColour x every classifier
+ * function and assert mutual exclusivity (a colour cannot be both a
+ * "numeric" and a "multiplier-only" colour, etc.) - this is exactly the
+ * kind of boundary-condition testing pure logic candidates are for. */
