@@ -15,6 +15,7 @@ import datetime
 import json
 import os
 import secrets
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
@@ -64,3 +65,38 @@ def write_evidence(
             f.write("\n")
 
     return json_path, md_path
+
+
+def atomic_write_json(path: "Path | str", data: Dict[str, Any]) -> Path:
+    """Writes `data` as JSON to `path` via write-to-temp-file-then-
+    replace, so a process interrupted mid-write (e.g. killed by an
+    external watchdog) never leaves a truncated or half-written file at
+    `path` - readers either see the previous complete version or the
+    new complete version, never a mix (Gate A serial-transport-
+    hardening phase: incremental handshake/probe evidence is rewritten
+    after every stage, so this matters a great deal here).
+
+    `os.replace()` is atomic on both POSIX and Windows when the source
+    and destination are on the same volume, which they always are here
+    (same report directory).
+    """
+    out_path = Path(path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    fd, tmp_name = tempfile.mkstemp(
+        dir=str(out_path.parent), prefix=out_path.name + ".", suffix=".tmp"
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, sort_keys=True)
+            f.write("\n")
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_name, str(out_path))
+    except BaseException:
+        try:
+            os.remove(tmp_name)
+        except OSError:
+            pass
+        raise
+    return out_path

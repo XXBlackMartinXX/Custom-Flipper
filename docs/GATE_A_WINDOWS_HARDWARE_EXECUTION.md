@@ -62,6 +62,14 @@ Or, for a first conservative dry run that touches no device at all:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\hardware_app_tester\Run-GateA-HardwareProof.ps1 -DryRun
 ```
 
+**Recommended for the very first real-hardware run** (see "Bounded
+serial probe / -ProbeOnly" below): before running the full Gate A app
+set, run just the narrow transport probe first -
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\hardware_app_tester\Run-GateA-HardwareProof.ps1 -ProbeOnly
+```
+
 Other supported parameters:
 
 - `-RepoRoot <path>` - override the detected repository root.
@@ -73,6 +81,63 @@ Other supported parameters:
 - `-SkipSafeAutomationExpansion` - answers the Part I "run all
   remaining SAFE_AUTOMATION profiles?" prompt as declined
   automatically, for a conservative Gate-A-only run.
+- `-ProbeOnly` - runs only repository verification, environment
+  preparation, device discovery, a bounded read-only serial probe, and
+  the read-only handshake, then stops - never proceeds to inventory
+  reconciliation or the Gate A app run, and never launches an
+  application. See "Bounded serial probe / -ProbeOnly" below.
+
+## Bounded serial probe / -ProbeOnly
+
+A real Windows run once reached Phase F (the read-only handshake) and
+the handshake subprocess did not exit within a 30-second external
+watchdog - no stdout, no stderr, no evidence file ever created. In
+response, this tool now:
+
+- Opens the real serial connection with **both** a bounded read timeout
+  and a bounded write timeout (previously only the read timeout was
+  set - an unbounded write is, on its own, capable of exactly this
+  symptom).
+- Synchronizes to the device's CLI prompt using a raw-byte search
+  (tolerating CRLF/LF/no trailing newline, a preceding banner, and
+  fragmentation across multiple reads) instead of depending on
+  `readline()`'s line framing.
+- Runs the handshake (and, before it, a narrower `probe-serial` check)
+  as a **separate, bounded child process** with redirected stdout/
+  stderr and an explicit timeout, rather than an in-process call with
+  no process-level bound at all - so a genuine hang is now itself a
+  detected, classified outcome (`GATE A HARDWARE PROOF BLOCKED /
+  HANDSHAKE PROCESS TIMEOUT`, exit code 2) instead of an indefinite
+  wait.
+- Writes `serial_handshake.json`/`serial_probe.json` incrementally,
+  stage by stage, via atomic temp-file replacement - so even if a
+  process is killed by the watchdog, the evidence file on disk reflects
+  the last stage that actually completed, never a truncated or
+  misleading "complete" report.
+
+`-ProbeOnly` runs just this narrow, read-only slice - repository
+verification, device discovery, the bounded serial probe, and the
+handshake - and stops before Phase G/H, so a transport-level problem
+can be diagnosed in isolation, with its own evidence, before committing
+to the full Gate A app run. A successful run prints and records:
+
+```
+SERIAL PROBE PASS
+READ-ONLY HANDSHAKE PASS
+APPLICATIONS LAUNCHED: NO
+FIRMWARE OPERATIONS: NO
+```
+
+and exits 0 (`GATE A SERIAL PROBE PACKAGE PASS`). Only after this
+result should the full Gate A app run be considered.
+
+You can also run the narrower probe directly against the Python CLI
+(useful for isolating a transport issue without re-running repository/
+environment setup):
+
+```powershell
+.\tools\hardware_app_tester\.venv\Scripts\python.exe -m hardware_app_tester.cli probe-serial --port COM6 --output serial_probe.json
+```
 
 ## What is automated
 
@@ -202,8 +267,18 @@ text of the classification itself:
   this is a clean-launch/close/continuity result, not a full pass.
 - `GATE A HARDWARE PROOF BLOCKED` (exit 2) - the run could not proceed
   past a precondition (repository state, environment, profiles, device
-  discovery, port contention, or handshake) and no application was
-  launched.
+  discovery, port contention, the bounded serial probe, or handshake)
+  and no application was launched.
+- `GATE A HARDWARE PROOF BLOCKED / HANDSHAKE PROCESS TIMEOUT` (exit 2) -
+  the probe-serial or handshake subprocess did not exit within its
+  bounded timeout and was terminated by the watchdog (only that one
+  process - qFlipper and any other process are left untouched). See
+  serial_probe.json/serial_handshake.json and the corresponding
+  `_stdout.log`/`_stderr.log` for the last stage recorded before the
+  kill.
+- `GATE A SERIAL PROBE PACKAGE PASS` (exit 0) - only ever emitted by
+  `-ProbeOnly`: the bounded serial probe and read-only handshake both
+  passed. No application was launched.
 - `GATE A HARDWARE PROOF FAILED / DEVICE STATE NEEDS REVIEW` (exit 3) -
   a stop condition fired during an app run; treat the physical device
   as needing manual inspection before any further automated use.

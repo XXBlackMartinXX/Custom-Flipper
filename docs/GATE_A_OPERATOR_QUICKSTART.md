@@ -27,6 +27,18 @@ Want to check everything except the device first? Run:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\hardware_app_tester\Run-GateA-HardwareProof.ps1 -DryRun
 ```
 
+**Recommended for your very first real-hardware run**: check just the
+serial connection before running the full app set -
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\hardware_app_tester\Run-GateA-HardwareProof.ps1 -ProbeOnly
+```
+
+A successful probe prints `SERIAL PROBE PASS` / `READ-ONLY HANDSHAKE
+PASS` / `APPLICATIONS LAUNCHED: NO` / `FIRMWARE OPERATIONS: NO` and
+exits without touching any app. Only run the full command (no
+switches) after that succeeds.
+
 ## What you will be asked to do
 
 1. Keep the Flipper connected and on its desktop/home screen.

@@ -70,15 +70,21 @@ What has **not** been validated, because it requires real hardware:
 hardware_app_tester/
   __init__.py
   cli.py                - the CLI entrypoint (validate-profiles, discover,
-                          handshake, run-gate-a, run-safe-automation)
+                          handshake, probe-serial, run-gate-a,
+                          run-safe-automation)
   discovery.py         - device discovery (enumeration/evaluation separated)
-  serial_cli.py        - line-based Flipper CLI client (loader open/list/etc.)
+  serial_cli.py        - line-based Flipper CLI client (loader open/list/etc.);
+                          bounded read+write timeouts, raw-byte prompt
+                          synchronization, per-stage transport diagnostics
   rpc_client.py         - protobuf RPC client skeleton (screen frames, input)
-  mock_transport.py     - synthetic in-process transport for --mock mode
+  mock_transport.py     - synthetic in-process transports: FakeSerialConnection
+                          (--mock mode, line-scripted) and FakeRawSerialConnection
+                          (raw-byte fault injection for transport-hardening tests)
   device_state.py       - best-effort uptime/heap/loader-state parsing
   profile_schema.py    - tests/hardware/apps/*.yaml schema + loader
                           + repository cross-check
-  evidence.py          - collision-resistant JSON/Markdown evidence writer
+  evidence.py          - collision-resistant JSON/Markdown evidence writer,
+                          plus atomic_write_json for incremental stage evidence
   test_runner.py       - library helpers used by cli.py
   crash_detection.py    - uptime/heap/loader-state regression checks
 tests/
@@ -89,6 +95,9 @@ tests/
   test_serial_cli_hardening.py
   test_crash_detection.py
   test_cli_hardening.py
+  test_serial_transport_hardening.py
+  test_exit_code_contract.ps1
+  test_serial_transport_hardening.ps1
 Run-GateA-HardwareProof.ps1 (one directory up) - the Windows one-command
   runner; see docs/GATE_A_WINDOWS_HARDWARE_EXECUTION.md.
 ```
@@ -111,7 +120,17 @@ real device.
 cd tools/hardware_app_tester
 python -m hardware_app_tester.cli validate-profiles --repo-root ../..
 python -m hardware_app_tester.cli run-gate-a --repo-root ../.. --report-dir /tmp/report --dry-run
+python -m hardware_app_tester.cli probe-serial --port COM6 --output serial_probe.json
 ```
+
+`probe-serial` is the narrowest real-hardware check this tool offers:
+open the port (bounded read/write timeouts), synchronize to the CLI
+prompt (raw-byte, framing-independent), optionally one read-only
+command (default `uptime`), close. Never launches an application, never
+performs a firmware operation. Recommended as the very first real
+command run against new hardware - see `Run-GateA-HardwareProof.ps1
+-ProbeOnly` for the one-command equivalent that also does repository
+verification and device discovery first.
 
 For the full, one-command Windows execution package (repository
 verification, environment setup, profile validation, device discovery,

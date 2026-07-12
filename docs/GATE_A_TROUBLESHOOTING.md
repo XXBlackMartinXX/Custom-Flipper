@@ -63,6 +63,43 @@ response within timeout, etc). Causes to check, in order:
 
 Do not respond to a CLI failure by running qFlipper's Repair function.
 
+## Handshake or probe process timeout (watchdog killed it)
+
+`GATE A HARDWARE PROOF BLOCKED / HANDSHAKE PROCESS TIMEOUT` means the
+`probe-serial` or `handshake` subprocess did not exit within its
+bounded timeout (20s for the probe, 30s for the handshake) and the
+runner's own watchdog terminated **only that process** - qFlipper and
+everything else on the system are left running. This is the failure
+mode this tool is specifically hardened against (an unbounded serial
+write, or prompt detection that never recognized a genuine response) -
+seeing this classification means the watchdog caught it rather than
+the script hanging forever.
+
+Check, in order:
+
+1. `serial_probe.json`/`serial_handshake.json` in the evidence
+   directory - `last_stage` shows exactly how far the subprocess got
+   before it was killed (e.g. stuck at `PROMPT_SYNC_START` means the
+   prompt was requested but never recognized; stuck at
+   `SERIAL_OPEN_START` means opening the port itself did not return).
+2. `serial_probe_stdout.log`/`serial_probe_stderr.log` (or the
+   `handshake_` equivalents) - any partial output captured before the
+   kill.
+3. Confirm nothing else has reconnected to the port since the last
+   successful discovery (another terminal program, a second qFlipper
+   window) - re-run `discover` to check.
+4. If this recurs consistently on the same physical setup, it may
+   indicate a cable, hub, or driver issue worth investigating
+   separately - it is not something to work around by reflashing or
+   repairing the device's firmware.
+
+Run the narrower probe alone first if you want to isolate this from a
+longer Gate A invocation:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\hardware_app_tester\Run-GateA-HardwareProof.ps1 -ProbeOnly
+```
+
 ## App missing / launch target not found
 
 `profile_validation.json`'s repository cross-check will name the exact

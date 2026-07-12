@@ -95,8 +95,22 @@
     regression tests can exercise the InternalError -> exit-code-1
     contract end-to-end. Never set this during a real run.
 
+.PARAMETER ProbeOnly
+    Runs only repository verification, environment preparation, device
+    discovery, a bounded read-only serial probe (`probe-serial`), and
+    the read-only handshake - then stops. Never proceeds to Phase G
+    (inventory) or Phase H (the Gate A app run), and never launches an
+    application. Intended to be run BEFORE the full Gate A app run so a
+    transport-level problem is isolated with its own narrow evidence.
+    On success, prints and records SERIAL PROBE PASS / READ-ONLY
+    HANDSHAKE PASS / APPLICATIONS LAUNCHED: NO / FIRMWARE OPERATIONS: NO
+    and exits 0.
+
 .EXAMPLE
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\hardware_app_tester\Run-GateA-HardwareProof.ps1 -DryRun
+
+.EXAMPLE
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\hardware_app_tester\Run-GateA-HardwareProof.ps1 -ProbeOnly
 
 .EXAMPLE
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\hardware_app_tester\Run-GateA-HardwareProof.ps1
@@ -112,8 +126,22 @@ param(
 
     [switch]$SkipSafeAutomationExpansion,
 
-    [switch]$SelfTestForceInternalError
+    [switch]$SelfTestForceInternalError,
+
+    [switch]$ProbeOnly
 )
+
+# ---------------------------------------------------------------------------
+# Serial-transport-hardening phase: bounded external process timeouts for
+# the handshake and probe-serial subprocesses (Part 5). These are
+# separate from FlipperCliClient's own internal read/write timeouts -
+# this is the outer, process-level watchdog that exists specifically
+# because the real Windows run that motivated this phase showed the
+# *process itself* (not just one read/write call) failing to exit
+# within a fixed bound.
+# ---------------------------------------------------------------------------
+$ProbeSerialProcessTimeoutSeconds = 20
+$HandshakeProcessTimeoutSeconds = 30
 
 # ---------------------------------------------------------------------------
 # PowerShell 5.1 / 7 compatibility discipline: no ternary (?:), no
@@ -162,6 +190,11 @@ enum GateAOutcome {
     GateAPartial
     GateBPass
     GateBPartial
+    #: Serial-transport-hardening phase, Part 8: the narrow -ProbeOnly
+    #: success path (repository verification, discovery, bounded serial
+    #: probe, read-only handshake - no Gate A app run). Exit 0, same as
+    #: every other non-blocking/non-failing outcome.
+    ProbeOnlyPass
     Blocked
     Failed
     InternalError
@@ -181,10 +214,127 @@ function Get-ExitCodeForOutcome {
         ([GateAOutcome]::GateAPartial) { return 0 }
         ([GateAOutcome]::GateBPass) { return 0 }
         ([GateAOutcome]::GateBPartial) { return 0 }
+        ([GateAOutcome]::ProbeOnlyPass) { return 0 }
         ([GateAOutcome]::Blocked) { return 2 }
         ([GateAOutcome]::Failed) { return 3 }
         ([GateAOutcome]::InternalError) { return 1 }
         default { return 1 }
+    }
+}
+
+function Invoke-BoundedPythonCommand {
+    <#
+        Runs one Python command as a separate, bounded child process
+        with redirected stdout/stderr, an explicit working directory,
+        and an explicit timeout - Part 5 of the Gate A serial-transport-
+        hardening mission. Deliberately NOT `& $venvPython ... 2>&1`,
+        which has no process-level timeout at all and, depending on
+        $ErrorActionPreference, can complicate distinguishing "the
+        Python process printed to stderr" from "PowerShell itself
+        raised a terminating error" - this function always returns a
+        plain result object regardless of either.
+
+        Terminates ONLY the spawned Python process by PID
+        (`Stop-Process -Id`) on timeout - never qFlipper, never any
+        other process on the system.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$PythonExe,
+        [Parameter(Mandatory = $true)][string[]]$PythonArgs,
+        [Parameter(Mandatory = $true)][string]$WorkingDirectory,
+        [Parameter(Mandatory = $true)][int]$TimeoutSeconds,
+        [Parameter(Mandatory = $true)][string]$StdOutPath,
+        [Parameter(Mandatory = $true)][string]$StdErrPath
+    )
+
+    New-Item -ItemType Directory -Path (Split-Path -Parent $StdOutPath) -Force | Out-Null
+
+    $proc = Start-Process -FilePath $PythonExe -ArgumentList $PythonArgs -WorkingDirectory $WorkingDirectory `
+        -RedirectStandardOutput $StdOutPath -RedirectStandardError $StdErrPath -NoNewWindow -PassThru
+
+    $completed = $proc.WaitForExit($TimeoutSeconds * 1000)
+    $watchdogIntervened = $false
+
+    if (-not $completed) {
+        $watchdogIntervened = $true
+        try {
+            # Kills only this specific process, by PID - never qFlipper
+            # or any other unrelated process.
+            Stop-Process -Id $proc.Id -Force -ErrorAction Stop
+        }
+        catch {
+            # Already exited between WaitForExit's timeout and here -
+            # not an error, just a benign race.
+        }
+        $proc.WaitForExit(5000) | Out-Null
+    }
+
+    $exitCode = $null
+    if ($proc.HasExited) {
+        $exitCode = $proc.ExitCode
+    }
+
+    $stdOutText = ''
+    $stdErrText = ''
+    if (Test-Path $StdOutPath) { $stdOutText = Get-Content -Path $StdOutPath -Raw -ErrorAction SilentlyContinue }
+    if (Test-Path $StdErrPath) { $stdErrText = Get-Content -Path $StdErrPath -Raw -ErrorAction SilentlyContinue }
+
+    return [ordered]@{
+        Completed          = $completed
+        WatchdogIntervened = $watchdogIntervened
+        ExitCode           = $exitCode
+        StdOut             = $stdOutText
+        StdErr             = $stdErrText
+    }
+}
+
+function Repair-EvidenceAfterWatchdog {
+    <#
+        Preserves evidence honestly after a process-level timeout kill
+        (Part 5): if the child process's own incrementally-written
+        evidence file exists (even partially - it should, since
+        PROCESS_STARTED is written before anything else), patch in
+        `watchdog_intervened`/`process_exit_code` rather than inventing
+        any stage the child never actually reached. If the file does
+        not exist at all (meaning the process was killed before its own
+        very first atomic write), write a minimal, clearly-labeled
+        fallback so a reader still finds *something* at the expected
+        evidence path, honestly described.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$EvidencePath,
+        [Parameter(Mandatory = $true)][string]$CommandName,
+        [Parameter(Mandatory = $true)][string]$FallbackStatus,
+        [Parameter(Mandatory = $true)][int]$TimeoutSeconds,
+        $ExitCode
+    )
+
+    if (Test-Path $EvidencePath) {
+        $partial = Get-Content -Path $EvidencePath -Raw | ConvertFrom-Json
+        $patched = [ordered]@{}
+        foreach ($prop in $partial.PSObject.Properties) {
+            $patched[$prop.Name] = $prop.Value
+        }
+        $patched['watchdog_intervened'] = $true
+        $patched['process_exit_code'] = $ExitCode
+        $patched | ConvertTo-Json -Depth 10 | Set-Content -Path $EvidencePath -Encoding UTF8
+    }
+    else {
+        [ordered]@{
+            command             = $CommandName
+            status              = $FallbackStatus
+            watchdog_intervened = $true
+            process_exit_code   = $ExitCode
+            applications_launched = $false
+            firmware_operations_performed = $false
+            detail              = (
+                "The $CommandName subprocess did not create any evidence " +
+                "file before the $TimeoutSeconds-second watchdog " +
+                'terminated it - the process likely hung before its ' +
+                'own first stage write (PROCESS_STARTED), or the ' +
+                'evidence directory was not writable.'
+            )
+        } | ConvertTo-Json -Depth 6 | Set-Content -Path $EvidencePath -Encoding UTF8
     }
 }
 
@@ -234,6 +384,8 @@ function Write-Status {
 }
 
 function Write-RunManifest {
+    param([hashtable]$ExtraFields = $null)
+
     New-Item -ItemType Directory -Path $ReportDir -Force | Out-Null
     $manifest = [ordered]@{
         run_timestamp_utc           = $RunTimestamp
@@ -248,6 +400,11 @@ function Write-RunManifest {
         stop_reason                 = $script:StopReason
         repo_root                   = $RepoRoot
         expected_branch             = $ExpectedBranch
+    }
+    if ($null -ne $ExtraFields) {
+        foreach ($key in $ExtraFields.Keys) {
+            $manifest[$key] = $ExtraFields[$key]
+        }
     }
     $manifest | ConvertTo-Json -Depth 6 | Set-Content -Path (Join-Path $ReportDir 'run_manifest.json') -Encoding UTF8
 }
@@ -290,7 +447,8 @@ function Complete-Run {
         [Parameter(Mandatory = $true)][string]$Classification,
         [Parameter(Mandatory = $true)][GateAOutcome]$Outcome,
         [Parameter(Mandatory = $true)][bool]$HardwareExecutionOccurred,
-        [string]$Detail = ''
+        [string]$Detail = '',
+        [hashtable]$ExtraManifestFields = $null
     )
 
     $exitCode = Get-ExitCodeForOutcome -Outcome $Outcome
@@ -321,7 +479,7 @@ function Complete-Run {
 
     New-Item -ItemType Directory -Path $ReportDir -Force | Out-Null
     Write-ChecksumsFile
-    Write-RunManifest
+    Write-RunManifest -ExtraFields $ExtraManifestFields
 
     Write-Host ''
     Write-Host "Evidence written to: $ReportDir" -ForegroundColor Cyan
@@ -601,22 +759,87 @@ and app_results.json (planned_apps only) in this directory.
         Write-Status -Status 'PASS' -Detail "Device discovered on $($discoverResult.port.device)."
 
         # ---------------------------------------------------------------
+        # Phase E.5 - Bounded read-only serial probe (Part 6/8 of the
+        # Gate A serial-transport-hardening mission). Runs BEFORE the
+        # fuller handshake so a transport-level problem is caught by the
+        # narrowest possible operation first, with its own evidence.
+        # ---------------------------------------------------------------
+        Write-Phase 'Phase E.5 - Bounded read-only serial probe'
+        $probeJsonPath = Join-Path $ReportDir 'serial_probe.json'
+        $probeArgs = @('-m', 'hardware_app_tester.cli', 'probe-serial', '--port', $discoverResult.port.device, '--command', 'uptime', '--output', $probeJsonPath)
+        $probeRun = Invoke-BoundedPythonCommand -PythonExe $venvPython -PythonArgs $probeArgs -WorkingDirectory $ToolDir `
+            -TimeoutSeconds $ProbeSerialProcessTimeoutSeconds `
+            -StdOutPath (Join-Path $ReportDir 'serial_probe_stdout.log') `
+            -StdErrPath (Join-Path $ReportDir 'serial_probe_stderr.log')
+
+        if ($probeRun.StdOut) { Write-Host $probeRun.StdOut }
+        if ($probeRun.StdErr) { Write-Host $probeRun.StdErr -ForegroundColor Red }
+
+        if ($probeRun.WatchdogIntervened) {
+            Repair-EvidenceAfterWatchdog -EvidencePath $probeJsonPath -CommandName 'probe-serial' `
+                -FallbackStatus 'SERIAL PROBE BLOCKED - PROMPT SYNC TIMEOUT' `
+                -TimeoutSeconds $ProbeSerialProcessTimeoutSeconds -ExitCode $probeRun.ExitCode
+            Complete-Run -Classification 'GATE A HARDWARE PROOF BLOCKED / HANDSHAKE PROCESS TIMEOUT' -Outcome ([GateAOutcome]::Blocked) -HardwareExecutionOccurred $true -Detail "The probe-serial subprocess did not exit within $ProbeSerialProcessTimeoutSeconds seconds and was terminated by the watchdog (only this process - qFlipper and other processes were left untouched). See $probeJsonPath and serial_probe_stdout.log/serial_probe_stderr.log for the last recorded stage."
+        }
+        if ($probeRun.ExitCode -ne 0) {
+            $probeResult = Get-Content $probeJsonPath -Raw | ConvertFrom-Json
+            Complete-Run -Classification 'GATE A HARDWARE PROOF BLOCKED' -Outcome ([GateAOutcome]::Blocked) -HardwareExecutionOccurred $true -Detail "Bounded serial probe did not pass ($($probeResult.status)) - see serial_probe.json. No application will be launched until this passes."
+        }
+        Write-Status -Status 'PASS' -Detail 'Bounded serial probe (open, prompt sync, uptime, close) completed cleanly.'
+
+        # ---------------------------------------------------------------
         # Phase F - Read-only device handshake
         # ---------------------------------------------------------------
         Write-Phase 'Phase F - Read-only device handshake'
-        $handshakeArgs = @('-m', 'hardware_app_tester.cli', 'handshake', '--port', $discoverResult.port.device, '--output', (Join-Path $ReportDir 'serial_handshake.json'))
-        $handshakeOutput = & $venvPython @handshakeArgs 2>&1
-        $handshakeExit = $LASTEXITCODE
-        Write-Host ($handshakeOutput -join "`n")
-        if ($handshakeExit -ne 0) {
+        $handshakeJsonPath = Join-Path $ReportDir 'serial_handshake.json'
+        $handshakeArgs = @('-m', 'hardware_app_tester.cli', 'handshake', '--port', $discoverResult.port.device, '--output', $handshakeJsonPath)
+
+        # Part 5: invoked as a separate, bounded child process with
+        # redirected stdout/stderr and an explicit timeout - NOT
+        # `& $venvPython ... 2>&1`, which has no process-level bound at
+        # all. This is the direct fix for the real Windows evidence: a
+        # handshake subprocess that did not exit within 30 seconds, with
+        # no stdout, no stderr, and no serial_handshake.json ever
+        # created - that failure mode is now itself a detected,
+        # classified, evidence-preserving outcome rather than an
+        # indefinite hang.
+        $handshakeRun = Invoke-BoundedPythonCommand -PythonExe $venvPython -PythonArgs $handshakeArgs -WorkingDirectory $ToolDir `
+            -TimeoutSeconds $HandshakeProcessTimeoutSeconds `
+            -StdOutPath (Join-Path $ReportDir 'handshake_stdout.log') `
+            -StdErrPath (Join-Path $ReportDir 'handshake_stderr.log')
+
+        if ($handshakeRun.StdOut) { Write-Host $handshakeRun.StdOut }
+        if ($handshakeRun.StdErr) { Write-Host $handshakeRun.StdErr -ForegroundColor Red }
+
+        if ($handshakeRun.WatchdogIntervened) {
+            Repair-EvidenceAfterWatchdog -EvidencePath $handshakeJsonPath -CommandName 'handshake' `
+                -FallbackStatus 'BLOCKED - HANDSHAKE PROCESS TIMEOUT' `
+                -TimeoutSeconds $HandshakeProcessTimeoutSeconds -ExitCode $handshakeRun.ExitCode
+            Complete-Run -Classification 'GATE A HARDWARE PROOF BLOCKED / HANDSHAKE PROCESS TIMEOUT' -Outcome ([GateAOutcome]::Blocked) -HardwareExecutionOccurred $true -Detail "The handshake subprocess did not exit within $HandshakeProcessTimeoutSeconds seconds and was terminated by the watchdog (only this process - qFlipper and other processes were left untouched). Do not continue to app testing. See $handshakeJsonPath and handshake_stdout.log/handshake_stderr.log for the last recorded stage."
+        }
+
+        if ($handshakeRun.ExitCode -ne 0) {
             Complete-Run -Classification 'GATE A HARDWARE PROOF BLOCKED' -Outcome ([GateAOutcome]::Blocked) -HardwareExecutionOccurred $true -Detail 'Read-only device handshake did not pass - see serial_handshake.json. No application will be launched until this passes.'
         }
         Write-Status -Status 'PASS' -Detail 'CLI prompt reachable; uptime/loader/heap queries responded.'
+
+        if ($ProbeOnly) {
+            Write-Host ''
+            Write-Host 'SERIAL PROBE PASS' -ForegroundColor Green
+            Write-Host 'READ-ONLY HANDSHAKE PASS' -ForegroundColor Green
+            Write-Host 'APPLICATIONS LAUNCHED: NO' -ForegroundColor Green
+            Write-Host 'FIRMWARE OPERATIONS: NO' -ForegroundColor Green
+            Complete-Run -Classification 'GATE A SERIAL PROBE PACKAGE PASS' -Outcome ([GateAOutcome]::ProbeOnlyPass) -HardwareExecutionOccurred $true -Detail 'Bounded serial probe and read-only handshake both passed. -ProbeOnly was specified - stopping before Phase G/H; no application was launched, no firmware operation was performed.' -ExtraManifestFields @{ serial_probe = 'SERIAL PROBE PASS'; read_only_handshake = 'READ-ONLY HANDSHAKE PASS'; applications_launched = $false; firmware_operations_performed = $false }
+        }
     }
     else {
         Write-Status -Status 'MOCK - SYNTHETIC DEVICE' -Detail 'Mock mode: device discovery and handshake are skipped in favor of a synthetic in-process transport used directly by the app-run phase below.'
         [ordered]@{ status = 'MOCK - SYNTHETIC DEVICE'; detail = 'No real discovery attempted.' } | ConvertTo-Json | Set-Content -Path (Join-Path $ReportDir 'device_discovery.json') -Encoding UTF8
         [ordered]@{ status = 'MOCK - NOT PERFORMED'; detail = 'No real handshake attempted.' } | ConvertTo-Json | Set-Content -Path (Join-Path $ReportDir 'serial_handshake.json') -Encoding UTF8
+
+        if ($ProbeOnly) {
+            Complete-Run -Classification 'MOCK - GATE A SERIAL PROBE PACKAGE PASS' -Outcome ([GateAOutcome]::ProbeOnlyPass) -HardwareExecutionOccurred $false -Detail '-ProbeOnly with -Mock: synthetic pass, never real hardware evidence.'
+        }
     }
 
     # -----------------------------------------------------------------------

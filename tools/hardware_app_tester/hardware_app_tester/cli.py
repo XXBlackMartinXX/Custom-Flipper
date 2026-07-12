@@ -53,7 +53,16 @@ from .profile_schema import (
     load_all_profiles,
     validate_all_profiles_against_repository,
 )
-from .serial_cli import FlipperCliClient
+from .serial_cli import FlipperCliClient, TransportStage
+
+#: Gate A serial-transport-hardening phase: both read and write timeouts
+#: are now explicit and finite (<= FlipperCliClient's own
+#: MAX_ACCEPTABLE_* limits), and flow control is explicitly disabled
+#: (matching pyserial's own defaults - verified, not assumed - so this
+#: is documentation, not a behavior change) rather than left unstated.
+REAL_SERIAL_READ_TIMEOUT = 0.5
+REAL_SERIAL_WRITE_TIMEOUT = 0.5
+PROMPT_SYNC_TIMEOUT = 3.0
 
 EXPECTED_PROFILE_COUNT = 20
 
@@ -177,74 +186,369 @@ def cmd_discover(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _open_real_serial_connection(port: str, timeout: float = 0.5):
+def _open_real_serial_connection(
+    port: str,
+    timeout: float = REAL_SERIAL_READ_TIMEOUT,
+    write_timeout: float = REAL_SERIAL_WRITE_TIMEOUT,
+):
+    """Opens a real pyserial connection with BOTH read and write
+    timeouts explicit and finite - Part 1 of the Gate A serial-
+    transport-hardening mission. The previous version of this function
+    left `write_timeout` unset (pyserial default: None, block forever),
+    which is capable, on its own, of causing `send_command()`'s
+    `self._conn.write(...)` call to hang indefinitely with no bound at
+    all - a real, verified-from-source defect, independent of whatever
+    exact stage the one real Windows run that surfaced this actually
+    blocked in.
+
+    `rtscts`/`dsrdtr`/`xonxoff` are passed explicitly as False - this
+    matches pyserial's own constructor defaults (verified against
+    pyserial's source, not assumed), so this is documentation of intent
+    ("no flow control unless required and proven"), not a behavior
+    change.
+    """
     import serial  # local import: keeps this module importable in
 
     # environments without pyserial installed for non-hardware commands.
-    return serial.Serial(port, baudrate=230400, timeout=timeout)
+    return serial.Serial(
+        port,
+        baudrate=230400,
+        timeout=timeout,
+        write_timeout=write_timeout,
+        rtscts=False,
+        dsrdtr=False,
+        xonxoff=False,
+    )
+
+
+class _StageRecorder:
+    """Incremental, atomically-written evidence for a serial-transport
+    operation (handshake or probe-serial) - Part 4 of the Gate A serial-
+    transport-hardening mission.
+
+    Every `.record()` call re-serializes the *entire* accumulated state
+    (all prior stages plus the new one) to `output_path` via
+    `evidence.atomic_write_json()`, so:
+
+    - the file exists from the very first stage (PROCESS_STARTED),
+      before the serial port is ever opened - if a process watchdog
+      kills this process later, the file on disk is the last stage that
+      actually completed, never a half-written blob.
+    - a reader can always tell exactly how far execution got, even after
+      an external kill, without any code in this process needing to run
+      again to "finish" the file.
+    """
+
+    def __init__(self, output_path: Optional[str], base_fields: Dict[str, Any]):
+        self.output_path = output_path
+        self.base: Dict[str, Any] = dict(base_fields)
+        self.base["stages"] = []
+        self._start = time.monotonic()
+
+    def _flush(self) -> None:
+        if self.output_path:
+            evidence.atomic_write_json(self.output_path, self.base)
+
+    def record(self, stage: str, **fields: Any) -> Dict[str, Any]:
+        entry = {
+            "stage": stage,
+            "timestamp_utc": _now_iso(),
+            "elapsed_ms": round((time.monotonic() - self._start) * 1000, 3),
+        }
+        entry.update(fields)
+        self.base["stages"].append(entry)
+        self.base["last_stage"] = stage
+        self._flush()
+        return entry
+
+    def finalize(self, status: str, detail: str, **extra_fields: Any) -> Dict[str, Any]:
+        self.base["status"] = status
+        self.base["detail"] = detail
+        self.base.update(extra_fields)
+        self.record("FINAL_CLASSIFICATION", classification=status)
+        return self.base
+
+
+def _response_fields(resp) -> Dict[str, Any]:
+    """The subset of a CliResponse worth recording per-stage - JSON-safe
+    only (no raw bytes; `raw_bytes_sanitized` is already a str)."""
+    return {
+        "response_stage": resp.stage,
+        "raw_byte_count": resp.raw_byte_count,
+        "raw_bytes_sanitized": resp.raw_bytes_sanitized,
+        "decoded_response": resp.lines,
+        "decode_warning": resp.decode_warning,
+        "exception_type": resp.exception_type,
+        "exception_message": resp.exception_message,
+        "response_elapsed_ms": resp.elapsed_ms,
+    }
+
+
+def _blocked_classification_for_stage(stage_label: str, resp) -> str:
+    """Maps a failed CliResponse.stage onto a human-readable BLOCKED
+    classification for a given stage label (e.g. "PROMPT SYNC",
+    "UPTIME") - the one place this mapping is done, so `handshake`'s
+    per-stage classifications stay consistent with each other."""
+    if resp.stage == TransportStage.WRITE_TIMEOUT:
+        return f"BLOCKED - {stage_label} WRITE TIMEOUT"
+    if resp.stage == TransportStage.SERIAL_DISCONNECTED:
+        return f"BLOCKED - {stage_label} SERIAL DISCONNECTED"
+    if resp.stage in (TransportStage.READ_TIMEOUT, TransportStage.PROMPT_NOT_FOUND):
+        return f"BLOCKED - {stage_label} TIMEOUT"
+    return f"BLOCKED - {stage_label} FAILED"  # pragma: no cover - defensive fallback
 
 
 def cmd_handshake(args: argparse.Namespace) -> int:
-    result: Dict[str, Any] = {
+    base_fields = {
         "command": "handshake",
-        "timestamp": _now_iso(),
         "dry_run": args.dry_run,
         "port": args.port,
+        "baudrate": 230400,
+        "read_timeout": REAL_SERIAL_READ_TIMEOUT,
+        "write_timeout": REAL_SERIAL_WRITE_TIMEOUT,
+        "prompt_sync_timeout": PROMPT_SYNC_TIMEOUT,
+        "applications_launched": False,
+        "firmware_operations_performed": False,
+        "watchdog_intervened": False,
     }
+
     if args.dry_run:
+        result = dict(base_fields)
         result["status"] = "NOT_RUN"
         result["detail"] = "DryRun: no serial connection was opened."
+        result["timestamp"] = _now_iso()
         _emit(result, args)
         return 0
 
     if not args.port:
+        result = dict(base_fields)
         result["status"] = "BLOCKED - NO PORT SPECIFIED"
         result["detail"] = "handshake requires --port (resolve it via 'discover' first)."
+        result["timestamp"] = _now_iso()
         _emit(result, args)
         return 1
 
+    recorder = _StageRecorder(getattr(args, "output", None), base_fields)
+    recorder.record("PROCESS_STARTED")
+
+    recorder.record("SERIAL_OPEN_START")
     try:
         conn = _open_real_serial_connection(args.port)
     except Exception as exc:  # pyserial raises SerialException, OSError, etc.
-        result["status"] = "BLOCKED - SERIAL OPEN FAILED"
-        result["detail"] = f"Could not open {args.port}: {exc}"
+        recorder.record("SERIAL_OPEN_FAIL", exception_type=type(exc).__name__, exception_message=str(exc))
+        result = recorder.finalize(
+            "BLOCKED - SERIAL OPEN FAILED", f"Could not open {args.port}: {exc}"
+        )
         _emit(result, args)
         return 1
+    recorder.record("SERIAL_OPEN_PASS")
 
+    classification: Optional[str] = None
+    detail: Optional[str] = None
     try:
         cli = FlipperCliClient(conn, default_timeout=5.0)
-        uptime_resp = cli.uptime()
-        loader_resp = cli.loader_info()
-        heap_resp = cli.free_heap()
+
+        recorder.record("PROMPT_SYNC_START")
+        sync_resp = cli.sync_to_prompt(timeout=PROMPT_SYNC_TIMEOUT)
+        if sync_resp.stage in TransportStage.OK_STAGES:
+            recorder.record("PROMPT_SYNC_PASS", **_response_fields(sync_resp))
+        else:
+            recorder.record("PROMPT_SYNC_FAIL", **_response_fields(sync_resp))
+            classification = _blocked_classification_for_stage("PROMPT SYNC", sync_resp)
+            detail = (
+                "Prompt synchronization did not complete "
+                f"({sync_resp.stage}) - no command was sent while "
+                "transport state was uncertain. See raw_bytes_sanitized "
+                "in the PROMPT_SYNC_FAIL stage for exactly what (if "
+                "anything) was received."
+            )
+
+        # "Do not proceed to the second command if the first command
+        # leaves transport state uncertain" - each step below only runs
+        # if every previous step completed cleanly.
+        uptime_resp = None
+        if classification is None:
+            recorder.record("UPTIME_START")
+            uptime_resp = cli.uptime()
+            if uptime_resp.stage in TransportStage.OK_STAGES:
+                recorder.record("UPTIME_PASS", **_response_fields(uptime_resp))
+            else:
+                recorder.record("UPTIME_FAIL", **_response_fields(uptime_resp))
+                classification = _blocked_classification_for_stage("UPTIME", uptime_resp)
+                detail = f"uptime did not complete ({uptime_resp.stage})."
+
+        loader_resp = None
+        if classification is None:
+            recorder.record("LOADER_INFO_START")
+            loader_resp = cli.loader_info()
+            if loader_resp.stage in TransportStage.OK_STAGES:
+                recorder.record("LOADER_INFO_PASS", **_response_fields(loader_resp))
+            else:
+                recorder.record("LOADER_INFO_FAIL", **_response_fields(loader_resp))
+                classification = _blocked_classification_for_stage("LOADER INFO", loader_resp)
+                detail = f"loader info did not complete ({loader_resp.stage})."
+
+        heap_resp = None
+        if classification is None:
+            recorder.record("FREE_HEAP_START")
+            heap_resp = cli.free_heap()
+            if heap_resp.stage in TransportStage.OK_STAGES:
+                recorder.record("FREE_HEAP_PASS", **_response_fields(heap_resp))
+            else:
+                recorder.record("FREE_HEAP_FAIL", **_response_fields(heap_resp))
+                classification = _blocked_classification_for_stage("FREE HEAP", heap_resp)
+                detail = f"free heap did not complete ({heap_resp.stage})."
+
     except Exception as exc:
-        result["status"] = "NEEDS_REVIEW - HANDSHAKE ERROR"
-        result["detail"] = f"Unexpected error during read-only handshake: {exc}"
-        _emit(result, args)
-        return 1
+        classification = "NEEDS_REVIEW - HANDSHAKE ERROR"
+        detail = f"Unexpected error during read-only handshake: {exc}"
+        recorder.record("UNEXPECTED_EXCEPTION", exception_type=type(exc).__name__, exception_message=str(exc))
     finally:
+        recorder.record("SERIAL_CLOSE_START")
         try:
             conn.close()
         except Exception:
+            # Closing must never hide an already-captured failure -
+            # deliberately swallowed, not re-raised or allowed to
+            # overwrite `classification`/`detail` above.
             pass
+        recorder.record("SERIAL_CLOSE_PASS")
 
-    result["uptime_response"] = dataclasses.asdict(uptime_resp)
-    result["loader_response"] = dataclasses.asdict(loader_resp)
-    result["free_heap_response"] = dataclasses.asdict(heap_resp)
+    if classification is None:
+        classification = "PASS"
+        detail = "CLI prompt reachable; prompt sync/uptime/loader/heap all responded within timeout."
 
-    if uptime_resp.timed_out or loader_resp.timed_out or heap_resp.timed_out:
-        result["status"] = "BLOCKED - CLI NOT RESPONDING"
-        result["detail"] = (
-            "One or more read-only handshake commands timed out waiting "
-            "for the CLI prompt - the device may not be at its desktop, "
-            "or another session may already be attached to this port."
+    result = recorder.finalize(classification, detail)
+    _emit(result, args)
+    return 0 if classification == "PASS" else 1
+
+
+def cmd_probe_serial(args: argparse.Namespace) -> int:
+    """Part 6 of the Gate A serial-transport-hardening mission: a
+    narrow, dedicated, read-only connectivity probe - open, sync to
+    prompt, optionally one read-only command, close. Never launches an
+    application, never performs a firmware operation. Intended to be
+    run by the operator BEFORE the full Gate A run, so a transport-level
+    problem (like the one this whole phase exists to fix) is diagnosed
+    in isolation, with its own bounded evidence, rather than only
+    surfacing deep inside a longer Gate A invocation.
+    """
+    read_only_commands = {
+        "uptime": lambda cli: cli.uptime(),
+        "loader_info": lambda cli: cli.loader_info(),
+        "free": lambda cli: cli.free_heap(),
+        "none": None,
+    }
+
+    base_fields = {
+        "command": "probe-serial",
+        "dry_run": args.dry_run,
+        "port": args.port,
+        "baudrate": 230400,
+        "read_timeout": REAL_SERIAL_READ_TIMEOUT,
+        "write_timeout": REAL_SERIAL_WRITE_TIMEOUT,
+        "prompt_sync_timeout": PROMPT_SYNC_TIMEOUT,
+        "probe_command": args.command,
+        "applications_launched": False,
+        "firmware_operations_performed": False,
+        "watchdog_intervened": False,
+    }
+
+    if args.dry_run:
+        result = dict(base_fields)
+        result["status"] = "NOT_RUN"
+        result["detail"] = "DryRun: no serial connection was opened."
+        result["timestamp"] = _now_iso()
+        _emit(result, args)
+        return 0
+
+    recorder = _StageRecorder(getattr(args, "output", None), base_fields)
+    recorder.record("PROCESS_STARTED")
+
+    if not args.port:
+        result = recorder.finalize(
+            "SERIAL PROBE BLOCKED - OPEN FAILED",
+            "probe-serial requires --port (resolve it via 'discover' first).",
         )
         _emit(result, args)
         return 1
 
-    result["status"] = "PASS"
-    result["detail"] = "CLI prompt reachable; uptime/loader/heap all responded within timeout."
+    if args.command not in read_only_commands:
+        result = recorder.finalize(
+            "SERIAL PROBE FAILED - INTERNAL ERROR",
+            f"Unsupported --command {args.command!r} (must be one of "
+            f"{sorted(read_only_commands)}) - read-only commands only.",
+        )
+        _emit(result, args)
+        return 1
+
+    recorder.record("SERIAL_OPEN_START")
+    try:
+        conn = _open_real_serial_connection(args.port)
+    except Exception as exc:
+        recorder.record("SERIAL_OPEN_FAIL", exception_type=type(exc).__name__, exception_message=str(exc))
+        result = recorder.finalize(
+            "SERIAL PROBE BLOCKED - OPEN FAILED", f"Could not open {args.port}: {exc}"
+        )
+        _emit(result, args)
+        return 1
+    recorder.record("SERIAL_OPEN_PASS")
+
+    classification: Optional[str] = None
+    detail: Optional[str] = None
+    try:
+        cli = FlipperCliClient(conn, default_timeout=5.0)
+
+        recorder.record("PROMPT_SYNC_START")
+        sync_resp = cli.sync_to_prompt(timeout=PROMPT_SYNC_TIMEOUT)
+        if sync_resp.stage in TransportStage.OK_STAGES:
+            recorder.record("PROMPT_SYNC_PASS", **_response_fields(sync_resp))
+        else:
+            recorder.record("PROMPT_SYNC_FAIL", **_response_fields(sync_resp))
+            detail = f"Prompt synchronization did not complete ({sync_resp.stage})."
+            if sync_resp.stage == TransportStage.WRITE_TIMEOUT:
+                classification = "SERIAL PROBE BLOCKED - WRITE TIMEOUT"
+            else:
+                # PROMPT_NOT_FOUND / READ_TIMEOUT / SERIAL_DISCONNECTED
+                # during sync are all folded into this one classification
+                # - Part 6 defines exactly six classification strings for
+                # this command, not a distinct one per transport stage.
+                classification = "SERIAL PROBE BLOCKED - PROMPT SYNC TIMEOUT"
+
+        probe_fn = read_only_commands[args.command]
+        if classification is None and probe_fn is not None:
+            stage_prefix = args.command.upper()
+            recorder.record(f"{stage_prefix}_START")
+            cmd_resp = probe_fn(cli)
+            if cmd_resp.stage in TransportStage.OK_STAGES:
+                recorder.record(f"{stage_prefix}_PASS", **_response_fields(cmd_resp))
+            else:
+                recorder.record(f"{stage_prefix}_FAIL", **_response_fields(cmd_resp))
+                classification = "SERIAL PROBE BLOCKED - COMMAND TIMEOUT"
+                detail = f"Read-only probe command {args.command!r} did not complete ({cmd_resp.stage})."
+    except Exception as exc:
+        classification = "SERIAL PROBE FAILED - INTERNAL ERROR"
+        detail = f"Unexpected internal error during probe: {exc}"
+    finally:
+        recorder.record("SERIAL_CLOSE_START")
+        try:
+            conn.close()
+        except Exception:
+            pass
+        recorder.record("SERIAL_CLOSE_PASS")
+
+    if classification is None:
+        classification = "SERIAL PROBE PASS"
+        command_note = f", '{args.command}' completed" if args.command != "none" else ""
+        detail = (
+            f"Serial port opened, prompt synchronized{command_note}, and "
+            "closed cleanly. No application was launched; no firmware "
+            "operation was performed."
+        )
+
+    result = recorder.finalize(classification, detail)
     _emit(result, args)
-    return 0
+    return 0 if classification == "SERIAL PROBE PASS" else 1
 
 
 # ---------------------------------------------------------------------------
@@ -774,6 +1078,28 @@ def build_parser() -> argparse.ArgumentParser:
     p_handshake.add_argument("--dry-run", action="store_true")
     p_handshake.add_argument("--output")
     p_handshake.set_defaults(func=cmd_handshake)
+
+    p_probe = subparsers.add_parser(
+        "probe-serial",
+        help=(
+            "Dedicated, read-only serial connectivity probe: open, "
+            "synchronize to the CLI prompt, optionally one read-only "
+            "command, close. Never launches an application, never "
+            "performs a firmware operation. Intended to be run before "
+            "the full Gate A handshake/app run to isolate a transport-"
+            "level problem in isolation with its own bounded evidence."
+        ),
+    )
+    p_probe.add_argument("--port")
+    p_probe.add_argument(
+        "--command",
+        choices=["uptime", "loader_info", "free", "none"],
+        default="uptime",
+        help="Which single read-only command to run after prompt sync (default: uptime).",
+    )
+    p_probe.add_argument("--dry-run", action="store_true")
+    p_probe.add_argument("--output")
+    p_probe.set_defaults(func=cmd_probe_serial)
 
     p_gate_a = subparsers.add_parser(
         "run-gate-a", help="Run the 5-app Gate A representative set."
