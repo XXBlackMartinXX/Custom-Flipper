@@ -2648,6 +2648,131 @@ outcome so the result documents can be filled in honestly.
 
 ---
 
+## Ultimate vNext Foundation — automated test platform, ecosystem census, product architecture
+
+A large infrastructure/audit/architecture phase, developed on a new
+branch (`feature/ultimate-vnext-test-census-architecture`, branched
+from the integration branch's `78aa28d`) rather than directly on the
+integration or documentation branches, per this phase's own branching
+requirement. **No firmware installation was performed in this phase.**
+An immutable local checkpoint tag
+(`checkpoint/installed-baseline-v1-78aa28d`) was created recording the
+accepted baseline commit, CI run, artifact hashes, and the
+operator-reported controlled-installation hardware evidence from the
+prior phase — the tag could not be pushed to the remote (`git push`
+returned an HTTP 403 from this session's git proxy for tag refs
+specifically; branch pushes are unaffected) and exists only in this
+session's local clone, disclosed honestly rather than worked around.
+
+**Part I — automated hardware test platform**
+(`tools/hardware_app_tester/`): a real, Windows-first host test runner
+architecture communicating with one normally booted Flipper Zero over
+its exact USB serial interface (never qFlipper's GUI). Device discovery
+(exact `VID_0483&PID_5740` matching, DFU rejection, ambiguous-device
+rejection, port-contention detection) and collision-resistant evidence
+writing are real, unit-tested Python code — 20/20 `pytest` assertions
+passed for real in this session, all against synthetic port descriptors
+and disposable temp directories, since **this development session has
+no Windows machine, no physical Flipper Zero, and no serial port**. The
+CLI/RPC transport code (`serial_cli.py`, `rpc_client.py`) is real,
+intended-to-work code that has never been exercised against real
+hardware — disclosed explicitly in the package's own README and in
+`docs/AUTOMATED_HARDWARE_TEST_RESULTS.md`, which records zero hardware
+`PASS` claims. Zero flashing/update/repair/erase/format capability
+exists anywhere in the tool, enforced by a dedicated regression test.
+20 real test-profile YAML files exist for the current app baseline
+(`tests/hardware/apps/*.yaml`), schema-validated: 10 classified
+`SAFE_AUTOMATION` (exactly this project's mission-specified low-risk
+list), 5 `FIXTURE_REQUIRED`, 5 `MANUAL_VISUAL_REQUIRED` — see
+`docs/CURRENT_20_APP_QUALIFICATION.md`, where every app's real hardware
+test status is honestly `NOT_RUN`. `tests/on_device/` documents
+on-device unit-test candidates grounded in direct source reads (not
+name-guessing): `resistor_logic.c` (10 confirmed pure boolean
+classifiers) and `subnet_math.c` (confirmed pure bit-counting/CIDR
+arithmetic) are real, strong candidates; an initial internal assumption
+that `vin_decoder` contains a VIN checksum function was checked directly
+against its real source and found wrong — corrected to record its one
+actual confirmed pure function (a manufacturer-prefix lookup) instead.
+
+**Part II — ecosystem census** (`docs/ecosystem/`): a real census, not
+a fabricated one. Four dedicated research agents each cloned
+(`git clone --depth 1 --filter=blob:none`) and inspected exactly one
+primary repository — official `flipperdevices/flipperzero-firmware`,
+`DarkFlippers/unleashed-firmware`, `Next-Flip/Momentum-Firmware`, and
+`RogueMaster/flipperzero-firmware-wPlugins` — plus, where a repo's
+actual community apps live in a separate companion repository
+(discovered as a real finding, not assumed), that companion repo too
+(`xMasterX/all-the-plugins`, `Next-Flip/Momentum-Apps`). Every
+repository is pinned by real commit hash and license hash; all five
+firmware repositories (including this project's own) ship the
+byte-identical GPL-3.0 `LICENSE`
+(SHA256 `3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986`).
+Real, verified app counts: 82 (official, built-in only), 317
+(Unleashed's companion repo), 243 (Momentum's companion repo), 688
+(RogueMaster, vendored directly). This project's own 20 apps were
+cross-referenced by real `appid` against all three community
+collections — full result in
+`docs/ecosystem/DUPLICATE_AND_SUPERSESSION_MATRIX.md`, including a real
+finding that RogueMaster carries duplicate "original" variants of two
+of this project's own apps (`2048`/`game2048`,
+`minesweeper_redux`/`minesweeper_og`), and a real, pre-existing gap this
+census surfaced in this project's own tree: 3 of our own 20 apps
+(`boilerplate`, `flipper95`, `network_subnet`) ship with no per-app
+`LICENSE` file. 34 individual candidates (of roughly 1,330 discovered
+across the four repositories) were catalogued with real dispositions in
+`docs/ecosystem/APP_CENSUS.json`/`.tsv`; the remaining ~1,296 are
+explicitly disclosed as not individually reviewed in this phase, never
+silently treated as approved. An entire family of RogueMaster apps
+matching this project's forbidden-automation scope by name
+(`ble_killer`, `wifi_deauther`, `mousejacker_*`, `nrfjammer`,
+`carjacker`, and more) was identified and given a blanket
+`REJECT_UNSAFE` category-level disposition in
+`docs/ecosystem/REJECTED_CANDIDATES.md`. **No code was imported as a
+result of this census.**
+
+**Part III/IV — product architecture** (`docs/architecture/`): a
+modular firmware profile design (`CUSTOM_CORE` through
+`CUSTOM_EXPERIMENTAL`, external-FAP-by-default) and six RFCs (Custom App
+Health Center, Smart App Packs, Unified Search and Command Palette,
+Hardware and Module Compatibility Hub, Safe Mode and Crash Isolation,
+Upstream Intelligence and Sync Automation) — architecture and
+proof-of-concept plans only, nothing implemented or hardware-tested.
+
+**Part V — quality system** (`docs/architecture/QUALITY_SYSTEM.md`):
+specifies the required CI checks (manifest/license/provenance/duplicate
+validation, forbidden-binary detection, resource budgets, SBOM
+generation, and more) as a target state; no CI workflow file was added
+or modified in this phase, consistent with this project's established
+discipline against broadly modifying `.github/workflows/` without a
+specific, narrow, reviewed reason.
+
+**Honest Gate status** (this phase's own mission-defined Gates A-D):
+Gate A (test platform proof) and Gate B (current 20-app automated
+qualification) are only **partially** satisfied — every piece of logic
+that can be unit-tested without real hardware has been, and passes, but
+the mission's own explicit requirement that "at least five
+representative low-risk apps automatically launch, navigate, exit, and
+produce evidence" on real hardware could not be met, because no
+Windows machine and no physical Flipper Zero exist in this development
+session. Gate C (ecosystem census) is met at the scope honestly defined
+in `docs/ecosystem/SOURCE_PROVENANCE.md`. Gate D (product architecture)
+is partially met: all six RFCs and the modular profile design are
+written, but "accepted" requires the project owner's own sign-off, not
+a self-declaration by this phase. Full detail in
+`docs/ULTIMATE_VNEXT_ROADMAP.md`.
+
+**Final classification: ULTIMATE VNEXT FOUNDATION PARTIAL / BLOCKERS
+DOCUMENTED.** No app is marked hardware-`PASS` anywhere in this phase's
+documentation. No firmware/app source, `applications/`,
+`applications_user/`, or `.github/workflows/` file was modified. No
+code was imported. No release was published or tagged. Release status
+remains **TEST-READY ONLY / NOT RELEASE-READY**. Committed to
+`feature/ultimate-vnext-test-census-architecture` (commit `b3f9aac`,
+branched from integration commit `78aa28d`); a draft pull request was
+opened against the integration branch, not merged.
+
+---
+
 ## Historical record: cloud sandbox build attempt (superseded, kept for the record)
 
 ## What this is
