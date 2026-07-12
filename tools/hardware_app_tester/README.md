@@ -69,18 +69,28 @@ What has **not** been validated, because it requires real hardware:
 ```
 hardware_app_tester/
   __init__.py
-  discovery.py        - device discovery (enumeration/evaluation separated)
+  cli.py                - the CLI entrypoint (validate-profiles, discover,
+                          handshake, run-gate-a, run-safe-automation)
+  discovery.py         - device discovery (enumeration/evaluation separated)
   serial_cli.py        - line-based Flipper CLI client (loader open/list/etc.)
   rpc_client.py         - protobuf RPC client skeleton (screen frames, input)
+  mock_transport.py     - synthetic in-process transport for --mock mode
+  device_state.py       - best-effort uptime/heap/loader-state parsing
   profile_schema.py    - tests/hardware/apps/*.yaml schema + loader
+                          + repository cross-check
   evidence.py          - collision-resistant JSON/Markdown evidence writer
-  test_runner.py       - orchestrates discovery -> per-app test -> evidence
+  test_runner.py       - library helpers used by cli.py
   crash_detection.py    - uptime/heap/loader-state regression checks
 tests/
   test_discovery.py
   test_evidence.py
   test_profile_schema.py
   test_no_destructive_capability.py
+  test_serial_cli_hardening.py
+  test_crash_detection.py
+  test_cli_hardening.py
+Run-GateA-HardwareProof.ps1 (one directory up) - the Windows one-command
+  runner; see docs/GATE_A_WINDOWS_HARDWARE_EXECUTION.md.
 ```
 
 ## Running the unit tests (no hardware required)
@@ -94,3 +104,17 @@ pytest tests/
 These tests exercise only the pure, hardware-independent logic listed
 above. They do not, and cannot, prove that this tool works against a
 real device.
+
+## Running the CLI directly (no hardware required for --dry-run/--mock)
+
+```bash
+cd tools/hardware_app_tester
+python -m hardware_app_tester.cli validate-profiles --repo-root ../..
+python -m hardware_app_tester.cli run-gate-a --repo-root ../.. --report-dir /tmp/report --dry-run
+```
+
+For the full, one-command Windows execution package (repository
+verification, environment setup, profile validation, device discovery,
+handshake, and the Gate A app run), see
+`Run-GateA-HardwareProof.ps1` and
+`docs/GATE_A_WINDOWS_HARDWARE_EXECUTION.md`.

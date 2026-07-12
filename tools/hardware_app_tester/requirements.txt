@@ -1,4 +1,14 @@
-pyserial>=3.5
-protobuf>=4.25
-PyYAML>=6.0
-pytest>=7.4
+# Pinned to exact versions (confirmed available on PyPI at the time this
+# file was last updated) per this project's "prefer locked/pinned
+# dependency versions" discipline for the Gate A Windows execution
+# package. Run-GateA-HardwareProof.ps1 records the versions actually
+# installed into dependency_versions.json at run time regardless - this
+# pin is the primary control, that record is the audit trail.
+pyserial==3.5
+PyYAML==6.0.3
+pytest==9.1.1
+# protobuf is not yet imported by any real code in this package
+# (hardware_app_tester/rpc_client.py is a documented skeleton with no
+# protobuf usage) - pinned here only as a forward-looking placeholder
+# for when the RPC client is actually implemented.
+protobuf==4.25.5
